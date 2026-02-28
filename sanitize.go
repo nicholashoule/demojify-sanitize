@@ -43,9 +43,9 @@ var aiClutterRE = regexp.MustCompile(
 		`Great[!,.]|` +
 		`Excellent[!,.]|` +
 		`Noted[!,.]|` +
-		`I'?d be happy to(?: help)?[.!]?|` +
+		`I'd be happy to(?: help)?[.!]?|` +
 		`I can(?: certainly)? help(?: with that)?[.!]?|` +
-		`I'?ll help you with that[.!]?|` +
+		`I'll help you with that[.!]?|` +
 		`Let me help you[.!]?|` +
 		`I hope this helps[.!]?|` +
 		`Feel free to ask if you need (?:more |further )?(?:help|assistance)[.!]?` +
