@@ -6,11 +6,11 @@ codebase for this repository itself -- dogfooding the library against its own so
 ## Why emoji-free source?
 
 - **Token efficiency** -- emoji in documentation wastes AI context window tokens
-  (each emoji encodes to multiple UTF-8 bytes and typically multiple LLM tokens)
+ (each emoji encodes to multiple UTF-8 bytes and typically multiple LLM tokens)
 - **Terminal portability** -- not all CI runners and log viewers render emoji correctly
 - **Diff readability** -- emoji changes add noise to git diffs
 - **Consistency** -- text alternatives (`[PASS]`, `[FAIL]`, `WARNING:`) are grep-able
-  and work in every environment
+ and work in every environment
 
 ## Text alternatives
 
@@ -36,8 +36,8 @@ import demojify "github.com/nicholashoule/demojify-sanitize"
 
 data, _ := os.ReadFile("README.md")
 if demojify.ContainsEmoji(string(data)) {
-    clean := demojify.Sanitize(string(data), demojify.DefaultOptions())
-    _ = os.WriteFile("README.md", []byte(clean), 0o644)
+ clean := demojify.Sanitize(string(data), demojify.DefaultOptions())
+ _ = os.WriteFile("README.md", []byte(clean), 0o644)
 }
 ```
 

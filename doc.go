@@ -32,7 +32,6 @@
 //   - [ReplaceCount] applies [Replace] and also returns the substitution count.
 //   - [FindAll] returns distinct emoji sequences found in text.
 //   - [FindAllMapped] returns only mapped-key sequences, greedy longest-first.
-//   - [FindMatchesInFile] returns per-occurrence [Match] detail for a file.
 //   - [DefaultReplacements] returns a built-in ~100-entry emoji-to-text map
 //     covering status symbols, arrows, shapes, checkboxes, and dingbats.
 //
@@ -50,6 +49,8 @@
 //     file whose content would change after sanitization.
 //   - [ScanFile] checks a single file and returns a [Finding] if it needs
 //     sanitization, or nil if it is already clean.
+//   - [FindMatchesInFile] returns per-occurrence [Match] detail for a file
+//     without sanitizing it.
 //   - [ScanConfig] configures directory/file exemptions, extension filters,
 //     the sanitization [Options], an optional [ScanConfig.Replacements] map
 //     (uses [Replace] instead of [Sanitize] when set), and

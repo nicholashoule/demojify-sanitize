@@ -28,11 +28,11 @@ the same regex/memory considerations as the text-processing tier.
 Shared security properties:
 
 - **Regex denial-of-service (ReDoS):** All regexes are pre-compiled at package
-  init using `regexp.MustCompile`. Go's `regexp` package uses RE2 semantics
-  (linear-time matching), which prevents catastrophic backtracking by design.
+ init using `regexp.MustCompile`. Go's `regexp` package uses RE2 semantics
+ (linear-time matching), which prevents catastrophic backtracking by design.
 - **Memory exhaustion:** Passing extremely large strings causes memory use
-  proportional to input size. Callers are responsible for applying input size
-  limits appropriate to their environment before calling library functions.
+ proportional to input size. Callers are responsible for applying input size
+ limits appropriate to their environment before calling library functions.
 
 ## Reporting a Vulnerability
 
@@ -52,7 +52,7 @@ You can expect an initial response within 5 business days.
 ## Security Best Practices for Consumers
 
 - Apply input size limits before calling library functions if processing
-  untrusted input at scale.
+ untrusted input at scale.
 - Keep your `go.mod` up to date to receive any future patches.
 - Run `govulncheck ./...` in your own CI pipeline to detect transitive
-  vulnerabilities in your dependency tree.
+ vulnerabilities in your dependency tree.

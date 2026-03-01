@@ -3,6 +3,7 @@ package demojify_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"unicode"
 
@@ -74,6 +75,75 @@ func TestSanitize(t *testing.T) {
 			want:  "Hello  World",
 		},
 		{
+			name:  "AllowedEmojis – preserve rocket, remove grinning face",
+			input: "Deploy \U0001F680 done \U0001F600!",
+			opts: demojify.Options{
+				RemoveEmojis:  true,
+				AllowedEmojis: []string{"\U0001F680"},
+			},
+			want: "Deploy \U0001F680 done !",
+		},
+		{
+			name:  "AllowedEmojis – preserve multiple emoji",
+			input: "\U0001F680 Deploy \U0001F4CA chart \U0001F600 smile",
+			opts: demojify.Options{
+				RemoveEmojis:  true,
+				AllowedEmojis: []string{"\U0001F680", "\U0001F4CA"},
+			},
+			want: "\U0001F680 Deploy \U0001F4CA chart  smile",
+		},
+		{
+			name:  "AllowedEmojis with AllowedRanges combined",
+			input: "Deploy \U0001F680 check \u2705 stars \u2B50",
+			opts: demojify.Options{
+				RemoveEmojis:  true,
+				AllowedEmojis: []string{"\U0001F680"},
+				AllowedRanges: []*unicode.RangeTable{
+					{R16: []unicode.Range16{{Lo: 0x2705, Hi: 0x2705, Stride: 1}}},
+				},
+			},
+			want: "Deploy \U0001F680 check \u2705 stars ",
+		},
+		{
+			name:  "AllowedEmojis nil – behaves identically to Demojify",
+			input: "Hello \U0001F600 World",
+			opts:  demojify.Options{RemoveEmojis: true, AllowedEmojis: nil},
+			want:  "Hello  World",
+		},
+		{
+			name:  "AllowedEmojis empty slice – behaves identically to Demojify",
+			input: "Hello \U0001F600 World",
+			opts:  demojify.Options{RemoveEmojis: true, AllowedEmojis: []string{}},
+			want:  "Hello  World",
+		},
+		{
+			name:  "AllowedEmojis – placeholder collision in input text",
+			input: "\uFDD00\uFDD0 keep \U0001F680 remove \U0001F600",
+			opts: demojify.Options{
+				RemoveEmojis:  true,
+				AllowedEmojis: []string{"\U0001F680"},
+			},
+			want: "\uFDD00\uFDD0 keep \U0001F680 remove ",
+		},
+		{
+			name:  "AllowedEmojis – empty string entry is silently ignored",
+			input: "Hello \U0001F600 World",
+			opts: demojify.Options{
+				RemoveEmojis:  true,
+				AllowedEmojis: []string{""},
+			},
+			want: "Hello  World",
+		},
+		{
+			name:  "AllowedEmojis – empty string mixed with valid entry",
+			input: "Deploy \U0001F680 done \U0001F600!",
+			opts: demojify.Options{
+				RemoveEmojis:  true,
+				AllowedEmojis: []string{"", "\U0001F680"},
+			},
+			want: "Deploy \U0001F680 done !",
+		},
+		{
 			name:  "empty string",
 			input: "",
 			opts:  demojify.DefaultOptions(),
@@ -94,10 +164,7 @@ func TestSanitize(t *testing.T) {
 func TestSanitizeFile(t *testing.T) {
 	t.Run("file with emoji is sanitized and written back", func(t *testing.T) {
 		dir := t.TempDir()
-		path := filepath.Join(dir, "dirty.txt")
-		if err := os.WriteFile(path, []byte("deploy \U0001F680 done\n"), 0o644); err != nil {
-			t.Fatalf("WriteFile: %v", err)
-		}
+		path := writeTempFile(t, dir, "dirty.txt", "deploy \U0001F680 done\n")
 		changed, err := demojify.SanitizeFile(path, demojify.Options{RemoveEmojis: true})
 		if err != nil {
 			t.Fatalf("SanitizeFile: %v", err)
@@ -117,11 +184,7 @@ func TestSanitizeFile(t *testing.T) {
 
 	t.Run("clean file returns false and is not written", func(t *testing.T) {
 		dir := t.TempDir()
-		path := filepath.Join(dir, "clean.txt")
-		content := "no emoji here"
-		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-			t.Fatalf("WriteFile: %v", err)
-		}
+		path := writeTempFile(t, dir, "clean.txt", "no emoji here")
 		info1, _ := os.Stat(path)
 		changed, err := demojify.SanitizeFile(path, demojify.DefaultOptions())
 		if err != nil {
@@ -166,4 +229,43 @@ func TestSanitizeFile(t *testing.T) {
 			t.Error("expected error for nonexistent file, got nil")
 		}
 	})
+}
+
+// TestSanitizeAgentOutputRemediation proves that the module detects and fully
+// remediates emoji in AI-generated content. ContainsEmoji catches the
+// violation, Sanitize removes emoji in one call, and the result is idempotent.
+func TestSanitizeAgentOutputRemediation(t *testing.T) {
+	// Simulate AI-generated content with decorative emoji mixed into real text.
+	rogueOutput := "\U0001F680 Deployment\n" +
+		"\n" +
+		"Run the following command to deploy:\n" +
+		"\n" +
+		"    go build ./...\n" +
+		"\n" +
+		"Check the docs \U0001F4CA for details."
+
+	// ContainsEmoji detects the violation before the file is written.
+	if !demojify.ContainsEmoji(rogueOutput) {
+		t.Fatal("ContainsEmoji: expected true for rogue agent output, got false")
+	}
+
+	// Sanitize remediates emoji in one call.
+	clean := demojify.Sanitize(rogueOutput, demojify.DefaultOptions())
+
+	// Output is now emoji-free.
+	if demojify.ContainsEmoji(clean) {
+		t.Errorf("after Sanitize, output still contains emoji:\n%s", clean)
+	}
+
+	// Substantive content is preserved.
+	for _, required := range []string{"Deployment", "go build ./..."} {
+		if !strings.Contains(clean, required) {
+			t.Errorf("after Sanitize, output is missing expected content %q:\n%s", required, clean)
+		}
+	}
+
+	// Running Sanitize again produces identical output -- idempotent.
+	if twice := demojify.Sanitize(clean, demojify.DefaultOptions()); twice != clean {
+		t.Errorf("Sanitize is not idempotent:\nfirst:  %q\nsecond: %q", clean, twice)
+	}
 }

@@ -87,6 +87,37 @@ func TestNormalize(t *testing.T) {
 			input: "line1\r\nline2\nline3\r\n",
 			want:  "line1\nline2\nline3",
 		},
+		// --- Indentation preservation ---
+		{
+			name:  "Markdown nested list preserved",
+			input: "- item\n  - nested\n    - deep",
+			want:  "- item\n  - nested\n    - deep",
+		},
+		{
+			name:  "Markdown indented code block preserved",
+			input: "Paragraph\n\n    code line 1\n    code line 2",
+			want:  "Paragraph\n\n    code line 1\n    code line 2",
+		},
+		{
+			name:  "tab indentation preserved inline collapsed",
+			input: "line1\n\t\tindented  text  here\nline3",
+			want:  "line1\n\t\tindented text here\nline3",
+		},
+		{
+			name:  "inline multi-space collapsed after content",
+			input: "x := 1   // aligned",
+			want:  "x := 1 // aligned",
+		},
+		{
+			name:  "leading spaces preserved multiline",
+			input: "func main() {\n\tfmt.Println(\"hi\")\n}",
+			want:  "func main() {\n\tfmt.Println(\"hi\")\n}",
+		},
+		{
+			name:  "mixed indent and inline collapse",
+			input: "top\n  key:    value\n    nested:    data",
+			want:  "top\n  key: value\n    nested: data",
+		},
 	}
 
 	for _, tt := range tests {

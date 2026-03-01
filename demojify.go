@@ -2,6 +2,8 @@ package demojify
 
 import (
 	"regexp"
+	"strconv"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -11,10 +13,11 @@ import (
 // (U+FE00–U+FE0F), and Combining Enclosing Keycap (U+20E3). Each codepoint is
 // matched and removed independently -- ZWJ and variation selectors are stripped
 // as isolated characters, not as part of a multi-codepoint sequence.
-// Unicode ranges follow the Unicode 15 emoji/pictographic assignments.
+// Unicode ranges follow the Unicode 15–17 emoji/pictographic assignments.
 //
 // Ranges covered:
 //
+//	U+2139           Information Source
 //	U+231A–U+231B   Watch, Hourglass Done
 //	U+23CF           Eject Symbol
 //	U+23E9–U+23F3   Fast-forward, hourglass, etc.
@@ -34,12 +37,15 @@ import (
 //	U+303D           Part alternation mark
 //	U+3297           Circled Congratulation
 //	U+3299           Circled Secret
-//	U+1F000–U+1FAFF All supplementary emoji blocks
+//	U+1F000–U+1FAFF All supplementary emoji blocks (incl. Regional Indicators,
+//	                 skin-tone modifiers, and new Emoji 17.0 additions)
 //	U+200D           Zero Width Joiner (stripped as an individual codepoint)
 //	U+20E3           Combining Enclosing Keycap
+//	U+E0020–U+E007F  Tags block (subdivision flag tag sequences: England, Scotland, Wales)
 //	U+FE00–U+FE0F   Variation Selectors 1–16
 var emojiRE = regexp.MustCompile(
-	`[\x{231A}-\x{231B}` +
+	`[\x{2139}` +
+		`\x{231A}-\x{231B}` +
 		`\x{23CF}` +
 		`\x{23E9}-\x{23F3}` +
 		`\x{23F8}-\x{23FA}` +
@@ -61,6 +67,7 @@ var emojiRE = regexp.MustCompile(
 		`\x{1F000}-\x{1FAFF}` +
 		`\x{200D}` +
 		`\x{20E3}` +
+		`\x{E0020}-\x{E007F}` +
 		`\x{FE00}-\x{FE0F}]`,
 )
 
@@ -88,4 +95,115 @@ func demojifyAllowed(text string, allowed []*unicode.RangeTable) string {
 		}
 		return ""
 	})
+}
+
+// demojifyPreserving removes emoji codepoints from text while preserving
+// specific emoji strings listed in allowedEmojis and any rune belonging to
+// the provided Unicode range tables. Allowed emoji strings are temporarily
+// replaced with inert Unicode noncharacter placeholders (U+FDD0-U+FDEF)
+// before emoji removal, then restored. Longer allowed strings are matched
+// before shorter sub-sequences to handle variation-selector and ZWJ
+// sequences correctly.
+//
+// Empty strings in allowedEmojis are silently ignored because
+// [strings.ReplaceAll] with an empty old-string inserts the replacement
+// between every rune, causing unbounded memory growth.
+func demojifyPreserving(text string, allowedEmojis []string, allowedRanges []*unicode.RangeTable) string {
+	// Filter out empty strings (DoS prevention) and sort allowed emojis
+	// by descending byte length so longer sequences (e.g., ZWJ family
+	// emoji) are matched before their sub-sequences.
+	sorted := make([]string, 0, len(allowedEmojis))
+	for _, e := range allowedEmojis {
+		if e != "" {
+			sorted = append(sorted, e)
+		}
+	}
+	if len(sorted) == 0 {
+		// All entries were empty; fall back to standard removal.
+		if len(allowedRanges) > 0 {
+			return demojifyAllowed(text, allowedRanges)
+		}
+		return Demojify(text)
+	}
+	sortByLenDesc(sorted)
+
+	// Build placeholder strings guaranteed to be absent from the input.
+	// We use a Unicode noncharacter (U+FDD0–U+FDEF range) as a sentinel
+	// prefix, then append an index. If any placeholder collides with text
+	// already in the input, we increment the sentinel codepoint until all
+	// placeholders are unique.
+	placeholders := buildPlaceholders(len(sorted), text)
+
+	// Phase 1: Protect allowed emoji sequences with placeholders.
+	protected := text
+	for i, emoji := range sorted {
+		protected = strings.ReplaceAll(protected, emoji, placeholders[i])
+	}
+
+	// Phase 2: Strip remaining emoji.
+	var cleaned string
+	if len(allowedRanges) > 0 {
+		cleaned = demojifyAllowed(protected, allowedRanges)
+	} else {
+		cleaned = Demojify(protected)
+	}
+
+	// Phase 3: Restore placeholders to their original emoji.
+	for i, emoji := range sorted {
+		cleaned = strings.ReplaceAll(cleaned, placeholders[i], emoji)
+	}
+
+	return cleaned
+}
+
+// buildPlaceholders generates n placeholder strings that are guaranteed not to
+// appear anywhere in text. It uses Unicode noncharacters (U+FDD0–U+FDEF) as
+// sentinel prefixes. These codepoints are permanently reserved by Unicode and
+// must never appear in conforming text, making collisions extremely unlikely.
+// If a collision is detected the function advances to the next noncharacter
+// until all placeholders are absent from text.
+func buildPlaceholders(n int, text string) []string {
+	// Unicode defines 32 noncharacters in U+FDD0–U+FDEF. That gives us
+	// 32 sentinel prefixes to try before falling back to the BMP
+	// noncharacters U+FFFE and U+FFFF, for a total of 34 candidates.
+	const firstSentinel = '\uFDD0'
+	const lastSentinel = '\uFDEF'
+
+	sentinel := firstSentinel
+	for {
+		phs := make([]string, n)
+		prefix := string(sentinel)
+		collision := false
+		for i := 0; i < n; i++ {
+			ph := prefix + strconv.Itoa(i) + prefix
+			if strings.Contains(text, ph) {
+				collision = true
+				break
+			}
+			phs[i] = ph
+		}
+		if !collision {
+			return phs
+		}
+		sentinel++
+		if sentinel > lastSentinel {
+			// Extreme fallback: use U+FFFE and U+FFFF.
+			if sentinel == lastSentinel+1 {
+				sentinel = '\uFFFE'
+				continue
+			}
+			// sentinel is U+FFFF (incremented from U+FFFE after a
+			// collision) -- try it before falling back to multi-rune.
+			if sentinel <= '\uFFFF' {
+				continue
+			}
+			// All 34 noncharacters collide -- practically impossible.
+			// Fall back to a multi-rune prefix that cannot occur naturally.
+			phs := make([]string, n)
+			for i := 0; i < n; i++ {
+				phs[i] = "\uFDD0\uFDD1\uFDD2" + strconv.Itoa(i) + "\uFDD0\uFDD1\uFDD2"
+			}
+			return phs
+		}
+	}
 }

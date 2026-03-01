@@ -5,14 +5,17 @@ package demojify
 // Because a fresh copy is returned on every call, callers can add, remove, or
 // override entries without affecting other callers.
 //
-// The map covers ~97 codepoint sequences across nine categories:
+// The map covers ~137 codepoint sequences across eleven categories:
 //
 //   - Warning and alert symbols (U+26A0, U+203C, ...)
-//   - Status symbols: pass/fail/alert indicators
+//   - Status symbols: pass/fail/alert/info indicators
+//   - Severity indicators: colored circles for CI dashboards
 //   - Favorites, highlights, and annotations
 //   - Cloud, deployment, and technical pictographs
+//   - CI/CD workflow: deploy, package, release, maintenance
 //   - Status indicators: pending, loading, directional
 //   - Arrows (U+2192 series) common in documentation
+//   - Math operators (U+2716, U+2795–U+2797, U+267E)
 //   - Geometric shapes and bullet-point codepoints
 //   - Checkboxes (U+2610 series)
 //   - Common dingbats: hearts, diamonds, bullets
@@ -28,17 +31,41 @@ func DefaultReplacements() map[string]string {
 
 		// Status symbols
 		"\u2705":       "[PASS]",
+		"\u2705\ufe0f": "[PASS]",
 		"\u2713":       "[PASS]",
 		"\u2714":       "[PASS]", // Heavy check mark
 		"\u2714\ufe0f": "[PASS]",
 		"\u274c":       "[FAIL]",
+		"\u274c\ufe0f": "[FAIL]",
 		"\u2717":       "[FAIL]",
 		"\u2718":       "[FAIL]", // Heavy ballot X
 		"\u274e":       "[FAIL]", // Negative squared cross mark
 		"\u2757":       "[ALERT]",
+		"\u2757\ufe0f": "[ALERT]",
 		"\u2755":       "[ALERT]", // White exclamation mark
+		"\u2755\ufe0f": "[ALERT]",
 		"\u203c":       "[ALERT]", // Double exclamation
 		"\u203c\ufe0f": "[ALERT]",
+		"\u2753":       "[?]", // Question mark
+		"\u2754":       "[?]", // White question mark
+
+		// Information symbol (U+2139, also covered by emojiRE)
+		"\u2139":       "[INFO]", // Information source
+		"\u2139\ufe0f": "[INFO]",
+
+		// Severity indicators -- colored circles (widely used in CI dashboards and docs)
+		"\U0001f534": "[ERROR]",    // Red circle
+		"\U0001f7e0": "[WARNING]",  // Orange circle
+		"\U0001f7e1": "[CAUTION]",  // Yellow circle
+		"\U0001f7e2": "[OK]",       // Green circle
+		"\U0001f535": "[INFO]",     // Blue circle
+		"\u26ab":     "[INACTIVE]", // Medium black circle
+		"\u26aa":     "[INACTIVE]", // Medium white circle
+
+		// Stop and prohibition
+		"\U0001f6d1": "[STOP]",       // Stop sign
+		"\u26d4":     "[NO ENTRY]",   // No entry sign
+		"\U0001f6ab": "[PROHIBITED]", // Prohibited sign
 
 		// Favorites and highlights
 		"\u2b50":     "[FEATURED]",
@@ -78,12 +105,29 @@ func DefaultReplacements() map[string]string {
 		"\U0001f5fa":   "Map",
 		"\U0001f4cd":   "Map",
 
+		// CI/CD workflow
+		"\U0001f680":   "[DEPLOY]",  // Rocket
+		"\U0001f4e6":   "[PACKAGE]", // Package
+		"\U0001f389":   "[SUCCESS]", // Party popper
+		"\u2728":       "[NEW]",     // Sparkles
+		"\U0001f3c1":   "[DONE]",    // Checkered flag
+		"\U0001f527":   "[FIX]",     // Wrench
+		"\U0001f6e0":   "[TOOLS]",   // Hammer and wrench
+		"\u267b":       "[RECYCLE]", // Recycling symbol
+		"\u267b\ufe0f": "[RECYCLE]",
+		"\U0001f4be":   "[SAVE]", // Floppy disk
+		"\U0001f525":   "[HOT]",  // Fire
+		"\U0001f4af":   "[100]",  // Hundred points
+
 		// Status indicators
 		"\u23f3":       "Pending",
+		"\u23f3\ufe0f": "Pending",
 		"\u23f1":       "Timer",
+		"\u23f1\ufe0f": "Timer",
 		"\u23f0":       "Timer",
 		"\U0001f504":   "Refresh",
 		"\u231b":       "Loading",
+		"\u231b\ufe0f": "Loading",
 		"\u2b06":       "Up",
 		"\u2b07":       "Down",
 		"\u27a1":       "Next",
@@ -105,6 +149,15 @@ func DefaultReplacements() map[string]string {
 		"\u2b05\ufe0f": "<-", // Leftwards black arrow with FE0F
 		"\u2b06\ufe0f": "^",  // Upwards black arrow with FE0F
 		"\u2b07\ufe0f": "v",  // Downwards black arrow with FE0F
+
+		// Math operators (common in documentation)
+		"\u2716":       "x", // Heavy multiplication X
+		"\u2716\ufe0f": "x",
+		"\u2795":       "+",          // Heavy plus sign
+		"\u2796":       "-",          // Heavy minus sign
+		"\u2797":       "/",          // Heavy division sign
+		"\u267e":       "[INFINITY]", // Infinity (permanent paper sign)
+		"\u267e\ufe0f": "[INFINITY]",
 
 		// Geometric shapes (bullet points)
 		"\u25cf": "*",  // Black circle

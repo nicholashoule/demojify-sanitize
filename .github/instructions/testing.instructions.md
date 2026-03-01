@@ -14,12 +14,13 @@ applyTo: "**/*_test.go"
 |------|-------|
 | `demojify_test.go` | `TestDemojify`, `TestContainsEmoji` |
 | `normalize_test.go` | `TestNormalize` |
-| `sanitize_test.go` | `TestDefaultOptions`, `TestSanitize` |
-| `scan_test.go` | `TestDefaultScanConfig`, `TestScanDir`, `TestScanDirFindingFields`, `TestScanFile`, `TestScanFileNotFound`, `TestScanDirErrorOnBadRoot` |
-| `replace_test.go` | `TestFindAll`, `TestReplace`, `TestReplaceFile`, `TestFindAllMapped`, `TestReplaceCount`, `TestFindMatchesInFile` |
+| `sanitize_test.go` | `TestDefaultOptions`, `TestSanitize`, `TestSanitizeFile`, `TestSanitizeAgentOutputRemediation` |
+| `scan_test.go` | `TestDefaultScanConfig`, `TestScanDir`, `TestScanDirFindingFields`, `TestScanFile`, `TestScanFileNotFound`, `TestScanDirErrorOnBadRoot`, `TestFindMatchesInFile` |
+| `replace_test.go` | `TestFindAll`, `TestReplace`, `TestReplaceFile`, `TestFindAllMapped`, `TestReplaceCount` |
 | `replacements_test.go` | `TestDefaultReplacements`, `TestDefaultReplacementsEntries`, `TestReplaceWithDefaultReplacements` |
 | `write_test.go` | `TestWriteFinding` |
-| `repo_test.go` | `TestRepoProductionSourceFilesEmojiClean`, `TestRepoAllDocsEmojiClean`, `TestRepoProductionFilesIdempotent`, `TestRepoTestFilesContainEmoji`, `TestRepoAgentOutputRemediation` |
+| `helpers_test.go` | `writeTempFile`, `writeTempDir` -- shared test utilities |
+| `repo_test.go` | `TestRepoProductionSourceFilesEmojiClean`, `TestRepoAllDocsEmojiClean`, `TestRepoProductionFilesIdempotent`, `TestRepoTestFilesContainEmoji` |
 | `example_test.go` | `Example*` functions (rendered on pkg.go.dev) |
 
 All tests are in package `demojify_test` (external test package) to verify the public API only.
@@ -41,35 +42,35 @@ go test ./... -coverprofile=coverage.out
 go tool cover -html=coverage.out
 
 # Using Make
-make test          # go test ./...
-make race          # go test ./... -race
-make coverage      # coverage report
+make test # go test ./...
+make race # go test ./... -race
+make coverage # coverage report
 ```
 
 ## Table-Driven Test Pattern
 
 ```go
 func TestFunctionName(t *testing.T) {
-    tests := []struct {
-        name  string
-        input string
-        want  string
-    }{
-        {
-            name:  "descriptive case name",
-            input: "input value",
-            want:  "expected output",
-        },
-    }
+ tests := []struct {
+ name string
+ input string
+ want string
+ }{
+ {
+ name: "descriptive case name",
+ input: "input value",
+ want: "expected output",
+ },
+ }
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            got := demojify.FunctionName(tt.input)
-            if got != tt.want {
-                t.Errorf("FunctionName(%q) = %q, want %q", tt.input, got, tt.want)
-            }
-        })
-    }
+ for _, tt := range tests {
+ t.Run(tt.name, func(t *testing.T) {
+ got := demojify.FunctionName(tt.input)
+ if got != tt.want {
+ t.Errorf("FunctionName(%q) = %q, want %q", tt.input, got, tt.want)
+ }
+ })
+ }
 }
 ```
 
@@ -80,9 +81,9 @@ Always include an expected output comment:
 
 ```go
 func ExampleFunctionName() {
-    fmt.Println(demojify.FunctionName("input"))
-    // Output:
-    // expected output
+ fmt.Println(demojify.FunctionName("input"))
+ // Output:
+ // expected output
 }
 ```
 
@@ -99,12 +100,12 @@ func ExampleFunctionName() {
 ```go
 // String comparison
 if got != want {
-    t.Errorf("Function(%q) = %q, want %q", input, got, want)
+ t.Errorf("Function(%q) = %q, want %q", input, got, want)
 }
 
 // Boolean comparison
 if got != want {
-    t.Errorf("ContainsEmoji(%q) = %v, want %v", input, got, want)
+ t.Errorf("ContainsEmoji(%q) = %v, want %v", input, got, want)
 }
 ```
 

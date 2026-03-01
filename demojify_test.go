@@ -63,6 +63,17 @@ func TestDemojify(t *testing.T) {
 			want:  "中文 العربية Ñoño",
 		},
 		{
+			name:  "information source symbol (U+2139)",
+			input: "ℹ️ read the docs",
+			want:  " read the docs",
+		},
+		{
+			name: "subdivision flag England (U+1F3F4 + TAG sequence)",
+			// 🏴󠁧󠁢󠁥󠁮󠁧󠁿 = U+1F3F4 U+E0067 U+E0062 U+E0065 U+E006E U+E0067 U+E007F
+			input: "Location: \U0001F3F4\U000E0067\U000E0062\U000E0065\U000E006E\U000E0067\U000E007F",
+			want:  "Location: ",
+		},
+		{
 			name:  "mixed emoji and text",
 			input: "🚀 Deploy complete! Check the dashboard 📊",
 			want:  " Deploy complete! Check the dashboard ",
@@ -96,6 +107,8 @@ func TestContainsEmoji(t *testing.T) {
 		{"misc symbol", "Done ✅", true},
 		{"non-emoji unicode", "中文", false},
 		{"empty string", "", false},
+		{"information source U+2139", "ℹ note", true},
+		{"tag character U+E007F", "end\U000E007F", true},
 	}
 
 	for _, tt := range tests {
