@@ -113,9 +113,14 @@ golangci-lint run ./...
 2. **No allocations in hot paths** -- prefer `regexp.ReplaceAllString` (single pass)
 3. **Benchmark before optimizing** -- use `go test -bench=. -benchmem`
 
+## Module Guidelines from pkg.go.dev
+
+Read the [pkg.go.dev guide](https://pkg.go.dev/about#adding-a-package) for instructions on publishing this module for public consumption. The API must be stable, well-documented, and idiomatic to be accepted.
+
 ## References
 
 - [Effective Go](https://go.dev/doc/effective_go)
 - [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
 - [regexp package docs](https://pkg.go.dev/regexp)
 - [Unicode emoji charts](https://unicode.org/charts/)
+- [pkg.go.dev guide](https://pkg.go.dev/about#adding-a-package)

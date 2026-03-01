@@ -11,8 +11,7 @@
 //	-fix             rewrite affected files in place after reporting
 //	-sub             substitute emoji with text tokens instead of stripping;
 //	                 implies -fix
-//	-normalize       collapse redundant whitespace left behind by -fix/-sub;
-//	                 only applied to files where emoji were found or replaced;
+//	-normalize       collapse redundant whitespace in all scanned files;
 //	                 implies -fix
 //	-quiet           suppress all output; exit code only (0 = clean, 1 = findings/errors)
 //	-exts <.go,.md>  comma-separated extensions to scan (default: all files);
@@ -34,7 +33,7 @@ func main() {
 	root := flag.String("root", ".", "directory to scan")
 	fix := flag.Bool("fix", false, "rewrite affected files in place")
 	sub := flag.Bool("sub", false, "substitute emoji with text tokens (implies -fix)")
-	normalize := flag.Bool("normalize", false, "collapse redundant whitespace left behind by -fix/-sub; only applied to files changed by emoji removal (implies -fix)")
+	normalize := flag.Bool("normalize", false, "collapse redundant whitespace in all scanned files (implies -fix)")
 	quiet := flag.Bool("quiet", false, "suppress all output; exit code only (0 = clean, 1 = findings/errors)")
 	exts := flag.String("exts", "", "comma-separated extensions to scan, e.g. .go,.md (default: all)")
 	flag.Parse()

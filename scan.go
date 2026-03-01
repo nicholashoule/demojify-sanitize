@@ -67,8 +67,8 @@ type ScanConfig struct {
 	// NOTE: When Replacements is non-empty, [Options.RemoveEmojis],
 	// [Options.AllowedRanges], and [Options.AllowedEmojis] are ignored
 	// because [Replace] always strips residual emoji via [Demojify]. Only
-	// [Options.NormalizeWhitespace] is honoured after substitution, and
-	// only when the substitution step changes the file content. To
+	// [Options.NormalizeWhitespace] is honoured after substitution; when
+	// enabled it runs unconditionally on every scanned file. To
 	// preserve specific Unicode ranges during replacement-based scans, add
 	// those codepoints to the Replacements map with identity values
 	// (key == value).
@@ -123,14 +123,6 @@ type Match struct {
 	// [ScanConfig.Replacements] maps those codepoints.
 	Sequence string
 
-	// Emoji is the matched codepoint sequence.
-	//
-	// Deprecated: Use [Match.Sequence] instead. Emoji is populated with the
-	// same value as Sequence for backward compatibility, but Sequence is the
-	// preferred field because matches may include non-emoji codepoints when
-	// [ScanConfig.Replacements] maps them.
-	Emoji string
-
 	// Replacement is the value from [ScanConfig.Replacements] for this
 	// sequence, or an empty string if the sequence is not mapped.
 	Replacement string
@@ -182,13 +174,10 @@ type Finding struct {
 // (mapped-sequence substitution followed by residual-emoji stripping via
 // [Demojify]); otherwise emoji removal is applied per cfg.Options.
 //
-// When [Options.NormalizeWhitespace] is enabled and emoji removal or
-// replacements are active, whitespace normalization is applied only to
-// files that were actually changed by the emoji/replacement step -- it
-// cleans up whitespace left behind by those fixes rather than rewriting
-// unrelated whitespace. When neither emoji removal nor replacements are
-// active, normalization is the sole purpose of the scan and runs
-// unconditionally on every file.
+// When [Options.NormalizeWhitespace] is enabled, whitespace normalization
+// is applied unconditionally to every scanned file, regardless of whether
+// emoji were found or replaced. This guarantees that redundant whitespace
+// is always cleaned in a single pass.
 //
 // Files matching ExemptFiles, ExemptSuffixes, or outside the
 // Extensions filter are skipped. Directories matching SkipDirs are not entered.
@@ -323,11 +312,7 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 
 		// Clean the file content. Emoji removal (or replacement-based
 		// substitution) runs first. Whitespace normalization, when enabled,
-		// is applied only if the emoji/replacement step actually changed
-		// the content -- matching the documented intent of cleaning up
-		// whitespace "left behind" by emoji removal.  When neither emoji
-		// removal nor replacements are active, normalization is the sole
-		// purpose of the scan and runs unconditionally.
+		// runs unconditionally on the result.
 		var cleaned string
 		if replacer != nil {
 			cleaned = Demojify(replacer.Replace(original))
@@ -345,10 +330,7 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 		}
 
 		if cfg.Options.NormalizeWhitespace {
-			emojiActive := replacer != nil || cfg.Options.RemoveEmojis
-			if !emojiActive || cleaned != original {
-				cleaned = Normalize(cleaned)
-			}
+			cleaned = Normalize(cleaned)
 		}
 
 		if cleaned != original {
@@ -394,8 +376,8 @@ func buildMatches(text string, replacements map[string]string, keys []string) []
 			for _, k := range keys {
 				if strings.HasPrefix(line[i:], k) {
 					matches = append(matches, Match{
-						Sequence:    k,
-						Emoji:       k,
+						Sequence: k,
+
 						Replacement: replacements[k],
 						Line:        lineIdx + 1,
 						Column:      i,
@@ -413,8 +395,8 @@ func buildMatches(text string, replacements map[string]string, keys []string) []
 			if loc := emojiRE.FindStringIndex(line[i:]); loc != nil && loc[0] == 0 {
 				seq := line[i : i+loc[1]]
 				matches = append(matches, Match{
-					Sequence:    seq,
-					Emoji:       seq,
+					Sequence: seq,
+
 					Replacement: "",
 					Line:        lineIdx + 1,
 					Column:      i,

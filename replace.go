@@ -54,6 +54,10 @@ func FindAll(text string) []string {
 // substitutions and removals performed (mapped sequences from the replacement
 // map plus any residual emoji codepoints stripped by [Demojify]).
 //
+// Binary files (detected by a NUL byte in the first 512 bytes) are silently
+// skipped and return (0, nil), matching the behaviour of [ScanDir] and
+// [ScanFile].
+//
 // ReplaceFile returns an error for any filesystem failure. When count is zero
 // the file is unchanged and no write is performed.
 // ReplaceFile is safe for concurrent use provided callers do not share path
@@ -62,6 +66,9 @@ func ReplaceFile(path string, replacements map[string]string) (count int, err er
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return 0, err
+	}
+	if isBinary(data) {
+		return 0, nil
 	}
 	original := string(data)
 

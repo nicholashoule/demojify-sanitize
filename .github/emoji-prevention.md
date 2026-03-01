@@ -43,16 +43,15 @@ if demojify.ContainsEmoji(string(data)) {
 
 ## Automated enforcement: dogfooding tests
 
-[`repo_test.go`](../repo_test.go) runs five tests on every `go test` invocation,
+[`repo_test.go`](../repo_test.go) runs four tests on every `go test` invocation,
 using this module's own API against the repository's files:
 
 | Test | What it checks |
 |------|---------------|
 | `TestRepoProductionSourceFilesEmojiClean` | Every non-test `.go` file contains no literal emoji |
 | `TestRepoAllDocsEmojiClean` | Every `.md` file (excluding files under `docs/`) contains no emoji -- covers README.md, CHANGELOG.md, CONTRIBUTING.md, SECURITY.md, and all `.github/` files |
-| `TestRepoProductionFilesIdempotent` | `Sanitize` (emoji removal + whitespace normalization) on every production file is a no-op -- files are already clean |
+| `TestRepoProductionFilesIdempotent` | `Sanitize` (emoji removal only) on every production file is a no-op -- files are already clean |
 | `TestRepoTestFilesContainEmoji` | Meta-test: at least one `*_test.go` file contains literal emoji, proving test data is present |
-| `TestRepoAgentOutputRemediation` | Proves the module detects and fully cleans realistic rogue AI output, and that the result is idempotent |
 
 Files are discovered dynamically via `filepath.WalkDir` -- no hardcoded lists.
 Adding a new file to the repo automatically brings it under enforcement.

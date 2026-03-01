@@ -18,7 +18,7 @@ func isBinary(data []byte) bool {
 	if len(snip) > sniffSize {
 		snip = snip[:sniffSize]
 	}
-	return bytes.ContainsRune(snip, 0)
+	return bytes.IndexByte(snip, 0) >= 0
 }
 
 // sortByLenDesc sorts a string slice in place by descending byte length

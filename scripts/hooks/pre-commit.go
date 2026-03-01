@@ -18,18 +18,39 @@ import (
 )
 
 func main() {
+	if !checkFmt() || !checkVet() {
+		os.Exit(1)
+	}
+}
+
+// checkFmt runs gofmt -s -l . and reports unformatted files.
+func checkFmt() bool {
 	out, err := exec.Command("gofmt", "-s", "-l", ".").Output()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[FAIL] gofmt: %v\n", err)
-		os.Exit(1)
+		return false
 	}
 	files := strings.TrimSpace(string(out))
 	if files == "" {
-		os.Exit(0)
+		fmt.Fprintln(os.Stderr, "[PASS] gofmt")
+		return true
 	}
 	fmt.Fprintln(os.Stderr, "[FAIL] gofmt: the following files need formatting (run: make fmt):")
 	for _, f := range strings.Split(files, "\n") {
 		fmt.Fprintf(os.Stderr, "  %s\n", f)
 	}
-	os.Exit(1)
+	return false
+}
+
+// checkVet runs go vet ./... and reports any issues.
+func checkVet() bool {
+	cmd := exec.Command("go", "vet", "./...")
+	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintln(os.Stderr, "[FAIL] go vet (run: make vet)")
+		return false
+	}
+	fmt.Fprintln(os.Stderr, "[PASS] go vet")
+	return true
 }

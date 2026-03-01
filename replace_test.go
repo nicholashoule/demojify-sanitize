@@ -244,6 +244,27 @@ func TestReplaceFile(t *testing.T) {
 			t.Error("expected error for nonexistent file, got nil")
 		}
 	})
+
+	t.Run("binary file is skipped", func(t *testing.T) {
+		dir := t.TempDir()
+		// Embed a NUL byte in the first 512 bytes so isBinary returns true.
+		path := writeTempFile(t, dir, "data.bin", "hello\x00\u2705 world\n")
+		count, err := demojify.ReplaceFile(path, map[string]string{"\u2705": "[PASS]"})
+		if err != nil {
+			t.Fatalf("ReplaceFile: %v", err)
+		}
+		if count != 0 {
+			t.Errorf("count = %d, want 0 for binary file", count)
+		}
+		// Verify the file was not modified.
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("ReadFile: %v", err)
+		}
+		if string(data) != "hello\x00\u2705 world\n" {
+			t.Errorf("binary file was modified: %q", string(data))
+		}
+	})
 }
 
 func TestFindAllMapped(t *testing.T) {

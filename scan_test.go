@@ -3,6 +3,7 @@ package demojify_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -483,6 +484,23 @@ func TestScanFileSkipsBinaryFiles(t *testing.T) {
 	}
 }
 
+func TestScanFileNormalizeWhitespace(t *testing.T) {
+	root := t.TempDir()
+	path := writeTempFile(t, root, "messy.txt", "\U0001F680 Deploy  complete!\n\n\n\nDone.\n")
+
+	f, err := demojify.ScanFile(path, demojify.DefaultOptions())
+	if err != nil {
+		t.Fatalf("ScanFile: %v", err)
+	}
+	if f == nil {
+		t.Fatal("expected finding, got nil")
+	}
+	want := "Deploy complete!\n\nDone."
+	if f.Cleaned != want {
+		t.Errorf("Cleaned = %q, want %q", f.Cleaned, want)
+	}
+}
+
 func TestScanDirErrorOnBadRoot(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "no-such-dir", "deep")
 	cfg := demojify.ScanConfig{
@@ -494,12 +512,12 @@ func TestScanDirErrorOnBadRoot(t *testing.T) {
 	}
 }
 
-// TestScanDirNormalizeGatedOnEmojiChange verifies that NormalizeWhitespace
-// only applies to files where the emoji/replacement step actually changed the
-// content, preventing false-positive findings for files with irregular
-// whitespace but no emoji.
-func TestScanDirNormalizeGatedOnEmojiChange(t *testing.T) {
-	t.Run("whitespace-only file is not a finding when emoji removal is active", func(t *testing.T) {
+// TestScanDirNormalizeUnconditional verifies that NormalizeWhitespace
+// runs unconditionally when enabled, producing findings for any file
+// whose whitespace can be collapsed -- regardless of whether the
+// emoji/replacement step also changed the content.
+func TestScanDirNormalizeUnconditional(t *testing.T) {
+	t.Run("whitespace-only file is a finding when emoji removal and normalization are active", func(t *testing.T) {
 		root := t.TempDir()
 		// Irregular whitespace (double spaces) but no emoji.
 		writeTempFile(t, root, "spaces.txt", "hello  world\n")
@@ -515,9 +533,13 @@ func TestScanDirNormalizeGatedOnEmojiChange(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ScanDir: %v", err)
 		}
-		if len(findings) != 0 {
-			t.Errorf("got %d findings, want 0 (no emoji, normalization should be skipped)",
+		if len(findings) != 1 {
+			t.Fatalf("got %d findings, want 1 (normalization runs unconditionally)",
 				len(findings))
+		}
+		want := "hello world"
+		if findings[0].Cleaned != want {
+			t.Errorf("Cleaned = %q, want %q", findings[0].Cleaned, want)
 		}
 	})
 
@@ -571,7 +593,7 @@ func TestScanDirNormalizeGatedOnEmojiChange(t *testing.T) {
 		}
 	})
 
-	t.Run("replacement path: whitespace-only file is not a finding", func(t *testing.T) {
+	t.Run("replacement path: whitespace-only file is a finding", func(t *testing.T) {
 		root := t.TempDir()
 		writeTempFile(t, root, "spaces.txt", "hello  world\n")
 
@@ -586,9 +608,13 @@ func TestScanDirNormalizeGatedOnEmojiChange(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ScanDir: %v", err)
 		}
-		if len(findings) != 0 {
-			t.Errorf("got %d findings, want 0 (no emoji/replacements matched, normalization skipped)",
+		if len(findings) != 1 {
+			t.Fatalf("got %d findings, want 1 (normalization runs unconditionally)",
 				len(findings))
+		}
+		want := "hello world"
+		if findings[0].Cleaned != want {
+			t.Errorf("Cleaned = %q, want %q", findings[0].Cleaned, want)
 		}
 	})
 
@@ -690,9 +716,6 @@ func TestScanDirCollectMatches(t *testing.T) {
 	if m0.Sequence != "\u2705" {
 		t.Errorf("Matches[0].Sequence = %q, want checkmark", m0.Sequence)
 	}
-	if m0.Emoji != m0.Sequence {
-		t.Errorf("Matches[0].Emoji = %q, want same as Sequence %q (deprecated field)", m0.Emoji, m0.Sequence)
-	}
 	if m0.Replacement != "[PASS]" {
 		t.Errorf("Matches[0].Replacement = %q, want [PASS]", m0.Replacement)
 	}
@@ -710,9 +733,6 @@ func TestScanDirCollectMatches(t *testing.T) {
 	m1 := f.Matches[1]
 	if m1.Sequence != "\U0001F680" {
 		t.Errorf("Matches[1].Sequence = %q, want rocket", m1.Sequence)
-	}
-	if m1.Emoji != m1.Sequence {
-		t.Errorf("Matches[1].Emoji = %q, want same as Sequence %q (deprecated field)", m1.Emoji, m1.Sequence)
 	}
 	if m1.Replacement != "" {
 		t.Errorf("Matches[1].Replacement = %q, want empty (unmapped)", m1.Replacement)
@@ -753,9 +773,6 @@ func TestScanDirCollectMatchesVariationSelector(t *testing.T) {
 	m := findings[0].Matches[0]
 	if m.Sequence != "\u26a0\ufe0f" {
 		t.Errorf("Sequence = %q, want combined sequence", m.Sequence)
-	}
-	if m.Emoji != m.Sequence {
-		t.Errorf("Emoji = %q, want same as Sequence %q (deprecated field)", m.Emoji, m.Sequence)
 	}
 	if m.Replacement != "WARNING:" {
 		t.Errorf("Replacement = %q, want WARNING:", m.Replacement)
@@ -818,9 +835,6 @@ func TestScanDirCollectMatchesNonEmojiKey(t *testing.T) {
 	m := f.Matches[0]
 	if m.Sequence != "\u2192" {
 		t.Errorf("Sequence = %q, want U+2192 arrow", m.Sequence)
-	}
-	if m.Emoji != m.Sequence {
-		t.Errorf("Emoji = %q, want same as Sequence %q (deprecated field)", m.Emoji, m.Sequence)
 	}
 	if m.Replacement != "->" {
 		t.Errorf("Replacement = %q, want \"->\"", m.Replacement)
@@ -944,9 +958,6 @@ func TestFindMatchesInFile(t *testing.T) {
 		if m0.Sequence != "\u2705" {
 			t.Errorf("matches[0].Sequence = %q, want checkmark", m0.Sequence)
 		}
-		if m0.Emoji != m0.Sequence {
-			t.Errorf("matches[0].Emoji = %q, want same as Sequence %q (deprecated field)", m0.Emoji, m0.Sequence)
-		}
 		if m0.Replacement != "[PASS]" {
 			t.Errorf("matches[0].Replacement = %q, want [PASS]", m0.Replacement)
 		}
@@ -966,9 +977,6 @@ func TestFindMatchesInFile(t *testing.T) {
 		}
 		if m1.Sequence != "\u274c" {
 			t.Errorf("matches[1].Sequence = %q, want cross mark", m1.Sequence)
-		}
-		if m1.Emoji != m1.Sequence {
-			t.Errorf("matches[1].Emoji = %q, want same as Sequence %q (deprecated field)", m1.Emoji, m1.Sequence)
 		}
 		if m1.Replacement != "[FAIL]" {
 			t.Errorf("matches[1].Replacement = %q, want [FAIL]", m1.Replacement)
@@ -1027,4 +1035,78 @@ func TestFindMatchesInFile(t *testing.T) {
 			t.Errorf("got %d matches, want nil for binary file", len(matches))
 		}
 	})
+}
+
+// TestScanDirUnreadableFile verifies that ScanDir returns an error when it
+// encounters a file that cannot be read. On Windows, os.Chmod does not
+// support removing read permission, so this test is skipped there.
+func TestScanDirUnreadableFile(t *testing.T) {
+	if isWindows() {
+		t.Skip("os.Chmod cannot remove read permission on Windows")
+	}
+
+	root := t.TempDir()
+	path := writeTempFile(t, root, "secret.md", "\u2705 hidden\n")
+	if err := os.Chmod(path, 0o000); err != nil {
+		t.Fatalf("Chmod: %v", err)
+	}
+
+	// When running as root (or with equivalent privileges), chmod 000 may
+	// not actually prevent reads. Detect this and skip.
+	if _, err := os.ReadFile(path); err == nil {
+		t.Skip("chmod 000 did not prevent reading (likely running as root)")
+	}
+
+	cfg := demojify.DefaultScanConfig()
+	cfg.Root = root
+	cfg.ExemptSuffixes = nil
+
+	_, err := demojify.ScanDir(cfg)
+	if err == nil {
+		t.Error("expected error for unreadable file, got nil")
+	}
+}
+
+// TestScanDirSymlink verifies that ScanDir follows symbolic links to
+// regular files and reports findings in them.
+func TestScanDirSymlink(t *testing.T) {
+	if isWindows() {
+		t.Skip("creating symlinks on Windows requires elevated privileges")
+	}
+
+	root := t.TempDir()
+	sub := writeTempDir(t, root, "real")
+	writeTempFile(t, sub, "status.md", "\u2705 passed\n")
+
+	// Create a symlink in root pointing to the real file.
+	link := filepath.Join(root, "link.md")
+	if err := os.Symlink(filepath.Join(sub, "status.md"), link); err != nil {
+		t.Fatalf("Symlink: %v", err)
+	}
+
+	cfg := demojify.DefaultScanConfig()
+	cfg.Root = root
+	cfg.ExemptSuffixes = nil
+
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+
+	// Should find the symlinked file (WalkDir follows symlinks to files).
+	found := false
+	for _, f := range findings {
+		if strings.Contains(f.Path, "link.md") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected ScanDir to follow symlink and report finding for link.md")
+	}
+}
+
+// isWindows reports whether the current platform is Windows.
+func isWindows() bool {
+	return runtime.GOOS == "windows"
 }

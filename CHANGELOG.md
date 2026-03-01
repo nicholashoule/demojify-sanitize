@@ -5,62 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0] - Unreleased
 
 ### Added
 
-- `DefaultReplacements()` expanded from ~97 to ~137 entries across twelve
-  categories. New entries:
-  - **Information symbol** -- U+2139 -> `[INFO]`
-  - **Severity circles** -- U+1F534 -> `[ERROR]`, U+1F7E0 -> `[WARNING]`,
-    U+1F7E1 -> `[CAUTION]`, U+1F7E2 -> `[OK]`, U+1F535 -> `[INFO]`,
-    U+26AB/U+26AA (medium circles) -> `[INACTIVE]`
-  - **Stop / prohibition** -- U+1F6D1 -> `[STOP]`, U+26D4 -> `[NO ENTRY]`,
-    U+1F6AB -> `[PROHIBITED]`
-  - **CI/CD workflow** -- U+1F680 -> `[DEPLOY]`, U+1F4E6 -> `[PACKAGE]`,
-    U+1F389 -> `[SUCCESS]`, U+2728 -> `[NEW]`, U+1F3C1 -> `[DONE]`,
-    U+1F527 -> `[FIX]`, U+1F6E0 -> `[TOOLS]`, U+267B -> `[RECYCLE]`,
-    U+1F4BE -> `[SAVE]`, U+1F525 -> `[HOT]`, U+1F4AF -> `[100]`
-  - **Math operators** -- U+2716 -> `x`, U+2795 -> `+`, U+2796 -> `-`,
-    U+2797 -> `/`, U+267E -> `[INFINITY]`
-  - **Expanded FE0F variants** -- added variation-selector-suffixed forms for
-    U+2705, U+274C, U+2757, U+2755, U+23F3, U+231B, U+23F1
-- `emojiRE` in `demojify.go` extended with two new ranges:
-  - **U+2139** -- Information Source, previously undetected by `Demojify` /
-    `ContainsEmoji`
-  - **U+E0020–U+E007F** -- Tags block; covers subdivision flag sequences
-    (England, Scotland, Wales) that slipped through before
-- `Options.AllowedEmojis []string` -- preserves exact emoji strings during
-  removal (complements `AllowedRanges` which works at the Unicode block level)
+- Large-document benchmark suite (`benchmark_test.go`) covering all public
+  APIs at 10 KB, 100 KB, and 1 MB with throughput and allocation reporting
+- Binary-file detection in `ReplaceFile`, matching `ScanDir`/`ScanFile`
+  behaviour
+- `ExampleScanDir`, `ExampleScanFile`, `ExampleWriteFinding`,
+  `ExampleSanitizeFile` in `example_test.go`
+- Driver program (`docs/examples/driver/main.go`) exercising every major API
+- Permission-denied and symlink test cases for `ScanDir` (skipped on Windows)
 
-### Changed (previously listed)
+### Changed
 
-- `Normalize` rewritten to preserve leading indentation on each line. Only
-  consecutive spaces/tabs after the first non-whitespace character are collapsed.
-  This makes `-normalize` safe for Markdown nested lists, indented code blocks,
-  and aligned source comments.
-- `ScanConfig` struct -- configures directory/file exemptions (`SkipDirs`,
-  `ExemptFiles`, `ExemptSuffixes`), extension filters, and sanitization
-  `Options` for file-level scanning.
-- `DefaultScanConfig()` -- returns a config suitable for Go module and AI-agent
-  repos (skips `.git/`, `vendor/`, `node_modules/`; exempts `*_test.go`; scans
-  all file types by default). Set `Extensions` to restrict to specific types.
-- `ScanDir(ScanConfig) ([]Finding, error)` -- walks a directory tree and
-  returns a `Finding` for every file whose content would change after
-  sanitization.
-- `ScanFile(path, Options) (*Finding, error)` -- checks a single file and
-  returns a `Finding` or nil if already clean.
-- `Finding` struct with `Path`, `HasEmoji`, `Original`, and `Cleaned` fields.
-- `Options.AllowedRanges []*unicode.RangeTable` -- preserves specific emoji
-  codepoints during removal while stripping all others (backward-compatible;
-  `nil` default removes everything as before).
-- `repo_test.go` -- dogfooding tests that validate the entire repository using
-  the module's own API (`ContainsEmoji`, `Sanitize`). Four tests:
-  `TestRepoProductionSourceFilesEmojiClean`, `TestRepoAllDocsEmojiClean`,
-  `TestRepoProductionFilesIdempotent`, `TestRepoTestFilesContainEmoji`.
-- `make fmt-check` target and CI `Format check` step enforcing `gofmt -s`.
-- Apache License 2.0 (`LICENSE` file).
-- Windows note in `Makefile` and `CONTRIBUTING.md`: race detector requires
-  CGO and gcc.
+- `isBinary` uses `bytes.IndexByte` instead of `bytes.ContainsRune` for
+  faster byte-level detection
+- `ScanDir` normalizes whitespace unconditionally when enabled, rather than
+  gating on emoji presence
+- CLI documentation (`docs/cli.md`) aligned with actual flag behaviour
 
-[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.1.0...HEAD
+### Removed
+
+- `Match.Emoji` deprecated field -- use `Match.Sequence`
+
+## [0.1.0] - 2026-03-01
+
+### Added
+
+- `Demojify(string) string` -- strip all emoji codepoints
+- `ContainsEmoji(string) bool` -- detect emoji presence
+- `Normalize(string) string` -- collapse redundant whitespace, preserve
+  leading indentation
+- `Sanitize(string, Options) string` -- configurable pipeline (strip +
+  normalize)
+- `SanitizeFile(string, Options) (bool, error)` -- sanitize a file atomically
+- `Options` / `DefaultOptions()` -- pipeline configuration
+- `Options.AllowedRanges` -- preserve specific Unicode blocks during removal
+- `Options.AllowedEmojis` -- preserve exact emoji strings during removal
+- `Replace(string, map) string` -- substitute emoji with text equivalents
+- `ReplaceFile(string, map) (int, error)` -- replace emoji in a file
+- `ReplaceCount(string, map) (string, int)` -- replace and return count
+- `FindAll(string) []string` -- distinct emoji sequences in text
+- `FindAllMapped(string, map) []string` -- mapped keys found in text
+- `DefaultReplacements() map[string]string` -- ~137 emoji-to-text entries
+- `ScanConfig` / `DefaultScanConfig()` -- scanner configuration with
+  directory/file exemptions and extension filters
+- `ScanDir(ScanConfig) ([]Finding, error)` -- walk directory tree
+- `ScanFile(string, Options) (*Finding, error)` -- check single file
+- `FindMatchesInFile(string, map) ([]Match, error)` -- per-occurrence detail
+- `Finding` / `Match` structs for scan results
+- `WriteFinding(string, Finding) (bool, error)` -- atomic write-back
+- `cmd/demojify` CLI with `-root`, `-fix`, `-sub`, `-normalize`, `-quiet`,
+  `-exts` flags
+- `repo_test.go` dogfooding tests (scan repo with own API)
+- `example_test.go` with 17 runnable examples for pkg.go.dev
+- Apache License 2.0
+
+[0.2.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/nicholashoule/demojify-sanitize/releases/tag/v0.1.0
