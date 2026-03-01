@@ -1,6 +1,8 @@
 package demojify_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"unicode"
 
@@ -87,4 +89,80 @@ func TestSanitize(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSanitizeFile(t *testing.T) {
+	t.Run("file with emoji is sanitized and written back", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "dirty.txt")
+		if err := os.WriteFile(path, []byte("deploy \U0001F680 done\n"), 0o644); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
+		changed, err := demojify.SanitizeFile(path, demojify.Options{RemoveEmojis: true})
+		if err != nil {
+			t.Fatalf("SanitizeFile: %v", err)
+		}
+		if !changed {
+			t.Error("changed = false, want true")
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("ReadFile: %v", err)
+		}
+		want := "deploy  done\n"
+		if string(data) != want {
+			t.Errorf("file content = %q, want %q", string(data), want)
+		}
+	})
+
+	t.Run("clean file returns false and is not written", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "clean.txt")
+		content := "no emoji here"
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
+		info1, _ := os.Stat(path)
+		changed, err := demojify.SanitizeFile(path, demojify.DefaultOptions())
+		if err != nil {
+			t.Fatalf("SanitizeFile: %v", err)
+		}
+		if changed {
+			t.Error("changed = true, want false for clean file")
+		}
+		info2, _ := os.Stat(path)
+		if !info2.ModTime().Equal(info1.ModTime()) {
+			t.Error("clean file was modified unexpectedly")
+		}
+	})
+
+	t.Run("file permissions are preserved", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "perms.txt")
+		if err := os.WriteFile(path, []byte("check \u2705\n"), 0o600); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
+		infoBefore, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("Stat before: %v", err)
+		}
+		wantPerm := infoBefore.Mode().Perm()
+		if _, err := demojify.SanitizeFile(path, demojify.Options{RemoveEmojis: true}); err != nil {
+			t.Fatalf("SanitizeFile: %v", err)
+		}
+		infoAfter, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("Stat after: %v", err)
+		}
+		if infoAfter.Mode().Perm() != wantPerm {
+			t.Errorf("permissions changed: got %o, want %o", infoAfter.Mode().Perm(), wantPerm)
+		}
+	})
+
+	t.Run("nonexistent file returns error", func(t *testing.T) {
+		_, err := demojify.SanitizeFile("/nonexistent/path/no-file.txt", demojify.DefaultOptions())
+		if err == nil {
+			t.Error("expected error for nonexistent file, got nil")
+		}
+	})
 }

@@ -23,6 +23,15 @@ import demojify "github.com/nicholashoule/demojify-sanitize"
 clean := demojify.Sanitize(text, demojify.DefaultOptions())
 ```
 
+A ready-to-run CLI example lives in [cmd/demojify/main.go](cmd/demojify/main.go).
+It audits a directory tree for emoji, reports every occurrence with file, line,
+and column, and optionally rewrites affected files (`-fix`) or substitutes emoji
+with text tokens (`-sub`).
+
+```bash
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify -root . -sub
+```
+
 ## Integration patterns
 
 ### AI response post-processing
@@ -83,7 +92,127 @@ for _, f := range findings {
 }
 ```
 
+### Substitution -- replace emoji with meaningful text
+
+Use `DefaultReplacements()` to map emoji to text equivalents, then write
+changed files back atomically:
+
+```go
+// One-shot string substitution.
+repl := demojify.DefaultReplacements()
+clean := demojify.Replace("\u2705 tests passed, \u274c build failed", repl)
+// "[PASS] tests passed, [FAIL] build failed"
+
+// Rewrite a file in place (no write when nothing changes).
+n, err := demojify.ReplaceFile("output.log", repl)
+fmt.Printf("replaced %d occurrence(s)\n", n)
+
+// Scan a directory, then substitute each dirty file.
+cfg := demojify.DefaultScanConfig()
+cfg.Root = "."
+cfg.Replacements = demojify.DefaultReplacements()
+findings, _ := demojify.ScanDir(cfg)
+for _, f := range findings {
+ demojify.ReplaceFile(f.Path, repl)
+}
+```
+
+Callers needing per-occurrence detail (line, column, surrounding context)
+can enable `CollectMatches` on the scan config, or call `FindMatchesInFile`
+directly:
+
+```go
+matches, err := demojify.FindMatchesInFile("output.log", demojify.DefaultReplacements())
+for _, m := range matches {
+ fmt.Printf("line %d col %d: %q -> %q\n", m.Line, m.Column, m.Emoji, m.Replacement)
+}
+```
+
 ## API
+
+### Substitution functions
+
+#### `Replace(text string, replacements map[string]string) string`
+
+Substitutes emoji codepoints using the provided map (longest key wins, so
+variation-selector sequences like `"\u26a0\ufe0f"` are matched before their bare
+codepoint), then strips any remaining unmatched emoji via `Demojify`.
+A nil or empty map behaves identically to `Demojify`.
+
+```go
+repl := demojify.DefaultReplacements()
+demojify.Replace("\u2705 OK \u274c FAIL", repl)
+// "[PASS] OK [FAIL] FAIL"
+```
+
+#### `ReplaceFile(path string, replacements map[string]string) (count int, err error)`
+
+Reads `path`, applies `Replace`, and atomically writes the result back only
+if changes were made. Original file permissions are preserved. Returns 0 and
+no write when the file is already clean.
+
+#### `ReplaceCount(text string, replacements map[string]string) (string, int)`
+
+Applies `Replace` and returns both the cleaned string and the total number of
+substitutions and removals performed. Equivalent to calling `Replace` and
+then counting separately, but in a single pass.
+
+#### `FindAll(text string) []string`
+
+Returns the distinct emoji codepoint sequences found in `text` in
+first-occurrence order. Each sequence appears at most once. Uses `emojiRE`
+(not a replacement map), so it finds every emoji regardless of mapping.
+
+#### `FindAllMapped(text string, replacements map[string]string) []string`
+
+Returns only the distinct keys from `replacements` that appear in `text`,
+in first-occurrence order. Uses the same longest-first greedy walk as
+`Replace`, so `"\u26a0\ufe0f"` wins over bare `"\u26a0"` when both are in the map.
+
+```go
+repl := demojify.DefaultReplacements()
+demojify.FindAllMapped("\u2705 pass \u274c fail", repl)
+// ["\u2705", "\u274c"]
+```
+
+#### `FindMatchesInFile(path string, replacements map[string]string) ([]Match, error)`
+
+Reads `path` and returns a `Match` for every emoji codepoint occurrence,
+with `Replacement` populated from the map. Returns nil (no error) when the
+file contains no emoji.
+
+#### `DefaultReplacements() map[string]string`
+
+Returns a fresh copy of the built-in ~100-entry emoji-to-text map. Callers
+may add, remove, or override entries without affecting other callers.
+
+Categories covered:
+
+| Category | Examples |
+|---|---|
+| Warning / alerts | U+26A0 (warning sign) -> `WARNING`, U+203C (double exclamation) -> `[ALERT]` |
+| Status symbols | U+2705 (check mark) -> `[PASS]`, U+274C (cross mark) -> `[FAIL]`, U+2757 -> `[ALERT]` |
+| Favorites / annotations | U+2B50 (star) -> `[FEATURED]`, U+1F4A1 (light bulb) -> `[TIP]`, U+1F4CC (pushpin) -> `[PINNED]` |
+| Tech / deployment | U+1F4BB (laptop) -> `Code`, U+1F5A5 (computer) -> `Server`, U+2699 (gear) -> `Configuration` |
+| Arrows | U+2192 (right arrow) -> `->`, U+2190 (left arrow) -> `<-`, U+21D2 (double right) -> `=>` |
+| Geometric shapes | U+25CF (black circle) -> `*`, U+25CB (white circle) -> `o`, U+25B2 (up triangle) -> `^` |
+| Checkboxes | U+2610 (ballot box) -> `[ ]`, U+2611 (checked box) -> `[x]`, U+2612 (X box) -> `[x]` |
+| Dingbats | U+2022 (bullet) -> `*`, U+2764 (heart) -> `<3`, U+2666 (diamond suit) -> `<>` |
+
+#### `Match` struct
+
+Returned by `FindMatchesInFile` and populated in `Finding.Matches` when
+`ScanConfig.CollectMatches` is true:
+
+```go
+type Match struct {
+ Emoji string // matched codepoint sequence
+ Replacement string // value from replacements map; empty if not mapped
+ Line int // 1-based line number
+ Column int // 0-based byte offset within the line
+ Context string // full line text
+}
+```
 
 ### `Demojify(text string) string`
 
@@ -168,11 +297,13 @@ content would change after sanitization. Configure exemptions through
 ```go
 type ScanConfig struct {
  Root string // directory to scan ("." if empty)
- SkipDirs []string // directory prefixes to skip (e.g., ".git/", "vendor/")
+ SkipDirs []string // directory names to skip at any depth (e.g., ".git/", "vendor/")
  ExemptFiles []string // base filenames to skip (e.g., "README.md")
  ExemptSuffixes []string // file suffixes to skip (e.g., "_test.go")
  Extensions []string // file types to scan; nil (default) = all files
  Options Options // sanitization pipeline applied to each file
+ Replacements map[string]string // if set, ScanDir uses Replace instead of Sanitize
+ CollectMatches bool // if true, populate Finding.Matches for each finding
 }
 
 func DefaultScanConfig() ScanConfig
@@ -204,7 +335,8 @@ type Finding struct {
  Path string // forward-slash normalized path
  HasEmoji bool // ContainsEmoji detected emoji
  Original string // content before sanitization
- Cleaned string // content after Sanitize
+ Cleaned string // content after Sanitize or Replace
+ Matches []Match // populated when ScanConfig.CollectMatches is true
 }
 ```
 
