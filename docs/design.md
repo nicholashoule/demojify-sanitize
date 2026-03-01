@@ -93,6 +93,44 @@ approach and does not weaken the library's error-handling contract.
 module repo. The scanner reuses the same `Options` struct and `Sanitize` pipeline
 that callers already know, keeping the API surface consistent.
 
+## Substitution pipeline
+
+The `Replace` family of functions (`Replace`, `ReplaceFile`, `ReplaceCount`,
+`FindAllMapped`, `FindMatchesInFile`) addresses a common pattern: rather than
+silently removing emoji, callers want to map them to readable text equivalents
+(e.g., `[PASS]`, `WARNING`, `->`) so that context is preserved in plain-text
+output.
+
+**Why `Replace` delegates to `Demojify` after substitution:**
+The replacement map is curated and finite. Inputs may contain emoji outside
+the map -- especially supplementary block emoji (U+1F000–U+1FAFF) added in
+recent Unicode versions. Rather than silently producing garbled output,
+`Replace` passes the substituted text through `Demojify` as a residual cleanup
+step. Callers get a clean string regardless of whether every codepoint was in
+their map.
+
+**Why longest-key matching is required:**
+Many emoji appear in both a bare form (e.g., U+26A0 WARNING SIGN) and a
+variation-selector form (U+26A0 U+FE0F). If the bare codepoint were matched
+first, the variation selector U+FE0F would remain and be stripped by `Demojify`
+as a residual, leaving a stray space or no-op character. Processing keys in
+descending byte-length order (via `strings.NewReplacer` for `Replace`, and a
+explicit linear scan for `FindAllMapped`) ensures multi-codepoint sequences are
+always consumed atomically.
+
+**Why `DefaultReplacements()` returns a copy:**
+A shared global map is not safe for concurrent mutation. Returning a fresh
+copy on every call lets each caller add, remove, or override entries without
+affecting other goroutines or call sites. The copy cost is negligible (~100
+entries) compared to the I/O in `ReplaceFile` or the regex in `Demojify`.
+
+**Why `ReplaceFile` uses an atomic rename:**
+Writing directly to the target file leaves a window where a crash or
+interruption would produce a truncated file. Writing to a sibling temp file
+and then calling `os.Rename` (which is atomic on POSIX filesystems and
+best-effort on Windows) means the file is either fully updated or fully
+unchanged.
+
 ## Scope boundaries
 
 The library intentionally does not:

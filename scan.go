@@ -45,6 +45,20 @@ type ScanConfig struct {
 	// Options configures the sanitization pipeline applied to each file's
 	// content. See [Options] and [DefaultOptions].
 	Options Options
+
+	// Replacements maps emoji (or other Unicode) sequences to text substitutes.
+	// When non-nil, [ScanDir] cleans files with [Replace] instead of [Sanitize],
+	// so matched sequences are substituted before any residual emoji are stripped.
+	// Longer keys are matched before shorter ones (variation-selector aware).
+	// Has no effect on [ScanFile], which accepts only [Options].
+	Replacements map[string]string
+
+	// CollectMatches controls whether [ScanDir] populates [Finding.Matches] for
+	// each file that has emoji. When true, every emoji codepoint occurrence is
+	// recorded with its line, column, and surrounding context. Setting this flag
+	// carries a small per-file allocation cost; leave it false for bulk audits
+	// that only need the cleaned text.
+	CollectMatches bool
 }
 
 // DefaultScanConfig returns a ScanConfig suitable for auditing a typical Go
@@ -73,6 +87,26 @@ func DefaultScanConfig() ScanConfig {
 	}
 }
 
+// Match describes a single emoji occurrence within a scanned file.
+// It is populated in [Finding.Matches] when [ScanConfig.CollectMatches] is true.
+type Match struct {
+	// Emoji is the matched codepoint sequence (e.g., U+2705 for a check mark).
+	Emoji string
+
+	// Replacement is the value from [ScanConfig.Replacements] for this
+	// sequence, or an empty string if the sequence is not mapped.
+	Replacement string
+
+	// Line is the 1-based line number where the match was found.
+	Line int
+
+	// Column is the 0-based byte offset within the line.
+	Column int
+
+	// Context is the full line text containing the match.
+	Context string
+}
+
 // Finding describes a file whose content differs from its sanitized form.
 // Callers can inspect [Finding.HasEmoji] to determine if emoji was detected
 // and write [Finding.Cleaned] back to the file to remediate it.
@@ -95,6 +129,11 @@ type Finding struct {
 	// Cleaned is the file's content after applying [Sanitize] with the
 	// configured [Options].
 	Cleaned string
+
+	// Matches holds per-occurrence detail for every emoji codepoint found in
+	// Original. It is only populated when [ScanConfig.CollectMatches] is true;
+	// otherwise it is nil.
+	Matches []Match
 }
 
 // ScanDir walks the directory tree rooted at cfg.Root and returns a [Finding]
@@ -185,21 +224,55 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 			return readErr
 		}
 		original := string(data)
-		cleaned := Sanitize(original, cfg.Options)
+
+		var cleaned string
+		if len(cfg.Replacements) > 0 {
+			cleaned = Replace(original, cfg.Replacements)
+			if cfg.Options.NormalizeWhitespace {
+				cleaned = Normalize(cleaned)
+			}
+		} else {
+			cleaned = Sanitize(original, cfg.Options)
+		}
 
 		if cleaned != original {
-			findings = append(findings, Finding{
+			f := Finding{
 				Path:     norm,
 				HasEmoji: ContainsEmoji(original),
 				Original: original,
 				Cleaned:  cleaned,
-			})
+			}
+			if cfg.CollectMatches {
+				f.Matches = buildMatches(original, cfg.Replacements)
+			}
+			findings = append(findings, f)
 		}
 
 		return nil
 	})
 
 	return findings, err
+}
+
+// buildMatches scans text line by line and returns a Match for every emoji
+// codepoint matched by emojiRE. Each Match records the matched sequence, its
+// 1-based line and 0-based byte-column within that line, the full line as
+// context, and the mapped replacement string (empty if not in replacements).
+func buildMatches(text string, replacements map[string]string) []Match {
+	var matches []Match
+	for lineIdx, line := range strings.Split(text, "\n") {
+		for _, loc := range emojiRE.FindAllStringIndex(line, -1) {
+			seq := line[loc[0]:loc[1]]
+			matches = append(matches, Match{
+				Emoji:       seq,
+				Replacement: replacements[seq],
+				Line:        lineIdx + 1,
+				Column:      loc[0],
+				Context:     line,
+			})
+		}
+	}
+	return matches
 }
 
 // ScanFile checks a single file against opts and returns a [Finding] if the

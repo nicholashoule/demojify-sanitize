@@ -99,3 +99,82 @@ func ExampleSanitize_markdownFiles() {
 		}
 	}
 }
+
+func ExampleFindAll() {
+	text := "build \u2705 done, launch \U0001F680 complete, check again \u2705"
+	fmt.Println(demojify.FindAll(text))
+	// Output:
+	// [✅ 🚀]
+}
+
+func ExampleReplace() {
+	repl := map[string]string{
+		"\u2705": "[PASS]",
+		"\u274c": "[FAIL]",
+		"\u26a0": "WARNING",
+	}
+	fmt.Println(demojify.Replace("\u2705 tests passed, \u274c build failed", repl))
+	// Output:
+	// [PASS] tests passed, [FAIL] build failed
+}
+
+// ExampleReplace_defaultReplacements shows how to use the built-in
+// substitution map so callers do not need to maintain their own.
+func ExampleReplace_defaultReplacements() {
+	out := demojify.Replace("\u2705 tests passed, \u274c build failed, \u26a0 review needed", demojify.DefaultReplacements())
+	fmt.Println(out)
+	// Output:
+	// [PASS] tests passed, [FAIL] build failed, WARNING review needed
+}
+
+// ExampleReplaceFile shows how to apply a substitution map to a file in place.
+// This example is compiled but not executed (no Output comment).
+func ExampleReplaceFile() {
+	repl := map[string]string{
+		"\u2705":     "[PASS]",
+		"\u274c":     "[FAIL]",
+		"\u26a0":     "WARNING",
+		"\U0001F680": "[DEPLOY]",
+	}
+	n, err := demojify.ReplaceFile("output.log", repl)
+	if err != nil {
+		log.Printf("ReplaceFile: %v", err)
+		return
+	}
+	if n > 0 {
+		log.Printf("replaced %d emoji occurrence(s) in output.log", n)
+	}
+}
+
+func ExampleReplaceCount() {
+	repl := demojify.DefaultReplacements()
+	clean, n := demojify.ReplaceCount("\u2705 build OK, \u274c deploy failed", repl)
+	fmt.Printf("%s (%d change(s))\n", clean, n)
+	// Output:
+	// [PASS] build OK, [FAIL] deploy failed (2 change(s))
+}
+
+func ExampleFindAllMapped() {
+	repl := demojify.DefaultReplacements()
+	fmt.Println(demojify.FindAllMapped("\u2705 pass \u274c fail \u26a0 warn", repl))
+	// Output:
+	// [✅ ❌ ⚠]
+}
+
+// ExampleFindMatchesInFile shows how to get per-line match detail from a file.
+// This example is compiled but not executed (no Output comment).
+func ExampleFindMatchesInFile() {
+	repl := demojify.DefaultReplacements()
+	matches, err := demojify.FindMatchesInFile("output.log", repl)
+	if err != nil {
+		log.Printf("FindMatchesInFile: %v", err)
+		return
+	}
+	for _, m := range matches {
+		if m.Replacement != "" {
+			log.Printf("line %d col %d: %q -> %q", m.Line, m.Column, m.Emoji, m.Replacement)
+		} else {
+			log.Printf("line %d col %d: %q (unmapped -- will be stripped)", m.Line, m.Column, m.Emoji)
+		}
+	}
+}

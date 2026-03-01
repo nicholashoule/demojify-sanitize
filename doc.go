@@ -15,6 +15,30 @@
 //
 //	clean := demojify.Sanitize(text, demojify.DefaultOptions())
 //
+// # Emoji substitution
+//
+// Rather than stripping emoji, callers can substitute them with meaningful
+// text equivalents using the replacement functions:
+//
+//   - [Replace] substitutes codepoints using a caller-supplied map, then
+//     strips any residual emoji via [Demojify]. Longer keys match first.
+//   - [ReplaceFile] applies [Replace] to a file atomically; no write
+//     occurs when the file is already clean.
+//   - [ReplaceCount] applies [Replace] and also returns the substitution count.
+//   - [FindAll] returns distinct emoji sequences found in text.
+//   - [FindAllMapped] returns only mapped-key sequences, greedy longest-first.
+//   - [FindMatchesInFile] returns per-occurrence [Match] detail for a file.
+//   - [DefaultReplacements] returns a built-in ~100-entry emoji-to-text map
+//     covering status symbols, arrows, shapes, checkboxes, and dingbats.
+//
+// Typical usage:
+//
+//	repl := demojify.DefaultReplacements()
+//	clean := demojify.Replace(text, repl)
+//
+//	// or, to replace and count in one call:
+//	clean, n := demojify.ReplaceCount(text, repl)
+//
 // # File and directory scanning
 //
 //   - [ScanDir] walks a directory tree and returns a [Finding] for every
@@ -22,7 +46,9 @@
 //   - [ScanFile] checks a single file and returns a [Finding] if it needs
 //     sanitization, or nil if it is already clean.
 //   - [ScanConfig] configures directory/file exemptions, extension filters,
-//     and the sanitization [Options] applied to each file.
+//     the sanitization [Options], an optional [ScanConfig.Replacements] map
+//     (uses [Replace] instead of [Sanitize] when set), and
+//     [ScanConfig.CollectMatches] (populates [Finding.Matches] per file).
 //   - [DefaultScanConfig] returns a config that scans all file types with
 //     sensible directory and suffix exemptions.
 package demojify

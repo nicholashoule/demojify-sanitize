@@ -3,6 +3,7 @@ package demojify_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	demojify "github.com/nicholashoule/demojify-sanitize"
@@ -434,5 +435,222 @@ func TestScanDirErrorOnBadRoot(t *testing.T) {
 	_, err := demojify.ScanDir(cfg)
 	if err == nil {
 		t.Error("expected error for nonexistent root, got nil")
+	}
+}
+
+func TestScanDirReplacements(t *testing.T) {
+	root := t.TempDir()
+	writeTempFile(t, root, "status.txt", "build \u2705 passed\n")
+
+	cfg := demojify.ScanConfig{
+		Root:         root,
+		Replacements: map[string]string{"\u2705": "[PASS]"},
+		Options:      demojify.Options{RemoveEmojis: true},
+	}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("got %d findings, want 1", len(findings))
+	}
+	want := "build [PASS] passed\n"
+	if findings[0].Cleaned != want {
+		t.Errorf("Cleaned = %q, want %q", findings[0].Cleaned, want)
+	}
+}
+
+func TestScanDirReplacementsUnmappedEmojiStripped(t *testing.T) {
+	root := t.TempDir()
+	// checkmark is mapped; rocket is not -- should be stripped
+	writeTempFile(t, root, "out.txt", "\u2705 done \U0001F680 launch\n")
+
+	cfg := demojify.ScanConfig{
+		Root:         root,
+		Replacements: map[string]string{"\u2705": "[PASS]"},
+		Options:      demojify.Options{RemoveEmojis: true},
+	}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("got %d findings, want 1", len(findings))
+	}
+	want := "[PASS] done  launch\n"
+	if findings[0].Cleaned != want {
+		t.Errorf("Cleaned = %q, want %q", findings[0].Cleaned, want)
+	}
+}
+
+func TestScanDirCollectMatches(t *testing.T) {
+	root := t.TempDir()
+	// Line 1: two emoji -- checkmark (mapped) and rocket (unmapped)
+	writeTempFile(t, root, "log.txt", "\u2705 pass\n\U0001F680 launch\n")
+
+	cfg := demojify.ScanConfig{
+		Root:           root,
+		CollectMatches: true,
+		Replacements:   map[string]string{"\u2705": "[PASS]"},
+		Options:        demojify.Options{RemoveEmojis: true},
+	}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("got %d findings, want 1", len(findings))
+	}
+	f := findings[0]
+	if len(f.Matches) != 2 {
+		t.Fatalf("Matches count = %d, want 2", len(f.Matches))
+	}
+
+	// First match: checkmark on line 1
+	m0 := f.Matches[0]
+	if m0.Emoji != "\u2705" {
+		t.Errorf("Matches[0].Emoji = %q, want checkmark", m0.Emoji)
+	}
+	if m0.Replacement != "[PASS]" {
+		t.Errorf("Matches[0].Replacement = %q, want [PASS]", m0.Replacement)
+	}
+	if m0.Line != 1 {
+		t.Errorf("Matches[0].Line = %d, want 1", m0.Line)
+	}
+	if m0.Column != 0 {
+		t.Errorf("Matches[0].Column = %d, want 0", m0.Column)
+	}
+	if m0.Context != "\u2705 pass" {
+		t.Errorf("Matches[0].Context = %q, want checkmark line", m0.Context)
+	}
+
+	// Second match: rocket on line 2
+	m1 := f.Matches[1]
+	if m1.Emoji != "\U0001F680" {
+		t.Errorf("Matches[1].Emoji = %q, want rocket", m1.Emoji)
+	}
+	if m1.Replacement != "" {
+		t.Errorf("Matches[1].Replacement = %q, want empty (unmapped)", m1.Replacement)
+	}
+	if m1.Line != 2 {
+		t.Errorf("Matches[1].Line = %d, want 2", m1.Line)
+	}
+}
+
+func TestScanDirCollectMatchesFalseGivesNilMatches(t *testing.T) {
+	root := t.TempDir()
+	writeTempFile(t, root, "a.txt", "\u2705 done\n")
+
+	cfg := demojify.ScanConfig{
+		Root:           root,
+		CollectMatches: false,
+		Options:        demojify.Options{RemoveEmojis: true},
+	}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("got %d findings, want 1", len(findings))
+	}
+	if findings[0].Matches != nil {
+		t.Errorf("Matches = %v, want nil when CollectMatches is false", findings[0].Matches)
+	}
+}
+
+// TestScanDirFilterByExtension verifies that ScanDir with an Extensions filter
+// returns only files matching those extensions, mirroring the
+// directory-scanning integration pattern used by emoji-cleaner tooling.
+func TestScanDirFilterByExtension(t *testing.T) {
+	root := t.TempDir()
+	subDir := writeTempDir(t, root, "sub")
+
+	writeTempFile(t, root, "file1.md", "\u2705 Markdown file\n")
+	writeTempFile(t, root, "file2.txt", "\u274c Text file\n")
+	writeTempFile(t, root, "file3.go", "// No emojis here\n")
+	writeTempFile(t, subDir, "file4.md", "\u26a0 Nested file\n")
+
+	// All emoji-containing files detected when no extension filter.
+	cfg := demojify.DefaultScanConfig()
+	cfg.Root = root
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir (no filter): %v", err)
+	}
+	if len(findings) != 3 {
+		paths := make([]string, len(findings))
+		for i, f := range findings {
+			paths[i] = f.Path
+		}
+		t.Errorf("ScanDir (no filter): got %d findings %v, want 3", len(findings), paths)
+	}
+
+	// Restrict to .md only -- should find file1.md and sub/file4.md.
+	cfg.Extensions = []string{".md"}
+	findings, err = demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir (.md filter): %v", err)
+	}
+	if len(findings) != 2 {
+		paths := make([]string, len(findings))
+		for i, f := range findings {
+			paths[i] = f.Path
+		}
+		t.Errorf("ScanDir (.md filter): got %d findings %v, want 2", len(findings), paths)
+	}
+	for _, f := range findings {
+		if !strings.HasSuffix(f.Path, ".md") {
+			t.Errorf("non-.md file in findings: %s", f.Path)
+		}
+	}
+}
+
+// TestScanDirReplaceAndSave verifies the ScanDir + ReplaceFile integration
+// pattern: scan a directory, apply substitutions to each dirty file, confirm
+// total replacement count and final file content.
+func TestScanDirReplaceAndSave(t *testing.T) {
+	root := t.TempDir()
+	subDir := writeTempDir(t, root, "sub")
+
+	writeTempFile(t, root, "file1.md", "\u2705 Success\n")
+	writeTempFile(t, root, "file2.txt", "\u274c Failure\n")
+	writeTempFile(t, root, "file3.md", "No emojis\n")
+	writeTempFile(t, subDir, "file4.md", "\u26a0 Warning \u2705 Done\n")
+
+	repl := demojify.DefaultReplacements()
+
+	// Scan .md files only -- file3.md is clean so not a finding.
+	cfg := demojify.DefaultScanConfig()
+	cfg.Root = root
+	cfg.Extensions = []string{".md"}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 2 {
+		t.Fatalf("ScanDir: got %d findings, want 2", len(findings))
+	}
+
+	totalCount := 0
+	for _, f := range findings {
+		absPath := filepath.Join(root, filepath.FromSlash(f.Path))
+		count, err := demojify.ReplaceFile(absPath, repl)
+		if err != nil {
+			t.Fatalf("ReplaceFile(%s): %v", f.Path, err)
+		}
+		totalCount += count
+	}
+
+	// file1.md: 1 substitution; sub/file4.md: 2 substitutions.
+	if totalCount != 3 {
+		t.Errorf("total replacements = %d, want 3", totalCount)
+	}
+
+	data, err := os.ReadFile(filepath.Join(root, "file1.md"))
+	if err != nil {
+		t.Fatalf("ReadFile file1.md: %v", err)
+	}
+	if string(data) != "[PASS] Success\n" {
+		t.Errorf("file1.md content = %q, want \"[PASS] Success\\n\"", string(data))
 	}
 }
