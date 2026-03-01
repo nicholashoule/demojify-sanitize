@@ -261,12 +261,15 @@ demojify.ContainsEmoji("Hello") // -> false
 
 ### `Normalize(text string) string`
 
-Collapses redundant whitespace:
+Collapses redundant whitespace while preserving leading indentation:
 
-- consecutive spaces/tabs -> single space
+- consecutive spaces/tabs after the first non-whitespace character -> single space
+- leading indentation (spaces/tabs at line start) -> preserved
 - trailing whitespace before a newline -> removed
 - three or more consecutive blank lines -> two blank lines
 - leading/trailing whitespace of the whole string -> trimmed
+
+Safe for Markdown nested lists, indented code blocks, and aligned source comments.
 
 ```go
 demojify.Normalize("Hello World\n\n\n\nMore text")

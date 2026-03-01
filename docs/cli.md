@@ -104,10 +104,8 @@ After substitution, collapses multiple consecutive spaces on each line to a
 single space and removes trailing whitespace. Useful when the original content
 had emoji surrounded by spaces that would otherwise leave double spaces behind.
 
-> **Note:** `-normalize` applies `Normalize()` which collapses all consecutive
-> horizontal whitespace. This is safe for Go source and prose, but will strip
-> leading indentation from Markdown lists or code blocks. Avoid `-normalize`
-> on Markdown files with indented list items.
+Leading indentation on each line is preserved, so `-normalize` is safe for
+Markdown nested lists, indented code blocks, and Go source with aligned comments.
 
 ### Audit Markdown and Go files only
 

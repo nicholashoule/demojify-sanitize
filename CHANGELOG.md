@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed (previously listed)
 
+- `Normalize` rewritten to preserve leading indentation on each line. Only
+  consecutive spaces/tabs after the first non-whitespace character are collapsed.
+  This makes `-normalize` safe for Markdown nested lists, indented code blocks,
+  and aligned source comments.
 - `ScanConfig` struct -- configures directory/file exemptions (`SkipDirs`,
   `ExemptFiles`, `ExemptSuffixes`), extension filters, and sanitization
   `Options` for file-level scanning.
