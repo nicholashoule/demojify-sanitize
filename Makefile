@@ -1,4 +1,4 @@
-.PHONY: all build test race coverage fmt vet lint clean
+.PHONY: all build test race coverage fmt fmt-check vet lint clean
 
 # Default: format, vet, then test
 all: fmt vet test
@@ -24,6 +24,10 @@ coverage:
 # Format code
 fmt:
 	gofmt -s -w .
+
+# Check formatting without writing (exits non-zero if any files need formatting)
+fmt-check:
+	@out=$$(gofmt -s -l .); if [ -n "$$out" ]; then echo "Unformatted files:\n$$out"; exit 1; fi
 
 # Vet
 vet:
