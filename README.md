@@ -1,6 +1,10 @@
 # demojify-sanitize
 
+[![CI](https://github.com/nicholashoule/demojify-sanitize/actions/workflows/ci.yml/badge.svg)](https://github.com/nicholashoule/demojify-sanitize/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/nicholashoule/demojify-sanitize.svg)](https://pkg.go.dev/github.com/nicholashoule/demojify-sanitize)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/nicholashoule/demojify-sanitize)](go.mod)
+[![License](https://img.shields.io/github/license/nicholashoule/demojify-sanitize)](LICENSE)
+[![Zero Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)](go.mod)
 
 A dependency-free Go module that helps AI agents or developers of various applications audit, detect, and fix emoji clutter and redundant whitespace in text content before it reaches production. Run it as a post-processing step after AI agent output, as a content gate in your request pipeline, or as a CI quality gate -- one call to `Sanitize` cleans every issue in one pass, while `ScanDir` and `ContainsEmoji` handle detection and auditing.
 
@@ -75,6 +79,7 @@ Full signatures and doc comments are on
 | Function | Purpose |
 |----------|---------|
 | `Sanitize(text, opts) string` | Configurable pipeline: emoji removal then whitespace normalization |
+| `SanitizeFile(path, opts) (bool, error)` | Sanitize a file atomically; no write when clean |
 | `Demojify(text) string` | Strip all emoji / pictographic codepoints |
 | `ContainsEmoji(text) bool` | Detect emoji presence |
 | `Normalize(text) string` | Collapse redundant whitespace (preserves leading indentation) |
