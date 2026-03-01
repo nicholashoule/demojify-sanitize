@@ -413,6 +413,9 @@ func TestFindMatchesInFile(t *testing.T) {
 		if m0.Sequence != "\u2705" {
 			t.Errorf("matches[0].Sequence = %q, want checkmark", m0.Sequence)
 		}
+		if m0.Emoji != m0.Sequence {
+			t.Errorf("matches[0].Emoji = %q, want same as Sequence %q (deprecated field)", m0.Emoji, m0.Sequence)
+		}
 		if m0.Replacement != "[PASS]" {
 			t.Errorf("matches[0].Replacement = %q, want [PASS]", m0.Replacement)
 		}
@@ -432,6 +435,9 @@ func TestFindMatchesInFile(t *testing.T) {
 		}
 		if m1.Sequence != "\u274c" {
 			t.Errorf("matches[1].Sequence = %q, want cross mark", m1.Sequence)
+		}
+		if m1.Emoji != m1.Sequence {
+			t.Errorf("matches[1].Emoji = %q, want same as Sequence %q (deprecated field)", m1.Emoji, m1.Sequence)
 		}
 		if m1.Replacement != "[FAIL]" {
 			t.Errorf("matches[1].Replacement = %q, want [FAIL]", m1.Replacement)
