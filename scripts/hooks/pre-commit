@@ -1,0 +1,17 @@
+#!/bin/sh
+# pre-commit hook: enforce gofmt -s formatting before every commit.
+#
+# Install once with:
+#   make hooks
+# or manually:
+#   cp scripts/hooks/pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+
+set -e
+
+unformatted=$(gofmt -s -l .)
+if [ -n "$unformatted" ]; then
+    echo "[FAIL] gofmt: the following files need formatting (run: make fmt):"
+    echo "$unformatted" | sed 's/^/  /'
+    exit 1
+fi

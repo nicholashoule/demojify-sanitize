@@ -1,4 +1,4 @@
-.PHONY: all build test race coverage fmt fmt-check vet lint clean
+.PHONY: all build test race coverage fmt fmt-check vet lint hooks clean
 
 # Default: format, vet, then test
 all: fmt vet test
@@ -40,6 +40,12 @@ vet:
 # Lint (requires golangci-lint: https://golangci-lint.run/usage/install/)
 lint:
 	golangci-lint run ./...
+
+# Install git hooks from scripts/hooks/ into .git/hooks/
+hooks:
+	cp scripts/hooks/pre-commit .git/hooks/pre-commit
+	chmod +x .git/hooks/pre-commit
+	@echo "[PASS] pre-commit hook installed"
 
 # Remove build artifacts
 clean:
