@@ -21,6 +21,14 @@ type Options struct {
 	// is kept when it belongs to any table in this slice. Has no effect when
 	// RemoveEmojis is false or the slice is nil or empty.
 	AllowedRanges []*unicode.RangeTable
+
+	// AllowedEmojis lists specific emoji strings that are preserved during
+	// emoji removal. Unlike [AllowedRanges], which preserves entire Unicode
+	// blocks, AllowedEmojis targets individual emoji -- including
+	// multi-codepoint sequences such as ZWJ family emoji or flag sequences.
+	// Longer strings are matched before shorter sub-sequences. Has no effect
+	// when RemoveEmojis is false or the slice is nil or empty.
+	AllowedEmojis []string
 }
 
 // DefaultOptions returns an Options value with all sanitization steps enabled.
@@ -38,10 +46,13 @@ func DefaultOptions() Options {
 //  2. Whitespace normalization ([Normalize]) when opts.NormalizeWhitespace is true.
 func Sanitize(text string, opts Options) string {
 	if opts.RemoveEmojis {
-		if len(opts.AllowedRanges) == 0 {
-			text = Demojify(text)
-		} else {
+		switch {
+		case len(opts.AllowedEmojis) > 0:
+			text = demojifyPreserving(text, opts.AllowedEmojis, opts.AllowedRanges)
+		case len(opts.AllowedRanges) > 0:
 			text = demojifyAllowed(text, opts.AllowedRanges)
+		default:
+			text = Demojify(text)
 		}
 	}
 	if opts.NormalizeWhitespace {
@@ -67,10 +78,5 @@ func SanitizeFile(path string, opts Options) (changed bool, err error) {
 	if cleaned == original {
 		return false, nil
 	}
-
-	info, err := os.Stat(path)
-	if err != nil {
-		return false, err
-	}
-	return true, atomicWrite(path, cleaned, info.Mode().Perm())
+	return true, statAndWrite(path, cleaned)
 }

@@ -35,8 +35,8 @@ documentation files, normalizing whitespace in automated text pipelines.
 ├── demojify.go          # Demojify / ContainsEmoji -- emoji removal
 ├── normalize.go         # Normalize -- whitespace normalization
 ├── sanitize.go          # Sanitize / SanitizeFile / Options / DefaultOptions -- pipeline
-├── scan.go              # ScanConfig / ScanDir / ScanFile / Finding / Match -- scanner
-├── replace.go           # Replace / ReplaceFile / ReplaceCount / FindAll / FindAllMapped / FindMatchesInFile
+├── scan.go              # ScanConfig / ScanDir / ScanFile / FindMatchesInFile / Finding / Match -- scanner
+├── replace.go           # Replace / ReplaceFile / ReplaceCount / FindAll / FindAllMapped
 ├── replacements.go      # DefaultReplacements -- built-in emoji-to-text map
 ├── write.go             # WriteFinding -- atomic write-back for scan results
 ├── doc.go               # Package-level documentation
@@ -47,6 +47,7 @@ documentation files, normalizing whitespace in automated text pipelines.
 ├── replace_test.go      # Tests for replace.go
 ├── replacements_test.go # Tests for replacements.go
 ├── write_test.go        # Tests for write.go
+├── helpers_test.go      # Shared test utilities (writeTempFile, writeTempDir)
 ├── example_test.go      # Runnable pkg.go.dev examples
 ├── repo_test.go         # Dogfooding tests -- validates repo with own API
 ├── go.mod               # Module definition
@@ -76,7 +77,7 @@ documentation files, normalizing whitespace in automated text pipelines.
 | `ReplaceCount(text string, repl map[string]string) (string, int)` | replace.go | Replace and return count |
 | `FindAll(text string) []string` | replace.go | Distinct emoji sequences in text |
 | `FindAllMapped(text string, repl map[string]string) []string` | replace.go | Mapped keys found in text |
-| `FindMatchesInFile(path string, repl map[string]string) ([]Match, error)` | replace.go | Per-occurrence match detail |
+| `FindMatchesInFile(path string, repl map[string]string) ([]Match, error)` | scan.go | Per-occurrence match detail |
 | `DefaultReplacements() map[string]string` | replacements.go | Built-in emoji-to-text map |
 | `ScanConfig` struct | scan.go | Scanner configuration |
 | `DefaultScanConfig() ScanConfig` | scan.go | Sensible defaults, scans all file types |

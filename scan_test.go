@@ -9,26 +9,6 @@ import (
 	demojify "github.com/nicholashoule/demojify-sanitize"
 )
 
-// writeTempFile creates a file inside dir with the given name and content.
-func writeTempFile(t *testing.T, dir, name, content string) string {
-	t.Helper()
-	path := filepath.Join(dir, name)
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("write %s: %v", path, err)
-	}
-	return path
-}
-
-// writeTempDir creates a subdirectory inside dir.
-func writeTempDir(t *testing.T, dir, name string) string {
-	t.Helper()
-	path := filepath.Join(dir, name)
-	if err := os.MkdirAll(path, 0o755); err != nil {
-		t.Fatalf("mkdir %s: %v", path, err)
-	}
-	return path
-}
-
 func TestDefaultScanConfig(t *testing.T) {
 	cfg := demojify.DefaultScanConfig()
 	if cfg.Root != "." {
@@ -488,6 +468,21 @@ func TestScanFileNotFound(t *testing.T) {
 	}
 }
 
+func TestScanFileSkipsBinaryFiles(t *testing.T) {
+	root := t.TempDir()
+	// Binary content: NUL byte in the first 512 bytes.
+	binary := []byte("binary \U0001F680 content\x00 rest of file\n")
+	path := writeTempFile(t, root, "image.dat", string(binary))
+
+	f, err := demojify.ScanFile(path, demojify.Options{RemoveEmojis: true})
+	if err != nil {
+		t.Fatalf("ScanFile: %v", err)
+	}
+	if f != nil {
+		t.Errorf("expected nil finding for binary file, got %+v", f)
+	}
+}
+
 func TestScanDirErrorOnBadRoot(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "no-such-dir", "deep")
 	cfg := demojify.ScanConfig{
@@ -804,4 +799,94 @@ func TestScanDirReplaceAndSave(t *testing.T) {
 	if string(data) != "[PASS] Success\n" {
 		t.Errorf("file1.md content = %q, want \"[PASS] Success\\n\"", string(data))
 	}
+}
+
+func TestFindMatchesInFile(t *testing.T) {
+	repl := demojify.DefaultReplacements()
+
+	t.Run("file with emoji returns matches with line and column", func(t *testing.T) {
+		dir := t.TempDir()
+		// Line 1: checkmark at column 0; line 2: cross mark at column 0
+		path := writeTempFile(t, dir, "doc.md", "\u2705 passed\n\u274c failed\n")
+
+		matches, err := demojify.FindMatchesInFile(path, repl)
+		if err != nil {
+			t.Fatalf("FindMatchesInFile: %v", err)
+		}
+		if len(matches) != 2 {
+			t.Fatalf("got %d matches, want 2", len(matches))
+		}
+
+		m0 := matches[0]
+		if m0.Sequence != "\u2705" {
+			t.Errorf("matches[0].Sequence = %q, want checkmark", m0.Sequence)
+		}
+		if m0.Emoji != m0.Sequence {
+			t.Errorf("matches[0].Emoji = %q, want same as Sequence %q (deprecated field)", m0.Emoji, m0.Sequence)
+		}
+		if m0.Replacement != "[PASS]" {
+			t.Errorf("matches[0].Replacement = %q, want [PASS]", m0.Replacement)
+		}
+		if m0.Line != 1 {
+			t.Errorf("matches[0].Line = %d, want 1", m0.Line)
+		}
+		if m0.Column != 0 {
+			t.Errorf("matches[0].Column = %d, want 0", m0.Column)
+		}
+		if m0.Context == "" {
+			t.Error("matches[0].Context should not be empty")
+		}
+
+		m1 := matches[1]
+		if m1.Line != 2 {
+			t.Errorf("matches[1].Line = %d, want 2", m1.Line)
+		}
+		if m1.Sequence != "\u274c" {
+			t.Errorf("matches[1].Sequence = %q, want cross mark", m1.Sequence)
+		}
+		if m1.Emoji != m1.Sequence {
+			t.Errorf("matches[1].Emoji = %q, want same as Sequence %q (deprecated field)", m1.Emoji, m1.Sequence)
+		}
+		if m1.Replacement != "[FAIL]" {
+			t.Errorf("matches[1].Replacement = %q, want [FAIL]", m1.Replacement)
+		}
+	})
+
+	t.Run("file with no emoji returns nil", func(t *testing.T) {
+		dir := t.TempDir()
+		path := writeTempFile(t, dir, "clean.txt", "This file has no emoji\n")
+
+		matches, err := demojify.FindMatchesInFile(path, repl)
+		if err != nil {
+			t.Fatalf("FindMatchesInFile: %v", err)
+		}
+		if matches != nil {
+			t.Errorf("got %d matches, want nil for clean file", len(matches))
+		}
+	})
+
+	t.Run("unmapped emoji has empty replacement", func(t *testing.T) {
+		dir := t.TempDir()
+		path := writeTempFile(t, dir, "log.txt", "\U0001F680 deployed\n")
+
+		matches, err := demojify.FindMatchesInFile(path, repl)
+		if err != nil {
+			t.Fatalf("FindMatchesInFile: %v", err)
+		}
+		if len(matches) == 0 {
+			t.Fatal("expected at least one match for rocket emoji")
+		}
+		// Rocket is not in DefaultReplacements; replacement should be empty.
+		if matches[0].Replacement != "" {
+			t.Errorf("Replacement = %q, want empty for unmapped emoji", matches[0].Replacement)
+		}
+	})
+
+	t.Run("nonexistent file returns error", func(t *testing.T) {
+		missing := filepath.Join(t.TempDir(), "no-such-dir", "no-file.txt")
+		_, err := demojify.FindMatchesInFile(missing, repl)
+		if err == nil {
+			t.Error("expected error for nonexistent file, got nil")
+		}
+	})
 }

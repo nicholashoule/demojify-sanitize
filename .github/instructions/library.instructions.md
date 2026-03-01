@@ -16,8 +16,8 @@ It applies to all Go source files.
 | [demojify.go](../../demojify.go) | `Demojify`, `ContainsEmoji` -- emoji detection/removal |
 | [normalize.go](../../normalize.go) | `Normalize` -- whitespace normalization |
 | [sanitize.go](../../sanitize.go) | `Sanitize`, `SanitizeFile`, `Options`, `DefaultOptions` -- pipeline |
-| [scan.go](../../scan.go) | `ScanConfig`, `DefaultScanConfig`, `ScanDir`, `ScanFile`, `Finding`, `Match` -- scanner |
-| [replace.go](../../replace.go) | `Replace`, `ReplaceFile`, `ReplaceCount`, `FindAll`, `FindAllMapped`, `FindMatchesInFile` -- substitution |
+| [scan.go](../../scan.go) | `ScanConfig`, `DefaultScanConfig`, `ScanDir`, `ScanFile`, `FindMatchesInFile`, `Finding`, `Match` -- scanner |
+| [replace.go](../../replace.go) | `Replace`, `ReplaceFile`, `ReplaceCount`, `FindAll`, `FindAllMapped` -- substitution |
 | [replacements.go](../../replacements.go) | `DefaultReplacements` -- built-in emoji-to-text map |
 | [write.go](../../write.go) | `WriteFinding` -- atomic write-back for scan results |
 | [doc.go](../../doc.go) | Package-level godoc comment |

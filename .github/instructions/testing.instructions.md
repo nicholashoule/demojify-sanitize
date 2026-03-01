@@ -14,12 +14,13 @@ applyTo: "**/*_test.go"
 |------|-------|
 | `demojify_test.go` | `TestDemojify`, `TestContainsEmoji` |
 | `normalize_test.go` | `TestNormalize` |
-| `sanitize_test.go` | `TestDefaultOptions`, `TestSanitize` |
-| `scan_test.go` | `TestDefaultScanConfig`, `TestScanDir`, `TestScanDirFindingFields`, `TestScanFile`, `TestScanFileNotFound`, `TestScanDirErrorOnBadRoot` |
-| `replace_test.go` | `TestFindAll`, `TestReplace`, `TestReplaceFile`, `TestFindAllMapped`, `TestReplaceCount`, `TestFindMatchesInFile` |
+| `sanitize_test.go` | `TestDefaultOptions`, `TestSanitize`, `TestSanitizeFile`, `TestSanitizeAgentOutputRemediation` |
+| `scan_test.go` | `TestDefaultScanConfig`, `TestScanDir`, `TestScanDirFindingFields`, `TestScanFile`, `TestScanFileNotFound`, `TestScanDirErrorOnBadRoot`, `TestFindMatchesInFile` |
+| `replace_test.go` | `TestFindAll`, `TestReplace`, `TestReplaceFile`, `TestFindAllMapped`, `TestReplaceCount` |
 | `replacements_test.go` | `TestDefaultReplacements`, `TestDefaultReplacementsEntries`, `TestReplaceWithDefaultReplacements` |
 | `write_test.go` | `TestWriteFinding` |
-| `repo_test.go` | `TestRepoProductionSourceFilesEmojiClean`, `TestRepoAllDocsEmojiClean`, `TestRepoProductionFilesIdempotent`, `TestRepoTestFilesContainEmoji`, `TestRepoAgentOutputRemediation` |
+| `helpers_test.go` | `writeTempFile`, `writeTempDir` -- shared test utilities |
+| `repo_test.go` | `TestRepoProductionSourceFilesEmojiClean`, `TestRepoAllDocsEmojiClean`, `TestRepoProductionFilesIdempotent`, `TestRepoTestFilesContainEmoji` |
 | `example_test.go` | `Example*` functions (rendered on pkg.go.dev) |
 
 All tests are in package `demojify_test` (external test package) to verify the public API only.

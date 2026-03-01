@@ -1,12 +1,22 @@
 package demojify
 
 import (
-	"bytes"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+// buildReplacer constructs a *strings.Replacer from pre-sorted keys and the
+// replacements map. Called once before a directory walk to avoid rebuilding
+// the replacer for every file.
+func buildReplacer(keys []string, replacements map[string]string) *strings.Replacer {
+	args := make([]string, 0, len(keys)*2)
+	for _, k := range keys {
+		args = append(args, k, replacements[k])
+	}
+	return strings.NewReplacer(args...)
+}
 
 // ScanConfig configures how [ScanDir] walks and checks files in a directory
 // tree. Use [DefaultScanConfig] for sensible defaults.
@@ -54,12 +64,13 @@ type ScanConfig struct {
 	// Longer keys are matched before shorter ones (variation-selector aware).
 	// Has no effect on [ScanFile], which accepts only [Options].
 	//
-	// NOTE: When Replacements is non-empty, [Options.RemoveEmojis] and
-	// [Options.AllowedRanges] are ignored because [Replace] always strips
-	// residual emoji via [Demojify]. Only [Options.NormalizeWhitespace] is
-	// applied after substitution. To preserve specific Unicode ranges during
-	// replacement-based scans, add those codepoints to the Replacements map
-	// with identity values (key == value).
+	// NOTE: When Replacements is non-empty, [Options.RemoveEmojis],
+	// [Options.AllowedRanges], and [Options.AllowedEmojis] are ignored
+	// because [Replace] always strips residual emoji via [Demojify]. Only
+	// [Options.NormalizeWhitespace] is applied after substitution. To
+	// preserve specific Unicode ranges during replacement-based scans, add
+	// those codepoints to the Replacements map with identity values
+	// (key == value).
 	Replacements map[string]string
 
 	// CollectMatches controls whether [ScanDir] populates [Finding.Matches] for
@@ -164,20 +175,6 @@ type Finding struct {
 	Matches []Match
 }
 
-// sniffSize is the number of bytes inspected for NUL when detecting binary files.
-const sniffSize = 512
-
-// isBinary reports whether data looks like a binary file by checking the first
-// 512 bytes for a NUL byte (\x00). This mirrors the heuristic used by Git and
-// other text-processing tools.
-func isBinary(data []byte) bool {
-	snip := data
-	if len(snip) > sniffSize {
-		snip = snip[:sniffSize]
-	}
-	return bytes.ContainsRune(snip, 0)
-}
-
 // ScanDir walks the directory tree rooted at cfg.Root and returns a [Finding]
 // for every file whose content would change after cleaning. When
 // [ScanConfig.Replacements] is non-empty, each file is cleaned with [Replace]
@@ -199,6 +196,22 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 		root = "."
 	}
 
+	// Precompute trimmed skip-dir names so strings.TrimSuffix is not
+	// called on every directory entry during the walk.
+	trimmedSkips := make([]string, len(cfg.SkipDirs))
+	for i, s := range cfg.SkipDirs {
+		trimmedSkips[i] = strings.TrimSuffix(s, "/")
+	}
+
+	// Pre-sort replacement keys and build the replacer once so the walk
+	// callback does not re-sort and re-allocate for every file.
+	var replKeys []string
+	var replacer *strings.Replacer
+	if len(cfg.Replacements) > 0 {
+		replKeys = sortedKeys(cfg.Replacements)
+		replacer = buildReplacer(replKeys, cfg.Replacements)
+	}
+
 	var findings []Finding
 
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
@@ -217,8 +230,8 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 		if d.IsDir() {
 			if norm != "." {
 				name := d.Name()
-				for _, skip := range cfg.SkipDirs {
-					if name == strings.TrimSuffix(skip, "/") {
+				for _, skip := range trimmedSkips {
+					if name == skip {
 						return filepath.SkipDir
 					}
 				}
@@ -301,8 +314,8 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 		original := string(data)
 
 		var cleaned string
-		if len(cfg.Replacements) > 0 {
-			cleaned = Replace(original, cfg.Replacements)
+		if replacer != nil {
+			cleaned = Demojify(replacer.Replace(original))
 			if cfg.Options.NormalizeWhitespace {
 				cleaned = Normalize(cleaned)
 			}
@@ -318,7 +331,7 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 				Cleaned:  cleaned,
 			}
 			if cfg.CollectMatches {
-				f.Matches = buildMatches(original, cfg.Replacements)
+				f.Matches = buildMatches(original, cfg.Replacements, replKeys)
 			}
 			findings = append(findings, f)
 		}
@@ -339,8 +352,11 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 // Each Match records the matched sequence, its 1-based line and 0-based
 // byte-column within that line, the full line as context, and the mapped
 // replacement string (empty if not in replacements).
-func buildMatches(text string, replacements map[string]string) []Match {
-	keys := sortedKeys(replacements) // longest first; nil-safe (empty slice when map empty)
+//
+// The keys parameter must be the replacement map keys sorted by descending
+// byte length (longest first). Callers that have already sorted keys (e.g.,
+// [ScanDir]) pass them directly to avoid re-sorting per file.
+func buildMatches(text string, replacements map[string]string, keys []string) []Match {
 	var matches []Match
 	for lineIdx, line := range strings.Split(text, "\n") {
 		for i := 0; i < len(line); {
@@ -387,9 +403,11 @@ func buildMatches(text string, replacements map[string]string) []Match {
 
 // ScanFile checks a single file against opts and returns a [Finding] if the
 // file's content would change after sanitization, or nil if the file is
-// already clean. [Finding.Path] is set to path with forward slashes;
-// it is not made relative to any root. Pass a root-relative path to obtain
-// a [Finding] whose Path is comparable to those returned by [ScanDir].
+// already clean. Binary files (detected by a NUL byte in the first 512 bytes)
+// are silently skipped and return (nil, nil), matching the behaviour of
+// [ScanDir]. [Finding.Path] is set to path with forward slashes; it is not
+// made relative to any root. Pass a root-relative path to obtain a [Finding]
+// whose Path is comparable to those returned by [ScanDir].
 //
 // Unlike the pure-string functions in this package, ScanFile performs file I/O
 // and therefore returns an error when the file is inaccessible.
@@ -397,6 +415,9 @@ func ScanFile(path string, opts Options) (*Finding, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
+	}
+	if isBinary(data) {
+		return nil, nil
 	}
 	original := string(data)
 	cleaned := Sanitize(original, opts)
@@ -409,4 +430,22 @@ func ScanFile(path string, opts Options) (*Finding, error) {
 		Original: original,
 		Cleaned:  cleaned,
 	}, nil
+}
+
+// FindMatchesInFile reads the file at path and returns a [Match] for every
+// emoji codepoint found, with [Match.Replacement] populated from the
+// replacements map (empty string if the codepoint is not mapped). Matches
+// are ordered by line then column. Returns nil and no error when the file
+// contains no emoji.
+//
+// Unlike [ScanDir] with CollectMatches, this function does not filter or
+// sanitize the file; it only collects match metadata.
+//
+// FindMatchesInFile returns an error for any filesystem failure.
+func FindMatchesInFile(path string, replacements map[string]string) ([]Match, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return buildMatches(string(data), replacements, sortedKeys(replacements)), nil
 }

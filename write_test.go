@@ -11,11 +11,8 @@ import (
 func TestWriteFinding(t *testing.T) {
 	t.Run("dirty finding is written back", func(t *testing.T) {
 		dir := t.TempDir()
-		path := filepath.Join(dir, "dirty.txt")
 		original := "build \U0001F680 deployed\n"
-		if err := os.WriteFile(path, []byte(original), 0o644); err != nil {
-			t.Fatalf("WriteFile: %v", err)
-		}
+		path := writeTempFile(t, dir, "dirty.txt", original)
 
 		f := demojify.Finding{
 			Path:     "dirty.txt",
@@ -41,11 +38,8 @@ func TestWriteFinding(t *testing.T) {
 
 	t.Run("clean finding is not written", func(t *testing.T) {
 		dir := t.TempDir()
-		path := filepath.Join(dir, "clean.txt")
 		content := "no emoji here\n"
-		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-			t.Fatalf("WriteFile: %v", err)
-		}
+		path := writeTempFile(t, dir, "clean.txt", content)
 		info1, _ := os.Stat(path)
 
 		f := demojify.Finding{

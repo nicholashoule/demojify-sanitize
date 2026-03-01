@@ -2,6 +2,8 @@ package demojify
 
 import (
 	"regexp"
+	"strconv"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -88,4 +90,46 @@ func demojifyAllowed(text string, allowed []*unicode.RangeTable) string {
 		}
 		return ""
 	})
+}
+
+// demojifyPreserving removes emoji codepoints from text while preserving
+// specific emoji strings listed in allowedEmojis and any rune belonging to
+// the provided Unicode range tables. Allowed emoji strings are temporarily
+// replaced with inert ASCII placeholders before emoji removal, then restored.
+// Longer allowed strings are matched before shorter sub-sequences to handle
+// variation-selector and ZWJ sequences correctly.
+func demojifyPreserving(text string, allowedEmojis []string, allowedRanges []*unicode.RangeTable) string {
+	// Sort allowed emojis by descending byte length so longer sequences
+	// (e.g., ZWJ family emoji) are matched before their sub-sequences.
+	sorted := make([]string, len(allowedEmojis))
+	copy(sorted, allowedEmojis)
+	sortByLenDesc(sorted)
+
+	// Build placeholder strings using ASCII control characters that are
+	// outside emojiRE's match range (all emoji ranges start at U+231A).
+	placeholders := make([]string, len(sorted))
+	for i := range sorted {
+		placeholders[i] = "\x01K" + strconv.Itoa(i) + "\x01"
+	}
+
+	// Phase 1: Protect allowed emoji sequences with placeholders.
+	protected := text
+	for i, emoji := range sorted {
+		protected = strings.ReplaceAll(protected, emoji, placeholders[i])
+	}
+
+	// Phase 2: Strip remaining emoji.
+	var cleaned string
+	if len(allowedRanges) > 0 {
+		cleaned = demojifyAllowed(protected, allowedRanges)
+	} else {
+		cleaned = Demojify(protected)
+	}
+
+	// Phase 3: Restore placeholders to their original emoji.
+	for i, emoji := range sorted {
+		cleaned = strings.ReplaceAll(cleaned, placeholders[i], emoji)
+	}
+
+	return cleaned
 }

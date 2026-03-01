@@ -2,24 +2,8 @@ package demojify
 
 import (
 	"os"
-	"sort"
 	"strings"
 )
-
-// sortedKeys returns the keys of m sorted by descending byte length so that
-// longer sequences are matched before shorter sub-sequences (e.g., a key
-// containing a variation selector such as U+FE0F is tried before its base
-// codepoint).
-func sortedKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Slice(keys, func(i, j int) bool {
-		return len(keys[i]) > len(keys[j])
-	})
-	return keys
-}
 
 // Replace substitutes emoji codepoints found in text using the provided
 // replacements map, then strips any remaining unmatched emoji codepoints
@@ -99,11 +83,7 @@ func ReplaceFile(path string, replacements map[string]string) (count int, err er
 		count = len(emojiRE.FindAllString(original, -1))
 	}
 
-	info, err := os.Stat(path)
-	if err != nil {
-		return 0, err
-	}
-	if err = atomicWrite(path, cleaned, info.Mode().Perm()); err != nil {
+	if err = statAndWrite(path, cleaned); err != nil {
 		return 0, err
 	}
 	return count, nil
@@ -173,24 +153,6 @@ func ReplaceCount(text string, replacements map[string]string) (string, int) {
 		return text, 0
 	}
 	return cleaned, countWithKeys(text, keys)
-}
-
-// FindMatchesInFile reads the file at path and returns a [Match] for every
-// emoji codepoint found, with [Match.Replacement] populated from the
-// replacements map (empty string if the codepoint is not mapped). Matches
-// are ordered by line then column. Returns nil and no error when the file
-// contains no emoji.
-//
-// Unlike [ScanDir] with CollectMatches, this function does not filter or
-// sanitize the file; it only collects match metadata.
-//
-// FindMatchesInFile returns an error for any filesystem failure.
-func FindMatchesInFile(path string, replacements map[string]string) ([]Match, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return buildMatches(string(data), replacements), nil
 }
 
 // countWithKeys performs a single left-to-right scan over text and returns the
