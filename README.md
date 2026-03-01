@@ -2,12 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/nicholashoule/demojify-sanitize.svg)](https://pkg.go.dev/github.com/nicholashoule/demojify-sanitize)
 
-A dependency-free Go module that helps developers of web applications and APIs
-audit, detect, and fix emoji clutter and redundant whitespace in text content
-before it reaches production. Run it as a post-processing step after AI agent
-output, as a content gate in your request pipeline, or as a CI quality gate --
-one call to `Sanitize` cleans every issue in one pass, while `ScanDir` and
-`ContainsEmoji` handle detection and auditing.
+A dependency-free Go module that helps AI agents or developers of various applications audit, detect, and fix emoji clutter and redundant whitespace in text content before it reaches production. Run it as a post-processing step after AI agent output, as a content gate in your request pipeline, or as a CI quality gate -- one call to `Sanitize` cleans every issue in one pass, while `ScanDir` and `ContainsEmoji` handle detection and auditing.
 
 ## Install
 
