@@ -42,9 +42,11 @@ lint:
 	golangci-lint run ./...
 
 # Install git hooks from scripts/hooks/ into .git/hooks/
+# chmod is a no-op on Windows but harmless; the sh wrapper runs via
+# Git for Windows' bundled sh.exe on all platforms.
 hooks:
 	cp scripts/hooks/pre-commit .git/hooks/pre-commit
-	chmod +x .git/hooks/pre-commit
+	chmod +x .git/hooks/pre-commit 2>/dev/null || true
 	@echo "[PASS] pre-commit hook installed"
 
 # Remove build artifacts
