@@ -50,7 +50,7 @@ Steps run in this fixed order:
 
 **Why:**
 - Emojis removed first ensures that an emoji adjacent to a clutter phrase (e.g.
-  `"Certainly! 🎉"`) does not prevent the phrase regex from matching. The phrase
+  `"Certainly! [emoji]"`) does not prevent the phrase regex from matching. The phrase
   patterns anchor on line content, not on character classes.
 - AI-clutter removal before normalization means the phrase removal may leave
   blank lines or trailing spaces behind; normalization cleans those up as a

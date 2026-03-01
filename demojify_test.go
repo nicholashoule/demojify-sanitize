@@ -39,7 +39,7 @@ func TestDemojify(t *testing.T) {
 		},
 		{
 			name:  "ZWJ family sequence",
-			input: "Family: 👨‍👩‍👧",
+			input: "Family: 👨\u200D👩\u200D👧",
 			want:  "Family: ",
 		},
 		{

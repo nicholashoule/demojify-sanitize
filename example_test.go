@@ -11,13 +11,13 @@ import (
 )
 
 func ExampleDemojify() {
-	fmt.Println(demojify.Demojify("🚀 Deploy complete! Check the logs 📊"))
+	fmt.Println(demojify.Demojify("\U0001F680 Deploy complete! Check the logs \U0001F4CA"))
 	// Output:
 	//  Deploy complete! Check the logs
 }
 
 func ExampleContainsEmoji() {
-	fmt.Println(demojify.ContainsEmoji("Hello 😀 World"))
+	fmt.Println(demojify.ContainsEmoji("Hello \U0001F600 World"))
 	fmt.Println(demojify.ContainsEmoji("Hello World"))
 	// Output:
 	// true
@@ -33,7 +33,7 @@ func ExampleNormalize() {
 }
 
 func ExampleSanitize() {
-	input := "Certainly!\n🚀 Deploy complete!\n\n\nCheck the logs 📊"
+	input := "Certainly!\n\U0001F680 Deploy complete!\n\n\nCheck the logs \U0001F4CA"
 	fmt.Println(demojify.Sanitize(input, demojify.DefaultOptions()))
 	// Output:
 	// Deploy complete!
@@ -44,7 +44,7 @@ func ExampleSanitize() {
 func ExampleSanitize_selective() {
 	// Only remove emojis, leave whitespace and AI clutter untouched.
 	opts := demojify.Options{RemoveEmojis: true}
-	fmt.Println(demojify.Sanitize("Sure! 🎉 Done.", opts))
+	fmt.Println(demojify.Sanitize("Sure! \U0001F389 Done.", opts))
 	// Output:
 	// Sure!  Done.
 }
@@ -55,8 +55,8 @@ func ExampleSanitize_selective() {
 // one call.
 func ExampleSanitize_aiResponsePipeline() {
 	aiResponse := "Certainly! Here is a summary.\n\n" +
-		"The deployment pipeline 🚀 runs on every push to main.\n" +
-		"Check the dashboard 📊 for metrics."
+		"The deployment pipeline \U0001F680 runs on every push to main.\n" +
+		"Check the dashboard \U0001F4CA for metrics."
 
 	fmt.Println(demojify.Sanitize(aiResponse, demojify.DefaultOptions()))
 	// Output:
@@ -69,7 +69,7 @@ func ExampleSanitize_aiResponsePipeline() {
 // ExampleContainsEmoji_contentGate shows how to use ContainsEmoji as a
 // guard before persisting or forwarding user-submitted text.
 func ExampleContainsEmoji_contentGate() {
-	report := "Q3 results: Revenue up 12% 📈"
+	report := "Q3 results: Revenue up 12% \U0001F4C8"
 
 	if demojify.ContainsEmoji(report) {
 		// Strip emojis and normalize before storing.

@@ -166,5 +166,6 @@ Format: `<type>(<scope>): <subject>`
 - [testing.instructions.md](testing.instructions.md)
 - [README.md](../../README.md)
 - [docs/design.md](../../docs/design.md)
+- [emoji-prevention.md](../emoji-prevention.md)
 - [CONTRIBUTING.md](../../CONTRIBUTING.md)
 - [CHANGELOG.md](../../CHANGELOG.md)
