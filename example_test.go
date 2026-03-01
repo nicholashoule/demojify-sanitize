@@ -33,7 +33,7 @@ func ExampleNormalize() {
 }
 
 func ExampleSanitize() {
-	input := "Certainly!\n\U0001F680 Deploy complete!\n\n\nCheck the logs \U0001F4CA"
+	input := "\U0001F680 Deploy complete!\n\n\nCheck the logs \U0001F4CA"
 	fmt.Println(demojify.Sanitize(input, demojify.DefaultOptions()))
 	// Output:
 	// Deploy complete!
@@ -42,28 +42,11 @@ func ExampleSanitize() {
 }
 
 func ExampleSanitize_selective() {
-	// Only remove emojis, leave whitespace and AI clutter untouched.
+	// Only remove emojis, leave whitespace untouched.
 	opts := demojify.Options{RemoveEmojis: true}
 	fmt.Println(demojify.Sanitize("Sure! \U0001F389 Done.", opts))
 	// Output:
 	// Sure!  Done.
-}
-
-// ExampleSanitize_aiResponsePipeline shows how to clean an AI-generated
-// response before storing or displaying it. The full pipeline strips the
-// preamble phrase, removes decorative emojis, and normalizes whitespace in
-// one call.
-func ExampleSanitize_aiResponsePipeline() {
-	aiResponse := "Certainly! Here is a summary.\n\n" +
-		"The deployment pipeline \U0001F680 runs on every push to main.\n" +
-		"Check the dashboard \U0001F4CA for metrics."
-
-	fmt.Println(demojify.Sanitize(aiResponse, demojify.DefaultOptions()))
-	// Output:
-	// Here is a summary.
-	//
-	// The deployment pipeline runs on every push to main.
-	// Check the dashboard for metrics.
 }
 
 // ExampleContainsEmoji_contentGate shows how to use ContainsEmoji as a

@@ -1,7 +1,6 @@
 // Package demojify helps developers of web applications and APIs audit,
-// detect, and fix emoji clutter, AI-generated preamble phrases, and
-// redundant whitespace before content reaches production. It is designed
-// for two primary workflows: AI agents can import it to self-correct
+// detect, and fix emoji clutter and redundant whitespace in text content
+// before it reaches production. AI agents can import it to self-correct
 // their own output, and applications can run it as a gate in their
 // request or CI pipeline to catch issues in one pass.
 //

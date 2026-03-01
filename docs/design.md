@@ -48,28 +48,11 @@ defect at development time rather than silently degrading at runtime.
 
 Steps run in this fixed order:
 1. Emoji removal (`Demojify`)
-2. AI-clutter removal
-3. Whitespace normalization (`Normalize`)
+2. Whitespace normalization (`Normalize`)
 
-**Why:**
-- Emojis removed first ensures that an emoji adjacent to a clutter phrase (e.g.
-  `"Certainly! [emoji]"`) does not prevent the phrase regex from matching. The phrase
-  patterns anchor on line content, not on character classes.
-- AI-clutter removal before normalization means the phrase removal may leave
-  blank lines or trailing spaces behind; normalization cleans those up as a
-  final pass rather than requiring each earlier step to tidy up after itself.
-
-## False-positive prevention in AI clutter patterns
-
-Short, common English words (`Sure`, `Great`, `Noted`, etc.) require trailing
-punctuation (`[!,.]`) before they are removed.
-
-**Why:** Without the punctuation requirement, `"Sure enough, the build passed"`
-or `"Great work by the team"` would be silently truncated, corrupting legitimate
-content. The punctuation signals that the word is being used as a standalone
-filler phrase rather than as part of a sentence. Longer, structurally
-distinctive phrases (`"I'd be happy to help"`) do not need this guard because
-they are unlikely to appear as mid-sentence fragments.
+**Why:** Emojis are removed first. An emoji adjacent to text leaves behind a
+space; normalization cleans those up as a final pass rather than requiring each
+step to tidy up after itself.
 
 ## External test package (`package demojify_test`)
 

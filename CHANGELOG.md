@@ -34,6 +34,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Windows note in `Makefile` and `CONTRIBUTING.md`: race detector requires
   CGO and gcc.
 
+### Removed
+
+- `Options.RemoveAIClutter` and `aiClutterRE` -- removed conversational filler
+  phrase removal. The feature was too narrow to address real-world AI content
+  clutter. `Sanitize` now pipelines emoji removal and whitespace normalization
+  only.
+
 ## [0.1.0] - 2026-02-28
 
 ### Added
