@@ -243,7 +243,8 @@ func TestReplaceFile(t *testing.T) {
 	})
 
 	t.Run("nonexistent file returns error", func(t *testing.T) {
-		_, err := demojify.ReplaceFile("/nonexistent/path/no-file.txt", nil)
+		missing := filepath.Join(t.TempDir(), "no-such-dir", "no-file.txt")
+		_, err := demojify.ReplaceFile(missing, nil)
 		if err == nil {
 			t.Error("expected error for nonexistent file, got nil")
 		}
@@ -475,7 +476,8 @@ func TestFindMatchesInFile(t *testing.T) {
 	})
 
 	t.Run("nonexistent file returns error", func(t *testing.T) {
-		_, err := demojify.FindMatchesInFile("/nonexistent/no-file.txt", repl)
+		missing := filepath.Join(t.TempDir(), "no-such-dir", "no-file.txt")
+		_, err := demojify.FindMatchesInFile(missing, repl)
 		if err == nil {
 			t.Error("expected error for nonexistent file, got nil")
 		}

@@ -274,13 +274,13 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 		if openErr != nil {
 			return openErr
 		}
-		sniff := make([]byte, sniffSize)
-		n, sniffErr := io.ReadFull(f, sniff)
+		var sniff [sniffSize]byte
+		n, sniffErr := io.ReadFull(f, sniff[:])
 		if sniffErr != nil && sniffErr != io.ErrUnexpectedEOF && sniffErr != io.EOF {
 			f.Close()
 			return sniffErr
 		}
-		if bytes.ContainsRune(sniff[:n], 0) {
+		if isBinary(sniff[:n]) {
 			f.Close()
 			return nil
 		}

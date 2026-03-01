@@ -160,7 +160,8 @@ func TestSanitizeFile(t *testing.T) {
 	})
 
 	t.Run("nonexistent file returns error", func(t *testing.T) {
-		_, err := demojify.SanitizeFile("/nonexistent/path/no-file.txt", demojify.DefaultOptions())
+		missing := filepath.Join(t.TempDir(), "no-such-dir", "no-file.txt")
+		_, err := demojify.SanitizeFile(missing, demojify.DefaultOptions())
 		if err == nil {
 			t.Error("expected error for nonexistent file, got nil")
 		}

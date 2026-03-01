@@ -481,15 +481,17 @@ func TestScanFile(t *testing.T) {
 }
 
 func TestScanFileNotFound(t *testing.T) {
-	_, err := demojify.ScanFile("/nonexistent/path/file.go", demojify.DefaultOptions())
+	missing := filepath.Join(t.TempDir(), "no-such-dir", "file.go")
+	_, err := demojify.ScanFile(missing, demojify.DefaultOptions())
 	if err == nil {
 		t.Error("expected error for nonexistent file, got nil")
 	}
 }
 
 func TestScanDirErrorOnBadRoot(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "no-such-dir", "deep")
 	cfg := demojify.ScanConfig{
-		Root: "/nonexistent/directory/that/should/not/exist",
+		Root: missing,
 	}
 	_, err := demojify.ScanDir(cfg)
 	if err == nil {

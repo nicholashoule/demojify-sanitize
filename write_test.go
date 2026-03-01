@@ -97,12 +97,13 @@ func TestWriteFinding(t *testing.T) {
 	})
 
 	t.Run("nonexistent path returns error", func(t *testing.T) {
+		missing := filepath.Join(t.TempDir(), "no-such-dir", "ghost.txt")
 		f := demojify.Finding{
 			Path:     "ghost.txt",
 			Original: "old",
 			Cleaned:  "new",
 		}
-		_, err := demojify.WriteFinding("/nonexistent/path/ghost.txt", f)
+		_, err := demojify.WriteFinding(missing, f)
 		if err == nil {
 			t.Error("expected error for nonexistent path, got nil")
 		}
