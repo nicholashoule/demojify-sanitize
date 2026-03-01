@@ -88,7 +88,7 @@ Full signatures and doc comments are on
 | `ReplaceCount(text, repl) (string, int)` | Replace and return substitution count |
 | `FindAll(text) []string` | Distinct emoji sequences in text |
 | `FindAllMapped(text, repl) []string` | Mapped keys found in text |
-| `DefaultReplacements() map[string]string` | Built-in ~135-entry emoji-to-text map ([full list](docs/replacements.md)) |
+| `DefaultReplacements() map[string]string` | Built-in ~137-entry emoji-to-text map ([full list](docs/replacements.md)) |
 
 ### Scanner
 

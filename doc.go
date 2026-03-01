@@ -32,7 +32,7 @@
 //   - [ReplaceCount] applies [Replace] and also returns the substitution count.
 //   - [FindAll] returns distinct emoji sequences found in text.
 //   - [FindAllMapped] returns only mapped-key sequences, greedy longest-first.
-//   - [DefaultReplacements] returns a built-in ~100-entry emoji-to-text map
+//   - [DefaultReplacements] returns a built-in ~137-entry emoji-to-text map
 //     covering status symbols, arrows, shapes, checkboxes, and dingbats.
 //
 // Typical usage:

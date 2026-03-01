@@ -5,7 +5,7 @@ package demojify
 // Because a fresh copy is returned on every call, callers can add, remove, or
 // override entries without affecting other callers.
 //
-// The map covers ~137 codepoint sequences across eleven categories:
+// The map covers ~137 codepoint sequences across twelve categories:
 //
 //   - Warning and alert symbols (U+26A0, U+203C, ...)
 //   - Status symbols: pass/fail/alert/info indicators
