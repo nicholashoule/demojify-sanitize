@@ -172,9 +172,9 @@ func ExampleFindMatchesInFile() {
 	}
 	for _, m := range matches {
 		if m.Replacement != "" {
-			log.Printf("line %d col %d: %q -> %q", m.Line, m.Column, m.Emoji, m.Replacement)
+			log.Printf("line %d col %d: %q -> %q", m.Line, m.Column, m.Sequence, m.Replacement)
 		} else {
-			log.Printf("line %d col %d: %q (unmapped -- will be stripped)", m.Line, m.Column, m.Emoji)
+			log.Printf("line %d col %d: %q (unmapped -- will be stripped)", m.Line, m.Column, m.Sequence)
 		}
 	}
 }

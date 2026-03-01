@@ -71,7 +71,7 @@ func main() {
 			if display == "" {
 				display = "(stripped)"
 			}
-			fmt.Printf("  line %d col %d: %q -> %q\n", m.Line, m.Column, m.Emoji, display)
+			fmt.Printf("  line %d col %d: %q -> %q\n", m.Line, m.Column, m.Sequence, display)
 		}
 
 		if *fix {
@@ -84,7 +84,7 @@ func main() {
 				n, werr = demojify.ReplaceFile(absPath, repl)
 			} else {
 				var changed bool
-				changed, werr = demojify.SanitizeFile(absPath, cfg.Options)
+				changed, werr = demojify.WriteFinding(absPath, f)
 				if changed {
 					n = len(f.Matches)
 				}

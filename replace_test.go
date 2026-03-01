@@ -410,8 +410,8 @@ func TestFindMatchesInFile(t *testing.T) {
 		}
 
 		m0 := matches[0]
-		if m0.Emoji != "\u2705" {
-			t.Errorf("matches[0].Emoji = %q, want checkmark", m0.Emoji)
+		if m0.Sequence != "\u2705" {
+			t.Errorf("matches[0].Sequence = %q, want checkmark", m0.Sequence)
 		}
 		if m0.Replacement != "[PASS]" {
 			t.Errorf("matches[0].Replacement = %q, want [PASS]", m0.Replacement)
@@ -430,8 +430,8 @@ func TestFindMatchesInFile(t *testing.T) {
 		if m1.Line != 2 {
 			t.Errorf("matches[1].Line = %d, want 2", m1.Line)
 		}
-		if m1.Emoji != "\u274c" {
-			t.Errorf("matches[1].Emoji = %q, want cross mark", m1.Emoji)
+		if m1.Sequence != "\u274c" {
+			t.Errorf("matches[1].Sequence = %q, want cross mark", m1.Sequence)
 		}
 		if m1.Replacement != "[FAIL]" {
 			t.Errorf("matches[1].Replacement = %q, want [FAIL]", m1.Replacement)

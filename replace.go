@@ -2,7 +2,6 @@ package demojify
 
 import (
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -100,36 +99,11 @@ func ReplaceFile(path string, replacements map[string]string) (count int, err er
 		count = len(emojiRE.FindAllString(original, -1))
 	}
 
-	// Preserve original permissions.
 	info, err := os.Stat(path)
 	if err != nil {
 		return 0, err
 	}
-	perm := info.Mode().Perm()
-
-	// Atomic write: write to a sibling temp file, then rename.
-	dir := filepath.Dir(path)
-	tmp, err := os.CreateTemp(dir, ".demojify-*")
-	if err != nil {
-		return 0, err
-	}
-	tmpName := tmp.Name()
-	defer func() {
-		if err != nil {
-			os.Remove(tmpName)
-		}
-	}()
-	if _, err = tmp.WriteString(cleaned); err != nil {
-		tmp.Close()
-		return 0, err
-	}
-	if err = tmp.Close(); err != nil {
-		return 0, err
-	}
-	if err = os.Chmod(tmpName, perm); err != nil {
-		return 0, err
-	}
-	if err = os.Rename(tmpName, path); err != nil {
+	if err = atomicWrite(path, cleaned, info.Mode().Perm()); err != nil {
 		return 0, err
 	}
 	return count, nil

@@ -2,7 +2,6 @@ package demojify
 
 import (
 	"bytes"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -106,11 +105,10 @@ func DefaultScanConfig() ScanConfig {
 // empty, only emoji codepoints are recorded.
 // It is populated in [Finding.Matches] when [ScanConfig.CollectMatches] is true.
 type Match struct {
-	// Emoji is the matched codepoint sequence. Despite the field name, this
-	// may hold non-emoji sequences (such as arrows or geometric shapes) when
-	// [ScanConfig.Replacements] maps those codepoints. The field name is
-	// retained for backward compatibility.
-	Emoji string
+	// Sequence is the matched codepoint sequence. This may hold non-emoji
+	// sequences (such as arrows or geometric shapes) when
+	// [ScanConfig.Replacements] maps those codepoints.
+	Sequence string
 
 	// Replacement is the value from [ScanConfig.Replacements] for this
 	// sequence, or an empty string if the sequence is not mapped.
@@ -259,32 +257,12 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 			}
 		}
 
-		// Sniff the first 512 bytes for a NUL byte to detect binary files
-		// before committing to reading the entire file into memory.
-		f, openErr := os.Open(path)
-		if openErr != nil {
-			return openErr
-		}
-		var sniffBuf [sniffSize]byte
-		n, _ := io.ReadFull(f, sniffBuf[:])
-		if isBinary(sniffBuf[:n]) {
-			f.Close()
-			return nil
-		}
-
-		// File is text -- read the remainder and combine with the sniffed prefix.
-		rest, readErr := io.ReadAll(f)
-		f.Close()
+		data, readErr := os.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}
-		var data []byte
-		if n > 0 {
-			data = make([]byte, n+len(rest))
-			copy(data, sniffBuf[:n])
-			copy(data[n:], rest)
-		} else {
-			data = rest
+		if isBinary(data) {
+			return nil
 		}
 		original := string(data)
 
@@ -338,7 +316,7 @@ func buildMatches(text string, replacements map[string]string) []Match {
 			for _, k := range keys {
 				if strings.HasPrefix(line[i:], k) {
 					matches = append(matches, Match{
-						Emoji:       k,
+					Sequence:    k,
 						Replacement: replacements[k],
 						Line:        lineIdx + 1,
 						Column:      i,
@@ -355,7 +333,7 @@ func buildMatches(text string, replacements map[string]string) []Match {
 			// No replacement key matched; fall back to emojiRE for unmapped emoji.
 			if loc := emojiRE.FindStringIndex(line[i:]); loc != nil && loc[0] == 0 {
 				matches = append(matches, Match{
-					Emoji:       line[i : i+loc[1]],
+					Sequence:    line[i : i+loc[1]],
 					Replacement: "",
 					Line:        lineIdx + 1,
 					Column:      i,

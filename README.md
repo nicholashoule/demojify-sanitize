@@ -76,6 +76,18 @@ for _, path := range markdownPaths {
 }
 ```
 
+### Write back scan results without re-reading files
+
+```go
+cfg := demojify.DefaultScanConfig()
+cfg.Root = "."
+findings, _ := demojify.ScanDir(cfg)
+for _, f := range findings {
+ absPath := filepath.Join(cfg.Root, filepath.FromSlash(f.Path))
+ demojify.WriteFinding(absPath, f)
+}
+```
+
 ### Directory scanner -- audit a repo in one call
 
 ```go
@@ -124,7 +136,7 @@ directly:
 ```go
 matches, err := demojify.FindMatchesInFile("output.log", demojify.DefaultReplacements())
 for _, m := range matches {
- fmt.Printf("line %d col %d: %q -> %q\n", m.Line, m.Column, m.Emoji, m.Replacement)
+ fmt.Printf("line %d col %d: %q -> %q\n", m.Line, m.Column, m.Sequence, m.Replacement)
 }
 ```
 
@@ -181,6 +193,13 @@ Reads `path` and returns a `Match` for every emoji codepoint occurrence,
 with `Replacement` populated from the map. Returns nil (no error) when the
 file contains no emoji.
 
+#### `WriteFinding(path string, f Finding) (changed bool, err error)`
+
+Writes `f.Cleaned` back to the file at `path` atomically using a
+temp-file-plus-rename strategy. No write occurs when `f.Cleaned` equals
+`f.Original`. Original file permissions are preserved. Use this after
+`ScanDir` to avoid re-reading files that were already scanned.
+
 #### `DefaultReplacements() map[string]string`
 
 Returns a fresh copy of the built-in ~100-entry emoji-to-text map. Callers
@@ -206,7 +225,7 @@ Returned by `FindMatchesInFile` and populated in `Finding.Matches` when
 
 ```go
 type Match struct {
- Emoji string // matched codepoint sequence
+ Sequence string // matched codepoint sequence
  Replacement string // value from replacements map; empty if not mapped
  Line int // 1-based line number
  Column int // 0-based byte offset within the line
