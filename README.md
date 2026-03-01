@@ -21,6 +21,52 @@ import demojify "github.com/nicholashoule/demojify-sanitize"
 clean := demojify.Sanitize(text, demojify.DefaultOptions())
 ```
 
+## Integration patterns
+
+### AI response post-processing
+
+Clean LLM output before storing or displaying it:
+
+```go
+aiResponse := "Certainly! Here is a summary.\n\n" +
+    "The deployment pipeline 🚀 runs on every push to main.\n" +
+    "Check the dashboard 📊 for metrics."
+
+clean := demojify.Sanitize(aiResponse, demojify.DefaultOptions())
+// "Here is a summary.\n\nThe deployment pipeline runs on every push to main.\nCheck the dashboard for metrics."
+```
+
+### Content gate — reject or flag emoji-bearing input
+
+```go
+if demojify.ContainsEmoji(userInput) {
+    opts := demojify.Options{RemoveEmojis: true, NormalizeWhitespace: true}
+    userInput = demojify.Sanitize(userInput, opts)
+}
+```
+
+### HTTP handler — sanitize request body
+
+```go
+http.HandleFunc("/submit", func(w http.ResponseWriter, r *http.Request) {
+    body, _ := io.ReadAll(r.Body)
+    clean := demojify.Sanitize(string(body), demojify.DefaultOptions())
+    // use clean for storage or further processing
+})
+```
+
+### Pre-commit / CI — sanitize Markdown files in place
+
+```go
+opts := demojify.DefaultOptions()
+for _, path := range markdownPaths {
+    data, _ := os.ReadFile(path)
+    _ = os.WriteFile(path, []byte(demojify.Sanitize(string(data), opts)), 0o644)
+}
+```
+
+
+
 ## API
 
 ### `Demojify(text string) string`
@@ -126,6 +172,12 @@ The following Unicode blocks are stripped by `Demojify`:
 Intentionally **not** removed: `©` (U+00A9), `®` (U+00AE), `™` (U+2122),
 basic mathematical/technical arrows (U+2190–U+2193), and all non-emoji Unicode
 scripts.
+
+## Design
+
+See [docs/design.md](docs/design.md) for the rationale behind key technical
+decisions (zero-dependency policy, pipeline order, false-positive prevention,
+and intentional Unicode exclusions).
 
 ## License
 
