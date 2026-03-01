@@ -67,8 +67,8 @@ type ScanConfig struct {
 	// NOTE: When Replacements is non-empty, [Options.RemoveEmojis],
 	// [Options.AllowedRanges], and [Options.AllowedEmojis] are ignored
 	// because [Replace] always strips residual emoji via [Demojify]. Only
-	// [Options.NormalizeWhitespace] is honoured after substitution, and
-	// only when the substitution step changes the file content. To
+	// [Options.NormalizeWhitespace] is honoured after substitution; when
+	// enabled it runs unconditionally on every scanned file. To
 	// preserve specific Unicode ranges during replacement-based scans, add
 	// those codepoints to the Replacements map with identity values
 	// (key == value).

@@ -3,6 +3,7 @@ package demojify_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -1050,6 +1051,12 @@ func TestScanDirUnreadableFile(t *testing.T) {
 		t.Fatalf("Chmod: %v", err)
 	}
 
+	// When running as root (or with equivalent privileges), chmod 000 may
+	// not actually prevent reads. Detect this and skip.
+	if _, err := os.ReadFile(path); err == nil {
+		t.Skip("chmod 000 did not prevent reading (likely running as root)")
+	}
+
 	cfg := demojify.DefaultScanConfig()
 	cfg.Root = root
 	cfg.ExemptSuffixes = nil
@@ -1101,5 +1108,5 @@ func TestScanDirSymlink(t *testing.T) {
 
 // isWindows reports whether the current platform is Windows.
 func isWindows() bool {
-	return os.PathSeparator == '\\' && os.PathListSeparator == ';'
+	return runtime.GOOS == "windows"
 }

@@ -35,7 +35,7 @@ func buildLargeMarkdown(targetBytes int) string {
 		"architecture decision records and agreed on the proposed changes to the " +
 		"caching layer.\n\n"
 	const proseEmoji = "Status: \u2705 passing | Build: \U0001F680 deployed | " +
-		"Coverage: \U0001F4CA 94%% | Alerts: \u26A0\uFE0F none | " +
+		"Coverage: \U0001F4CA 94% | Alerts: \u26A0\uFE0F none | " +
 		"Review: \U0001F44D\U0001F3FD approved | " + // skin-tone modifier
 		"Team: \U0001F468\u200D\U0001F4BB\u200D\U0001F469\u200D\U0001F4BB pair | " + // ZWJ
 		"Flag: \U0001F1FA\U0001F1F8 | " + // flag sequence
@@ -50,14 +50,14 @@ func buildLargeMarkdown(targetBytes int) string {
 	const table = "| Metric | Value | Status |\n" +
 		"|--------|-------|--------|\n" +
 		"| Latency p99 | 142ms | \u2705 |\n" +
-		"| Error rate | 0.02%% | \u2705 |\n" +
+		"| Error rate | 0.02% | \u2705 |\n" +
 		"| Throughput | 12,400 req/s | \U0001F680 |\n" +
 		"| Memory | 1.2 GiB | \u26A0\uFE0F |\n\n"
 	const bulletList = "- Refactored the authentication middleware \U0001F512\n" +
 		"- Added retry logic with exponential backoff \u23F3\n" +
 		"- Updated API documentation for v2 endpoints \U0001F4DD\n" +
 		"- Resolved flaky test in CI \U0001F527\n" +
-		"- Deployed canary to 5%% of traffic \U0001F6A6\n\n"
+		"- Deployed canary to 5% of traffic \U0001F6A6\n\n"
 	const link = "[Architecture Decision Records](https://example.com/adr) | " +
 		"[Runbook](https://example.com/runbook) | " +
 		"[Dashboard](https://example.com/dashboard)\n\n"
@@ -73,9 +73,9 @@ func buildLargeMarkdown(targetBytes int) string {
 		section++
 		b.WriteString(fmt.Sprintf(subheader, section))
 		b.WriteString(prose)
-		b.WriteString(fmt.Sprintf(proseEmoji /* %% are literal */))
+		b.WriteString(proseEmoji)
 		b.WriteString(codeBlock)
-		b.WriteString(fmt.Sprintf(table /* %% are literal */))
+		b.WriteString(table)
 		b.WriteString(bulletList)
 		b.WriteString(link)
 		b.WriteString(whitespaceMessy)

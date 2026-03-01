@@ -212,20 +212,36 @@ func ExampleFindMatchesInFile() {
 }
 
 // ExampleScanDir shows how to audit a directory tree for emoji and inspect
-// per-file findings. This example is compiled but not executed (no Output comment).
+// per-file findings.
 func ExampleScanDir() {
+	dir, err := os.MkdirTemp("", "example-scandir-*")
+	if err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+	defer os.RemoveAll(dir)
+
+	if err := os.WriteFile(filepath.Join(dir, "status.md"), []byte("\u2705 done\n"), 0o644); err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+
 	cfg := demojify.DefaultScanConfig()
-	cfg.Root = "."
-	cfg.Extensions = []string{".go", ".md"}
+	cfg.Root = dir
+	cfg.Extensions = []string{".md"}
 	cfg.CollectMatches = true
+	cfg.Replacements = demojify.DefaultReplacements()
 
 	findings, err := demojify.ScanDir(cfg)
 	if err != nil {
-		log.Fatalf("ScanDir: %v", err)
+		fmt.Println("error:", err)
+		return
 	}
 	for _, f := range findings {
-		log.Printf("%s: %d match(es)", f.Path, len(f.Matches))
+		fmt.Printf("found %d match(es), has_emoji=%v\n", len(f.Matches), f.HasEmoji)
 	}
+	// Output:
+	// found 1 match(es), has_emoji=true
 }
 
 func ExampleScanFile() {

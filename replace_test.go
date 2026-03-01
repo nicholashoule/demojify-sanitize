@@ -257,7 +257,10 @@ func TestReplaceFile(t *testing.T) {
 			t.Errorf("count = %d, want 0 for binary file", count)
 		}
 		// Verify the file was not modified.
-		data, _ := os.ReadFile(path)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("ReadFile: %v", err)
+		}
 		if string(data) != "hello\x00\u2705 world\n" {
 			t.Errorf("binary file was modified: %q", string(data))
 		}

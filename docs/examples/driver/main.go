@@ -26,28 +26,18 @@ func main() {
 	for _, s := range samples {
 		fmt.Printf("  ContainsEmoji(%q) = %v\n", s, demojify.ContainsEmoji(s))
 	}
-	// Output:
-	//   ContainsEmoji("\u2705 build passed") = true
-	//   ContainsEmoji("plain text only") = false
-	//   ContainsEmoji("\U0001F680 deploy complete") = true
 
 	// ---- 2. Strip all emoji ----
 	fmt.Println("\n=== Demojify ===")
 	raw := "\U0001F680 Deploy complete! Check \U0001F4CA for details."
 	fmt.Printf("  before: %q\n", raw)
 	fmt.Printf("  after:  %q\n", demojify.Demojify(raw))
-	// Output:
-	//   before: "\U0001F680 Deploy complete! Check \U0001F4CA for details."
-	//   after:  " Deploy complete! Check  for details."
 
 	// ---- 3. Normalize whitespace ----
 	fmt.Println("\n=== Normalize ===")
 	messy := "Hello   World  \n\n\n\nMore text"
 	fmt.Printf("  before: %q\n", messy)
 	fmt.Printf("  after:  %q\n", demojify.Normalize(messy))
-	// Output:
-	//   before: "Hello   World  \n\n\n\nMore text"
-	//   after:  "Hello World\n\nMore text"
 
 	// ---- 4. Full pipeline via Sanitize ----
 	fmt.Println("\n=== Sanitize (DefaultOptions) ===")
@@ -55,9 +45,6 @@ func main() {
 	clean := demojify.Sanitize(input, demojify.DefaultOptions())
 	fmt.Printf("  before: %q\n", input)
 	fmt.Printf("  after:  %q\n", clean)
-	// Output:
-	//   before: "\U0001F680 Deploy complete!\n\n\nCheck the logs \U0001F4CA"
-	//   after:  "Deploy complete!\n\nCheck the logs"
 
 	// ---- 5. Substitution with DefaultReplacements ----
 	fmt.Println("\n=== Replace (DefaultReplacements) ===")
@@ -66,30 +53,21 @@ func main() {
 	fmt.Printf("  before: %q\n", text)
 	result := demojify.Replace(text, repl)
 	fmt.Printf("  after:  %q\n", result)
-	// Output:
-	//   before: "\u2705 tests passed, \u274c build failed, \u26a0 review needed"
-	//   after:  "[PASS] tests passed, [FAIL] build failed, WARNING review needed"
 
 	// ---- 6. ReplaceCount -- substitute and count ----
 	fmt.Println("\n=== ReplaceCount ===")
 	rc, n := demojify.ReplaceCount("\u2705 OK \u274c FAIL \U0001F680 deploy", repl)
 	fmt.Printf("  result: %q (%d substitution(s))\n", rc, n)
-	// Output:
-	//   result: "[PASS] OK [FAIL] FAIL [DEPLOY] deploy" (3 substitution(s))
 
 	// ---- 7. FindAll -- discover distinct emoji ----
 	fmt.Println("\n=== FindAll ===")
 	found := demojify.FindAll("\u2705 pass \u274c fail \u2705 again")
-	fmt.Printf("  found: %v\n", found)
-	// Output:
-	//   found: [<checkmark> <cross>]
+	fmt.Printf("  found: %v\n", found) // prints literal emoji sequences
 
 	// ---- 8. FindAllMapped -- only mapped keys ----
 	fmt.Println("\n=== FindAllMapped ===")
 	mapped := demojify.FindAllMapped("\u2705 pass \U0001F600 smile", repl)
-	fmt.Printf("  mapped keys: %v\n", mapped)
-	// Output:
-	//   mapped keys: [<checkmark>]  (grinning face is not in DefaultReplacements)
+	fmt.Printf("  mapped keys: %v\n", mapped) // only emoji with entries in repl
 
 	// ---- 9. ScanDir -- audit a directory ----
 	fmt.Println("\n=== ScanDir ===")
