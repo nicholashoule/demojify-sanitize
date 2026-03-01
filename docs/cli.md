@@ -22,6 +22,7 @@ go build -o demojify ./cmd/demojify
 | `-fix` | false | Rewrite affected files in place after reporting |
 | `-sub` | false | Substitute emoji with text tokens instead of stripping; implies `-fix` |
 | `-normalize` | false | Collapse redundant whitespace left behind by `-fix`/`-sub`; only applied to files changed by emoji removal; implies `-fix` |
+| `-quiet` | false | Suppress all output; exit code only (0 = clean, 1 = findings/errors) |
 
 ## Exit Codes
 
@@ -127,6 +128,12 @@ echo "Exit: $?"
 ```
 
 Exits 0 (pass) or 1 (fail). Combine with `-sub -fix` to auto-correct instead.
+
+Use `-quiet` in CI pipelines where only the exit code matters:
+
+```bash
+go run ./cmd/demojify -root . -quiet
+```
 
 ### Fix, then verify clean
 

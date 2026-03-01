@@ -14,6 +14,7 @@
 //	-normalize       collapse redundant whitespace left behind by -fix/-sub;
 //	                 only applied to files where emoji were found or replaced;
 //	                 implies -fix
+//	-quiet           suppress all output; exit code only (0 = clean, 1 = findings/errors)
 //	-exts <.go,.md>  comma-separated extensions to scan (default: all files);
 //	                 a leading dot is added automatically if omitted
 package main
@@ -34,6 +35,7 @@ func main() {
 	fix := flag.Bool("fix", false, "rewrite affected files in place")
 	sub := flag.Bool("sub", false, "substitute emoji with text tokens (implies -fix)")
 	normalize := flag.Bool("normalize", false, "collapse redundant whitespace left behind by -fix/-sub; only applied to files changed by emoji removal (implies -fix)")
+	quiet := flag.Bool("quiet", false, "suppress all output; exit code only (0 = clean, 1 = findings/errors)")
 	exts := flag.String("exts", "", "comma-separated extensions to scan, e.g. .go,.md (default: all)")
 	flag.Parse()
 
@@ -82,23 +84,27 @@ func main() {
 	}
 
 	if len(findings) == 0 {
-		fmt.Println("[PASS] no emoji found")
+		if !*quiet {
+			fmt.Println("[PASS] no emoji found")
+		}
 		return
 	}
 
 	exitCode := 0
 	for _, f := range findings {
-		fmt.Printf("\n[WARN] %s\n", f.Path)
-		if len(f.Matches) == 0 && !f.HasEmoji {
-			// File changed due to whitespace normalization only.
-			fmt.Println("  (whitespace normalized, no emoji found)")
-		}
-		for _, m := range f.Matches {
-			display := m.Replacement
-			if display == "" {
-				display = "(stripped)"
+		if !*quiet {
+			fmt.Printf("\n[WARN] %s\n", f.Path)
+			if len(f.Matches) == 0 && !f.HasEmoji {
+				// File changed due to whitespace normalization only.
+				fmt.Println("  (whitespace normalized, no emoji found)")
 			}
-			fmt.Printf("  line %d col %d: %q -> %q\n", m.Line, m.Column, m.Sequence, display)
+			for _, m := range f.Matches {
+				display := m.Replacement
+				if display == "" {
+					display = "(stripped)"
+				}
+				fmt.Printf("  line %d col %d: %q -> %q\n", m.Line, m.Column, m.Sequence, display)
+			}
 		}
 
 		if *fix {
@@ -123,10 +129,12 @@ func main() {
 			if werr != nil {
 				fmt.Fprintf(os.Stderr, "  [FAIL] write %s: %v\n", f.Path, werr)
 				exitCode = 1
-			} else if n == 0 && !f.HasEmoji {
-				fmt.Printf("  [PASS] fixed 1 file (whitespace only)\n")
-			} else {
-				fmt.Printf("  [PASS] fixed %d occurrence(s)\n", n)
+			} else if !*quiet {
+				if n == 0 && !f.HasEmoji {
+					fmt.Printf("  [PASS] fixed 1 file (whitespace only)\n")
+				} else {
+					fmt.Printf("  [PASS] fixed %d occurrence(s)\n", n)
+				}
 			}
 		} else {
 			exitCode = 1
