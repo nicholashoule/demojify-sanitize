@@ -100,14 +100,31 @@ func demojifyAllowed(text string, allowed []*unicode.RangeTable) string {
 // demojifyPreserving removes emoji codepoints from text while preserving
 // specific emoji strings listed in allowedEmojis and any rune belonging to
 // the provided Unicode range tables. Allowed emoji strings are temporarily
-// replaced with inert ASCII placeholders before emoji removal, then restored.
-// Longer allowed strings are matched before shorter sub-sequences to handle
-// variation-selector and ZWJ sequences correctly.
+// replaced with inert Unicode noncharacter placeholders (U+FDD0-U+FDEF)
+// before emoji removal, then restored. Longer allowed strings are matched
+// before shorter sub-sequences to handle variation-selector and ZWJ
+// sequences correctly.
+//
+// Empty strings in allowedEmojis are silently ignored because
+// [strings.ReplaceAll] with an empty old-string inserts the replacement
+// between every rune, causing unbounded memory growth.
 func demojifyPreserving(text string, allowedEmojis []string, allowedRanges []*unicode.RangeTable) string {
-	// Sort allowed emojis by descending byte length so longer sequences
-	// (e.g., ZWJ family emoji) are matched before their sub-sequences.
-	sorted := make([]string, len(allowedEmojis))
-	copy(sorted, allowedEmojis)
+	// Filter out empty strings (DoS prevention) and sort allowed emojis
+	// by descending byte length so longer sequences (e.g., ZWJ family
+	// emoji) are matched before their sub-sequences.
+	sorted := make([]string, 0, len(allowedEmojis))
+	for _, e := range allowedEmojis {
+		if e != "" {
+			sorted = append(sorted, e)
+		}
+	}
+	if len(sorted) == 0 {
+		// All entries were empty; fall back to standard removal.
+		if len(allowedRanges) > 0 {
+			return demojifyAllowed(text, allowedRanges)
+		}
+		return Demojify(text)
+	}
 	sortByLenDesc(sorted)
 
 	// Build placeholder strings guaranteed to be absent from the input.
@@ -173,6 +190,11 @@ func buildPlaceholders(n int, text string) []string {
 			// Extreme fallback: use U+FFFE and U+FFFF.
 			if sentinel == lastSentinel+1 {
 				sentinel = '\uFFFE'
+				continue
+			}
+			// sentinel is U+FFFF (incremented from U+FFFE after a
+			// collision) -- try it before falling back to multi-rune.
+			if sentinel <= '\uFFFF' {
 				continue
 			}
 			// All 34 noncharacters collide -- practically impossible.

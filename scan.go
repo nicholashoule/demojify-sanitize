@@ -67,7 +67,8 @@ type ScanConfig struct {
 	// NOTE: When Replacements is non-empty, [Options.RemoveEmojis],
 	// [Options.AllowedRanges], and [Options.AllowedEmojis] are ignored
 	// because [Replace] always strips residual emoji via [Demojify]. Only
-	// [Options.NormalizeWhitespace] is applied after substitution. To
+	// [Options.NormalizeWhitespace] is honoured after substitution, and
+	// only when the substitution step changes the file content. To
 	// preserve specific Unicode ranges during replacement-based scans, add
 	// those codepoints to the Replacements map with identity values
 	// (key == value).
@@ -179,9 +180,16 @@ type Finding struct {
 // for every file whose content would change after cleaning. When
 // [ScanConfig.Replacements] is non-empty, each file is cleaned with [Replace]
 // (mapped-sequence substitution followed by residual-emoji stripping via
-// [Demojify]); otherwise [Sanitize] is applied with cfg.Options.
-// If [Options.NormalizeWhitespace] is enabled, whitespace normalization is
-// applied in both modes.
+// [Demojify]); otherwise emoji removal is applied per cfg.Options.
+//
+// When [Options.NormalizeWhitespace] is enabled and emoji removal or
+// replacements are active, whitespace normalization is applied only to
+// files that were actually changed by the emoji/replacement step -- it
+// cleans up whitespace left behind by those fixes rather than rewriting
+// unrelated whitespace. When neither emoji removal nor replacements are
+// active, normalization is the sole purpose of the scan and runs
+// unconditionally on every file.
+//
 // Files matching ExemptFiles, ExemptSuffixes, or outside the
 // Extensions filter are skipped. Directories matching SkipDirs are not entered.
 // Files larger than cfg.MaxFileBytes are silently skipped (zero disables the
@@ -313,14 +321,34 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 		}
 		original := string(data)
 
+		// Clean the file content. Emoji removal (or replacement-based
+		// substitution) runs first. Whitespace normalization, when enabled,
+		// is applied only if the emoji/replacement step actually changed
+		// the content -- matching the documented intent of cleaning up
+		// whitespace "left behind" by emoji removal.  When neither emoji
+		// removal nor replacements are active, normalization is the sole
+		// purpose of the scan and runs unconditionally.
 		var cleaned string
 		if replacer != nil {
 			cleaned = Demojify(replacer.Replace(original))
-			if cfg.Options.NormalizeWhitespace {
-				cleaned = Normalize(cleaned)
+		} else if cfg.Options.RemoveEmojis {
+			switch {
+			case len(cfg.Options.AllowedEmojis) > 0:
+				cleaned = demojifyPreserving(original, cfg.Options.AllowedEmojis, cfg.Options.AllowedRanges)
+			case len(cfg.Options.AllowedRanges) > 0:
+				cleaned = demojifyAllowed(original, cfg.Options.AllowedRanges)
+			default:
+				cleaned = Demojify(original)
 			}
 		} else {
-			cleaned = Sanitize(original, cfg.Options)
+			cleaned = original
+		}
+
+		if cfg.Options.NormalizeWhitespace {
+			emojiActive := replacer != nil || cfg.Options.RemoveEmojis
+			if !emojiActive || cleaned != original {
+				cleaned = Normalize(cleaned)
+			}
 		}
 
 		if cleaned != original {

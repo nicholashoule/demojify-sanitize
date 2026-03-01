@@ -83,6 +83,7 @@ func TestRepoAllDocsEmojiClean(t *testing.T) {
 func TestRepoProductionFilesIdempotent(t *testing.T) {
 	cfg := demojify.DefaultScanConfig()
 	cfg.Root = "."
+	cfg.Extensions = []string{".go", ".md"}
 	cfg.SkipDirs = append(cfg.SkipDirs, "docs/")
 	// RemoveEmojis only; NormalizeWhitespace stays false (default).
 

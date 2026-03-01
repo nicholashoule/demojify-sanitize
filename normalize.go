@@ -71,8 +71,11 @@ func collapseInlineSpaces(text string) string {
 // The returned string is trimmed of leading and trailing whitespace.
 //
 // Because leading indentation is preserved, Normalize is safe to use on
-// Markdown files with nested lists, indented code blocks, and Go source
-// with aligned comments.
+// Markdown files with nested lists and indented code blocks. However,
+// inline runs of multiple spaces or tabs after the first non-whitespace
+// character are collapsed to a single space, which breaks column-aligned
+// comments and tabular formatting. Use a formatter such as gofmt to
+// restore comment alignment in Go source files after normalizing.
 func Normalize(text string) string {
 	text = crlfReplacer.Replace(text)
 	text = collapseInlineSpaces(text)

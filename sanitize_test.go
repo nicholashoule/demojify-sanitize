@@ -126,6 +126,24 @@ func TestSanitize(t *testing.T) {
 			want: "\uFDD00\uFDD0 keep \U0001F680 remove ",
 		},
 		{
+			name:  "AllowedEmojis – empty string entry is silently ignored",
+			input: "Hello \U0001F600 World",
+			opts: demojify.Options{
+				RemoveEmojis:  true,
+				AllowedEmojis: []string{""},
+			},
+			want: "Hello  World",
+		},
+		{
+			name:  "AllowedEmojis – empty string mixed with valid entry",
+			input: "Deploy \U0001F680 done \U0001F600!",
+			opts: demojify.Options{
+				RemoveEmojis:  true,
+				AllowedEmojis: []string{"", "\U0001F680"},
+			},
+			want: "Deploy \U0001F680 done !",
+		},
+		{
 			name:  "empty string",
 			input: "",
 			opts:  demojify.DefaultOptions(),

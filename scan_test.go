@@ -494,6 +494,129 @@ func TestScanDirErrorOnBadRoot(t *testing.T) {
 	}
 }
 
+// TestScanDirNormalizeGatedOnEmojiChange verifies that NormalizeWhitespace
+// only applies to files where the emoji/replacement step actually changed the
+// content, preventing false-positive findings for files with irregular
+// whitespace but no emoji.
+func TestScanDirNormalizeGatedOnEmojiChange(t *testing.T) {
+	t.Run("whitespace-only file is not a finding when emoji removal is active", func(t *testing.T) {
+		root := t.TempDir()
+		// Irregular whitespace (double spaces) but no emoji.
+		writeTempFile(t, root, "spaces.txt", "hello  world\n")
+
+		cfg := demojify.ScanConfig{
+			Root: root,
+			Options: demojify.Options{
+				RemoveEmojis:        true,
+				NormalizeWhitespace: true,
+			},
+		}
+		findings, err := demojify.ScanDir(cfg)
+		if err != nil {
+			t.Fatalf("ScanDir: %v", err)
+		}
+		if len(findings) != 0 {
+			t.Errorf("got %d findings, want 0 (no emoji, normalization should be skipped)",
+				len(findings))
+		}
+	})
+
+	t.Run("file with emoji and irregular whitespace is normalized", func(t *testing.T) {
+		root := t.TempDir()
+		// Emoji + double spaces: both should be cleaned.
+		writeTempFile(t, root, "both.txt", "\U0001F680  deployed  ok\n")
+
+		cfg := demojify.ScanConfig{
+			Root: root,
+			Options: demojify.Options{
+				RemoveEmojis:        true,
+				NormalizeWhitespace: true,
+			},
+		}
+		findings, err := demojify.ScanDir(cfg)
+		if err != nil {
+			t.Fatalf("ScanDir: %v", err)
+		}
+		if len(findings) != 1 {
+			t.Fatalf("got %d findings, want 1", len(findings))
+		}
+		// Emoji removed, then double spaces collapsed.
+		want := "deployed ok"
+		if findings[0].Cleaned != want {
+			t.Errorf("Cleaned = %q, want %q", findings[0].Cleaned, want)
+		}
+	})
+
+	t.Run("standalone normalization (no emoji removal) applies unconditionally", func(t *testing.T) {
+		root := t.TempDir()
+		writeTempFile(t, root, "spaces.txt", "hello  world\n")
+
+		cfg := demojify.ScanConfig{
+			Root: root,
+			Options: demojify.Options{
+				RemoveEmojis:        false,
+				NormalizeWhitespace: true,
+			},
+		}
+		findings, err := demojify.ScanDir(cfg)
+		if err != nil {
+			t.Fatalf("ScanDir: %v", err)
+		}
+		if len(findings) != 1 {
+			t.Fatalf("got %d findings, want 1 (standalone normalization)", len(findings))
+		}
+		want := "hello world"
+		if findings[0].Cleaned != want {
+			t.Errorf("Cleaned = %q, want %q", findings[0].Cleaned, want)
+		}
+	})
+
+	t.Run("replacement path: whitespace-only file is not a finding", func(t *testing.T) {
+		root := t.TempDir()
+		writeTempFile(t, root, "spaces.txt", "hello  world\n")
+
+		cfg := demojify.ScanConfig{
+			Root:         root,
+			Replacements: map[string]string{"\u2705": "[PASS]"},
+			Options: demojify.Options{
+				NormalizeWhitespace: true,
+			},
+		}
+		findings, err := demojify.ScanDir(cfg)
+		if err != nil {
+			t.Fatalf("ScanDir: %v", err)
+		}
+		if len(findings) != 0 {
+			t.Errorf("got %d findings, want 0 (no emoji/replacements matched, normalization skipped)",
+				len(findings))
+		}
+	})
+
+	t.Run("replacement path: file with emoji and whitespace is normalized", func(t *testing.T) {
+		root := t.TempDir()
+		writeTempFile(t, root, "status.txt", "\u2705  passed  ok\n")
+
+		cfg := demojify.ScanConfig{
+			Root:         root,
+			Replacements: map[string]string{"\u2705": "[PASS]"},
+			Options: demojify.Options{
+				NormalizeWhitespace: true,
+			},
+		}
+		findings, err := demojify.ScanDir(cfg)
+		if err != nil {
+			t.Fatalf("ScanDir: %v", err)
+		}
+		if len(findings) != 1 {
+			t.Fatalf("got %d findings, want 1", len(findings))
+		}
+		want := "[PASS] passed ok"
+		if findings[0].Cleaned != want {
+			t.Errorf("Cleaned = %q, want %q", findings[0].Cleaned, want)
+		}
+	})
+}
+
 func TestScanDirReplacements(t *testing.T) {
 	root := t.TempDir()
 	writeTempFile(t, root, "status.txt", "build \u2705 passed\n")

@@ -269,7 +269,11 @@ Collapses redundant whitespace while preserving leading indentation:
 - three or more consecutive blank lines -> two blank lines
 - leading/trailing whitespace of the whole string -> trimmed
 
-Safe for Markdown nested lists, indented code blocks, and aligned source comments.
+Safe for Markdown nested lists and indented code blocks (leading indentation
+is preserved). However, inline runs of multiple spaces or tabs after the first
+non-whitespace character are collapsed to a single space, which breaks
+column-aligned comments and tabular formatting; use gofmt or a formatter to
+restore Go source comment alignment after normalizing.
 
 ```go
 demojify.Normalize("Hello World\n\n\n\nMore text")
@@ -305,6 +309,8 @@ func DefaultOptions() Options // RemoveEmojis+NormalizeWhitespace true; allowed 
 `AllowedRanges` preserves every codepoint that falls within any supplied
 `unicode.RangeTable`. `AllowedEmojis` preserves exact multi-codepoint sequences
 (e.g. `"\U0001F680"`, `"\U0001F3F4\U000E0067..."`). Both can be combined.
+Empty strings in `AllowedEmojis` are silently ignored, and empty keys in
+replacement maps are silently skipped to prevent unbounded memory growth.
 
 ```go
 // Remove all emoji except rocket (U+1F680) and thumbs-up.

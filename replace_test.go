@@ -139,6 +139,12 @@ func TestReplace(t *testing.T) {
 			replacements: map[string]string{"\u2705": "[PASS]"},
 			want:         "",
 		},
+		{
+			name:         "empty key in map is silently ignored",
+			input:        "hello world",
+			replacements: map[string]string{"": "INSERTED", "\u2705": "[PASS]"},
+			want:         "hello world",
+		},
 	}
 
 	for _, tt := range tests {
@@ -289,7 +295,6 @@ func TestFindAllMapped(t *testing.T) {
 			want:  []string{"\u26a0\ufe0f"},
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := demojify.FindAllMapped(tt.input, repl)
@@ -310,6 +315,15 @@ func TestFindAllMappedNilMap(t *testing.T) {
 	got := demojify.FindAllMapped("hello \u2705", nil)
 	if len(got) != 0 {
 		t.Errorf("FindAllMapped with nil map = %v, want empty", got)
+	}
+}
+
+func TestFindAllMappedEmptyKey(t *testing.T) {
+	repl := map[string]string{"": "INSERTED", "\u2705": "[PASS]"}
+	got := demojify.FindAllMapped("hello \u2705", repl)
+	// Empty key must be silently skipped; only the check mark is found.
+	if len(got) != 1 || got[0] != "\u2705" {
+		t.Errorf("FindAllMapped with empty key = %v, want [\u2705]", got)
 	}
 }
 
@@ -366,6 +380,13 @@ func TestReplaceCount(t *testing.T) {
 			input:        "",
 			replacements: repl,
 			wantText:     "",
+			wantCount:    0,
+		},
+		{
+			name:         "empty key in map is silently ignored",
+			input:        "hello world",
+			replacements: map[string]string{"": "INSERTED"},
+			wantText:     "hello world",
 			wantCount:    0,
 		},
 	}

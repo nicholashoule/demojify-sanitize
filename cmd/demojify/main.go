@@ -12,6 +12,7 @@
 //	-sub             substitute emoji with text tokens instead of stripping;
 //	                 implies -fix
 //	-normalize       collapse redundant whitespace left behind by -fix/-sub;
+//	                 only applied to files where emoji were found or replaced;
 //	                 implies -fix
 //	-exts <.go,.md>  comma-separated extensions to scan (default: all files);
 //	                 a leading dot is added automatically if omitted
@@ -32,7 +33,7 @@ func main() {
 	root := flag.String("root", ".", "directory to scan")
 	fix := flag.Bool("fix", false, "rewrite affected files in place")
 	sub := flag.Bool("sub", false, "substitute emoji with text tokens (implies -fix)")
-	normalize := flag.Bool("normalize", false, "collapse redundant whitespace left behind by -fix/-sub (implies -fix)")
+	normalize := flag.Bool("normalize", false, "collapse redundant whitespace left behind by -fix/-sub; only applied to files changed by emoji removal (implies -fix)")
 	exts := flag.String("exts", "", "comma-separated extensions to scan, e.g. .go,.md (default: all)")
 	flag.Parse()
 
@@ -88,6 +89,10 @@ func main() {
 	exitCode := 0
 	for _, f := range findings {
 		fmt.Printf("\n[WARN] %s\n", f.Path)
+		if len(f.Matches) == 0 && !f.HasEmoji {
+			// File changed due to whitespace normalization only.
+			fmt.Println("  (whitespace normalized, no emoji found)")
+		}
 		for _, m := range f.Matches {
 			display := m.Replacement
 			if display == "" {
@@ -118,6 +123,8 @@ func main() {
 			if werr != nil {
 				fmt.Fprintf(os.Stderr, "  [FAIL] write %s: %v\n", f.Path, werr)
 				exitCode = 1
+			} else if n == 0 && !f.HasEmoji {
+				fmt.Printf("  [PASS] fixed 1 file (whitespace only)\n")
 			} else {
 				fmt.Printf("  [PASS] fixed %d occurrence(s)\n", n)
 			}

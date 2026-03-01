@@ -21,7 +21,7 @@ go build -o demojify ./cmd/demojify
 | `-exts <.go,.md>` | all files | Comma-separated extensions to scan |
 | `-fix` | false | Rewrite affected files in place after reporting |
 | `-sub` | false | Substitute emoji with text tokens instead of stripping; implies `-fix` |
-| `-normalize` | false | Collapse redundant whitespace (e.g., gaps left by `-fix`/`-sub`); implies `-fix` |
+| `-normalize` | false | Collapse redundant whitespace left behind by `-fix`/`-sub`; only applied to files changed by emoji removal; implies `-fix` |
 
 ## Exit Codes
 
@@ -105,7 +105,11 @@ single space and removes trailing whitespace. Useful when the original content
 had emoji surrounded by spaces that would otherwise leave double spaces behind.
 
 Leading indentation on each line is preserved, so `-normalize` is safe for
-Markdown nested lists, indented code blocks, and Go source with aligned comments.
+Markdown nested lists and indented code blocks. However, inline runs of
+multiple spaces or tabs after the first non-whitespace character are collapsed
+to a single space, which will destroy column-aligned comments and tabular
+formatting. Run gofmt after applying `-normalize` to Go source to restore
+comment alignment.
 
 ### Audit Markdown and Go files only
 
