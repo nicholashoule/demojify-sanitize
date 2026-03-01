@@ -121,7 +121,7 @@ always consumed atomically.
 **Why `DefaultReplacements()` returns a copy:**
 A shared global map is not safe for concurrent mutation. Returning a fresh
 copy on every call lets each caller add, remove, or override entries without
-affecting other goroutines or call sites. The copy cost is negligible (~100
+affecting other goroutines or call sites. The copy cost is negligible (~137
 entries) compared to the I/O in `ReplaceFile` or the regex in `Demojify`.
 
 **Why `ReplaceFile` uses an atomic rename:**
