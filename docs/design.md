@@ -1,8 +1,9 @@
 # Design Rationale
 
 This document explains the key design decisions behind `demojify-sanitize`.
-It is intended for contributors and enterprise evaluators who need to understand
-the *why*, not just the *what*.
+It is intended for contributors, enterprise evaluators, and developers of web
+applications or APIs who use AI agents and need to understand how the module
+audits, detects, and fixes content issues before they reach production.
 
 ## Zero-dependency policy
 

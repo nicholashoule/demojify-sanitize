@@ -2,9 +2,11 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/nicholashoule/demojify-sanitize.svg)](https://pkg.go.dev/github.com/nicholashoule/demojify-sanitize)
 
-A dependency-free Go module for detecting and removing emojis, Unicode
-pictographic characters, AI-generated clutter, and other non-semantic
-artifacts from Markdown, documentation, and repository text files.
+A dependency-free Go module that helps developers of web applications and APIs
+audit, detect, and fix emoji clutter, AI-generated preamble phrases, and
+redundant whitespace before they reach production. Run it as a post-processing
+step after AI agent output, as a content gate in your request pipeline, or as a
+CI check -- one call to `Sanitize` finds and fixes every issue in one pass.
 
 ## Install
 

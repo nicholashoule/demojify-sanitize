@@ -1,11 +1,14 @@
-// Package demojify provides functions to detect and remove emojis,
-// Unicode pictographic characters, AI-generated clutter, and other
-// non-semantic artifacts from Markdown, documentation, and repository
-// text files.
+// Package demojify helps developers of web applications and APIs audit,
+// detect, and fix emoji clutter, AI-generated preamble phrases, and
+// redundant whitespace before content reaches production. It is designed
+// for two primary workflows: AI agents can import it to self-correct
+// their own output, and applications can run it as a gate in their
+// request or CI pipeline to catch issues in one pass.
 //
 // Three primary entry points are exposed:
 //
 //   - [Demojify] strips emoji and Unicode pictographic characters.
+//   - [ContainsEmoji] detects whether text contains emoji.
 //   - [Sanitize] applies a configurable pipeline controlled by [Options].
 //   - [Normalize] collapses redundant whitespace and blank lines.
 //

@@ -6,15 +6,17 @@ applyTo: "**"
 
 ## Project Overview
 
-**demojify-sanitize** -- a dependency-free Go library for detecting and removing emojis,
-Unicode pictographic characters, AI-generated preamble phrases, and redundant whitespace
-from Markdown, documentation, and repository text files.
+**demojify-sanitize** -- a dependency-free Go library that helps developers of web
+applications and APIs audit, detect, and fix emoji clutter, AI-generated preamble
+phrases, and redundant whitespace before content reaches production. AI agents can
+import it to self-correct their output, and applications can run it as a gate in
+their request or CI pipeline to catch and fix every issue in one pass.
 
 **Module path:** `github.com/nicholashoule/demojify-sanitize`
 
-**Use cases:** Pre-processing AI-generated content, cleaning Markdown/documentation files,
-sanitizing user-submitted text, removing emoji clutter from CI/CD log output, normalizing
-whitespace in automated text pipelines.
+**Use cases:** Post-processing AI agent output in web apps and APIs, sanitizing
+user-submitted content, running as a CI quality gate, cleaning Markdown and
+documentation files, normalizing whitespace in automated text pipelines.
 
 ## Technology Stack
 
