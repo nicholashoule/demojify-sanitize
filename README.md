@@ -88,7 +88,7 @@ Full signatures and doc comments are on
 | `ReplaceCount(text, repl) (string, int)` | Replace and return substitution count |
 | `FindAll(text) []string` | Distinct emoji sequences in text |
 | `FindAllMapped(text, repl) []string` | Mapped keys found in text |
-| `DefaultReplacements() map[string]string` | Built-in ~135-entry emoji-to-text map ([full list](docs/replacements.md)) |
+| `DefaultReplacements() map[string]string` | Built-in ~137-entry emoji-to-text map ([full list](docs/replacements.md)) |
 
 ### Scanner
 
@@ -140,7 +140,7 @@ Full range table: [docs/unicode-coverage.md](docs/unicode-coverage.md).
 | Document | Contents |
 |----------|----------|
 | [docs/design.md](docs/design.md) | Architecture rationale: zero-dependency policy, pipeline order, error handling, atomic writes |
-| [docs/replacements.md](docs/replacements.md) | Full `DefaultReplacements()` reference: all ~135 entries organized by category |
+| [docs/replacements.md](docs/replacements.md) | Full `DefaultReplacements()` reference: all ~137 entries organized by category |
 | [docs/unicode-coverage.md](docs/unicode-coverage.md) | `emojiRE` ranges, intentional exclusions (copyright, trademark, math arrows), substitution vs. stripping |
 | [docs/cli.md](docs/cli.md) | `cmd/demojify` CLI reference: flags, exit codes, output format, examples |
 

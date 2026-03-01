@@ -483,6 +483,23 @@ func TestScanFileSkipsBinaryFiles(t *testing.T) {
 	}
 }
 
+func TestScanFileNormalizeWhitespace(t *testing.T) {
+	root := t.TempDir()
+	path := writeTempFile(t, root, "messy.txt", "\U0001F680 Deploy  complete!\n\n\n\nDone.\n")
+
+	f, err := demojify.ScanFile(path, demojify.DefaultOptions())
+	if err != nil {
+		t.Fatalf("ScanFile: %v", err)
+	}
+	if f == nil {
+		t.Fatal("expected finding, got nil")
+	}
+	want := "Deploy complete!\n\nDone."
+	if f.Cleaned != want {
+		t.Errorf("Cleaned = %q, want %q", f.Cleaned, want)
+	}
+}
+
 func TestScanDirErrorOnBadRoot(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "no-such-dir", "deep")
 	cfg := demojify.ScanConfig{

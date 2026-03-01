@@ -83,6 +83,16 @@ func TestDemojify(t *testing.T) {
 			input: "",
 			want:  "",
 		},
+		{
+			name:  "only emoji returns empty string",
+			input: "\U0001F680\U0001F4CA\u2705",
+			want:  "",
+		},
+		{
+			name:  "skin tone modifier stripped",
+			input: "wave \U0001F44B\U0001F3FD end",
+			want:  "wave  end",
+		},
 	}
 
 	for _, tt := range tests {

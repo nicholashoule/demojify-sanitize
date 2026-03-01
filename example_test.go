@@ -100,6 +100,37 @@ func ExampleSanitize_markdownFiles() {
 	}
 }
 
+func ExampleDefaultOptions() {
+	opts := demojify.DefaultOptions()
+	fmt.Println(opts.RemoveEmojis, opts.NormalizeWhitespace)
+	// Output:
+	// true true
+}
+
+func ExampleDefaultReplacements() {
+	repl := demojify.DefaultReplacements()
+	fmt.Println(repl["\u2705"])
+	fmt.Println(repl["\u274c"])
+	fmt.Println(repl["\U0001F680"])
+	// Output:
+	// [PASS]
+	// [FAIL]
+	// [DEPLOY]
+}
+
+func ExampleDefaultScanConfig() {
+	cfg := demojify.DefaultScanConfig()
+	fmt.Println("Root:", cfg.Root)
+	fmt.Println("SkipDirs:", cfg.SkipDirs)
+	fmt.Println("ExemptSuffixes:", cfg.ExemptSuffixes)
+	fmt.Println("MaxFileBytes:", cfg.MaxFileBytes)
+	// Output:
+	// Root: .
+	// SkipDirs: [.git/ vendor/ node_modules/]
+	// ExemptSuffixes: [_test.go]
+	// MaxFileBytes: 1048576
+}
+
 func ExampleFindAll() {
 	text := "build \u2705 done, launch \U0001F680 complete, check again \u2705"
 	fmt.Println(demojify.FindAll(text))
