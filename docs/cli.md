@@ -77,15 +77,16 @@ go run ./cmd/demojify -version
 # demojify (devel)
 ```
 
-`go run` always builds from local source, so `debug.ReadBuildInfo()` returns an
-empty version string and the output is always `(devel)`.
+`go run` always builds from local source, so `debug.ReadBuildInfo()` sets the
+version to `(devel)` directly -- the `(devel)` output is produced by the
+toolchain itself, not by a fallback for empty strings.
 
 To see a real semver tag, install a published version and invoke the binary:
 
 ```bash
-go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.2.0
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest
 demojify -version
-# demojify v0.2.0
+# demojify v0.2.1
 ```
 
 ### Audit only (no writes)

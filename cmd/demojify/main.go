@@ -152,9 +152,10 @@ func main() {
 }
 
 // cliVersion returns the module version reported by the Go build system.
-// When the binary is built with "go install" or "go build" the semver tag is
-// used (e.g. "v0.2.0"). For local "go run" / development builds the Go
-// toolchain sets the version to "(devel)".
+// A semver tag (e.g. "v0.2.1") is embedded only when the binary is installed
+// from a published tagged release (e.g. "go install ...@v0.2.1"). Builds from
+// local source -- whether via "go run", "go build", or "go install" without a
+// version suffix -- have the version set to "(devel)" by the Go toolchain.
 func cliVersion() string {
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
