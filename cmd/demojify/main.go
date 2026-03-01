@@ -156,6 +156,8 @@ func main() {
 // from a published tagged release (e.g. "go install ...@v0.2.1"). Builds from
 // local source -- whether via "go run", "go build", or "go install" without a
 // version suffix -- have the version set to "(devel)" by the Go toolchain.
+// The empty-string fallback is a defensive guard for unusual non-module build
+// contexts where debug.ReadBuildInfo() succeeds but Main.Version is unset.
 func cliVersion() string {
 	info, ok := debug.ReadBuildInfo()
 	if !ok {

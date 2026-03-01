@@ -78,8 +78,8 @@ go run ./cmd/demojify -version
 ```
 
 `go run` always builds from local source, so `debug.ReadBuildInfo()` sets the
-version to `(devel)` directly -- the `(devel)` output is produced by the
-toolchain itself, not by a fallback for empty strings.
+version to `(devel)` directly. An empty-string fallback in `cliVersion()` also
+produces `(devel)` as a defensive guard for unusual non-module build contexts.
 
 To see a real semver tag, install a published version and invoke the binary:
 
