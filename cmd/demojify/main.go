@@ -16,6 +16,7 @@
 //	-quiet           suppress all output; exit code only (0 = clean, 1 = findings/errors)
 //	-exts <.go,.md>  comma-separated extensions to scan (default: all files);
 //	                 a leading dot is added automatically if omitted
+//	-version         print version and exit
 package main
 
 import (
@@ -24,6 +25,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 
 	demojify "github.com/nicholashoule/demojify-sanitize"
@@ -36,7 +38,13 @@ func main() {
 	normalize := flag.Bool("normalize", false, "collapse redundant whitespace in all scanned files (implies -fix)")
 	quiet := flag.Bool("quiet", false, "suppress all output; exit code only (0 = clean, 1 = findings/errors)")
 	exts := flag.String("exts", "", "comma-separated extensions to scan, e.g. .go,.md (default: all)")
+	version := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
+
+	if *version {
+		fmt.Println(cliVersion())
+		return
+	}
 
 	if *sub || *normalize {
 		*fix = true
@@ -141,4 +149,20 @@ func main() {
 	}
 
 	os.Exit(exitCode)
+}
+
+// cliVersion returns the module version reported by the Go build system.
+// When the binary is built with "go install" or "go build" the semver tag is
+// used (e.g. "v0.2.0"). For local "go run" / development builds the Go
+// toolchain sets the version to "(devel)".
+func cliVersion() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "demojify version unknown"
+	}
+	v := info.Main.Version
+	if v == "" {
+		v = "(devel)"
+	}
+	return "demojify " + v
 }
