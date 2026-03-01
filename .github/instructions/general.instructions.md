@@ -38,6 +38,7 @@ whitespace in automated text pipelines.
 ├── normalize_test.go    # Tests for normalize.go
 ├── sanitize_test.go     # Tests for sanitize.go
 ├── example_test.go      # Runnable pkg.go.dev examples
+├── repo_test.go         # Dogfooding tests -- validates repo with own API
 ├── go.mod               # Module definition
 ├── Makefile             # Development workflow
 ├── CHANGELOG.md         # Release history

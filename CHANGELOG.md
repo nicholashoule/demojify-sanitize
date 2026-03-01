@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `Options.AllowedRanges []*unicode.RangeTable` -- preserves specific emoji
+  codepoints during removal while stripping all others (backward-compatible;
+  `nil` default removes everything as before).
+- `repo_test.go` -- dogfooding tests that validate the entire repository using
+  the module's own API (`ContainsEmoji`, `Sanitize`). Five tests:
+  `TestRepoProductionSourceFilesEmojiClean`, `TestRepoAllDocsEmojiClean`,
+  `TestRepoProductionFilesIdempotent`, `TestRepoTestFilesContainEmoji`,
+  `TestRepoAgentOutputRemediation`.
+- `make fmt-check` target and CI `Format check` step enforcing `gofmt -s`.
+- Apache License 2.0 (`LICENSE` file).
+- Windows note in `Makefile` and `CONTRIBUTING.md`: race detector requires
+  CGO and gcc.
+
 ## [0.1.0] - 2026-02-28
 
 ### Added

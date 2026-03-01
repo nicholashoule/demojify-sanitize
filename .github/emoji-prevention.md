@@ -43,14 +43,15 @@ if demojify.ContainsEmoji(string(data)) {
 
 ## Automated enforcement: dogfooding tests
 
-[`repo_test.go`](../repo_test.go) runs four tests on every `go test` invocation,
+[`repo_test.go`](../repo_test.go) runs five tests on every `go test` invocation,
 using this module's own API against the repository's files:
 
 | Test | What it checks |
 |------|---------------|
-| `TestRepoAllSourceFilesEmojiClean` | Every `.go` file contains no literal emoji |
+| `TestRepoProductionSourceFilesEmojiClean` | Every non-test `.go` file contains no literal emoji |
 | `TestRepoAllDocsEmojiClean` | Every `.md` file (except README.md) contains no emoji, including all `.github/` files |
-| `TestRepoAllFilesIdempotent` | `Sanitize` (emoji + AI clutter removal) on every file is a no-op -- files are already clean |
+| `TestRepoProductionFilesIdempotent` | `Sanitize` (emoji + AI clutter removal) on every production file is a no-op -- files are already clean |
+| `TestRepoTestFilesContainEmoji` | Meta-test: at least one `*_test.go` file contains literal emoji, proving test data is present |
 | `TestRepoAgentOutputRemediation` | Proves the module detects and fully cleans realistic rogue AI output, and that the result is idempotent |
 
 Files are discovered dynamically via `filepath.WalkDir` -- no hardcoded lists.
@@ -100,17 +101,20 @@ If you need to add emoji to other documentation for a legitimate illustrative
 purpose, use Unicode escape sequences in source (e.g. `\U0001F680`) rather than
 literal characters, so the file itself passes `ContainsEmoji`.
 
-## In code: escaping instead of literals
+## In code: production vs test files
 
-Source files that must reference emoji (e.g. test inputs) should use Go Unicode
-escape syntax so the file bytes are ASCII-clean:
+**Production source** (non-test `.go` files, `.md` docs) must be emoji-free.
+Use Unicode escape syntax when referencing emoji in string literals:
 
 ```go
-// Correct -- source is emoji-free, behavior is tested
+// Correct -- source file is emoji-free, behavior is tested
 demojify.Demojify("\U0001F680 Deploy complete!")
-
-// Incorrect -- embeds emoji bytes in source (do not copy this pattern)
-demojify.Demojify("[U+1F680 rocket emoji] Deploy complete!")
 ```
 
 See [`example_test.go`](../example_test.go) for the applied convention.
+
+**Test files** (`*_test.go`) are exempt from enforcement. They MAY contain
+literal emoji as test input data -- this proves the module processes real-world
+codepoints. The dogfooding tests in `repo_test.go` use `isTestFile()` to skip
+test files during repo hygiene checks, and `TestRepoTestFilesContainEmoji`
+asserts that at least one test file does contain literal emoji.

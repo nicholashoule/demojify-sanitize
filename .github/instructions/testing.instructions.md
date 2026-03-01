@@ -15,6 +15,7 @@ applyTo: "**/*_test.go"
 | `demojify_test.go` | `TestDemojify`, `TestContainsEmoji` |
 | `normalize_test.go` | `TestNormalize` |
 | `sanitize_test.go` | `TestDefaultOptions`, `TestSanitize` |
+| `repo_test.go` | `TestRepoProductionSourceFilesEmojiClean`, `TestRepoAllDocsEmojiClean`, `TestRepoProductionFilesIdempotent`, `TestRepoTestFilesContainEmoji`, `TestRepoAgentOutputRemediation` |
 | `example_test.go` | `Example*` functions (rendered on pkg.go.dev) |
 
 All tests are in package `demojify_test` (external test package) to verify the public API only.
