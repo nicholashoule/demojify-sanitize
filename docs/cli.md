@@ -21,7 +21,7 @@ go build -o demojify ./cmd/demojify
 | `-exts <.go,.md>` | all files | Comma-separated extensions to scan |
 | `-fix` | false | Rewrite affected files in place after reporting |
 | `-sub` | false | Substitute emoji with text tokens instead of stripping; implies `-fix` |
-| `-normalize` | false | Collapse redundant whitespace left behind by `-fix`/`-sub`; only applied to files changed by emoji removal; implies `-fix` |
+| `-normalize` | false | Collapse redundant whitespace in all scanned files; implies `-fix` |
 | `-quiet` | false | Suppress all output; exit code only (0 = clean, 1 = findings/errors) |
 
 ## Exit Codes
@@ -127,7 +127,7 @@ go run ./cmd/demojify -root . -exts .go,.md
 echo "Exit: $?"
 ```
 
-Exits 0 (pass) or 1 (fail). Combine with `-sub -fix` to auto-correct instead.
+Exits 0 (pass) or 1 (fail). Combine with `-sub` to auto-correct instead.
 
 Use `-quiet` in CI pipelines where only the exit code matters:
 
@@ -138,7 +138,7 @@ go run ./cmd/demojify -root . -quiet
 ### Fix, then verify clean
 
 ```bash
-go run ./cmd/demojify -root . -sub -fix && \
+go run ./cmd/demojify -root . -sub && \
 go run ./cmd/demojify -root . -exts .go,.md
 ```
 
@@ -150,5 +150,5 @@ The CLI is a thin wrapper around the library. The equivalent library calls are:
 |----------------------|--------------|
 | (audit only) | `ScanDir(DefaultScanConfig())` |
 | `-fix` | `ScanDir(cfg)` + `WriteFinding(path, f)` |
-| `-sub -fix` | `ScanDir(cfg)` with `cfg.Replacements = DefaultReplacements()` + `ReplaceFile(path, repl)` |
-| `-sub -normalize -fix` | `ScanDir(cfg)` with `cfg.Options.NormalizeWhitespace = true` + `WriteFinding(path, f)` |
+| `-sub` | `ScanDir(cfg)` with `cfg.Replacements = DefaultReplacements()` + `ReplaceFile(path, repl)` |
+| `-sub -normalize` | `ScanDir(cfg)` with `cfg.Options.NormalizeWhitespace = true` + `WriteFinding(path, f)` |

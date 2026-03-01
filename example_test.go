@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	demojify "github.com/nicholashoule/demojify-sanitize"
 )
@@ -208,4 +209,86 @@ func ExampleFindMatchesInFile() {
 			log.Printf("line %d col %d: %q (unmapped -- will be stripped)", m.Line, m.Column, m.Sequence)
 		}
 	}
+}
+
+// ExampleScanDir shows how to audit a directory tree for emoji and inspect
+// per-file findings. This example is compiled but not executed (no Output comment).
+func ExampleScanDir() {
+	cfg := demojify.DefaultScanConfig()
+	cfg.Root = "."
+	cfg.Extensions = []string{".go", ".md"}
+	cfg.CollectMatches = true
+
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		log.Fatalf("ScanDir: %v", err)
+	}
+	for _, f := range findings {
+		log.Printf("%s: %d match(es)", f.Path, len(f.Matches))
+	}
+}
+
+func ExampleScanFile() {
+	f, err := demojify.ScanFile("README.md", demojify.DefaultOptions())
+	if err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+	if f == nil {
+		fmt.Println("clean")
+	} else {
+		fmt.Println("needs sanitization")
+	}
+	// (output depends on README.md content)
+}
+
+// ExampleSanitizeFile shows how to sanitize a single file in place.
+// This example is compiled but not executed (no Output comment).
+func ExampleSanitizeFile() {
+	changed, err := demojify.SanitizeFile("output.md", demojify.DefaultOptions())
+	if err != nil {
+		log.Printf("SanitizeFile: %v", err)
+		return
+	}
+	if changed {
+		log.Println("output.md was sanitized")
+	}
+}
+
+func ExampleWriteFinding() {
+	dir, err := os.MkdirTemp("", "example-writefinding-*")
+	if err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+	defer os.RemoveAll(dir)
+
+	path := filepath.Join(dir, "status.md")
+	if err := os.WriteFile(path, []byte("\u2705 done\n"), 0o644); err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+
+	f, err := demojify.ScanFile(path, demojify.DefaultOptions())
+	if err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+	if f == nil {
+		fmt.Println("already clean")
+		return
+	}
+
+	changed, err := demojify.WriteFinding(path, *f)
+	if err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+	fmt.Println("changed:", changed)
+
+	data, _ := os.ReadFile(path)
+	fmt.Println("content:", string(data))
+	// Output:
+	// changed: true
+	// content: done
 }
