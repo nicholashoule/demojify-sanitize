@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `DefaultReplacements()` expanded from ~97 to ~135 entries across eleven
+- `DefaultReplacements()` expanded from ~97 to ~137 entries across twelve
   categories. New entries:
   - **Information symbol** -- U+2139 -> `[INFO]`
   - **Severity circles** -- U+1F534 -> `[ERROR]`, U+1F7E0 -> `[WARNING]`,
@@ -55,10 +55,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   codepoints during removal while stripping all others (backward-compatible;
   `nil` default removes everything as before).
 - `repo_test.go` -- dogfooding tests that validate the entire repository using
-  the module's own API (`ContainsEmoji`, `Sanitize`). Five tests:
+  the module's own API (`ContainsEmoji`, `Sanitize`). Four tests:
   `TestRepoProductionSourceFilesEmojiClean`, `TestRepoAllDocsEmojiClean`,
-  `TestRepoProductionFilesIdempotent`, `TestRepoTestFilesContainEmoji`,
-  `TestRepoAgentOutputRemediation`.
+  `TestRepoProductionFilesIdempotent`, `TestRepoTestFilesContainEmoji`.
 - `make fmt-check` target and CI `Format check` step enforcing `gofmt -s`.
 - Apache License 2.0 (`LICENSE` file).
 - Windows note in `Makefile` and `CONTRIBUTING.md`: race detector requires
