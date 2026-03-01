@@ -23,6 +23,7 @@ go build -o demojify ./cmd/demojify
 | `-sub` | false | Substitute emoji with text tokens instead of stripping; implies `-fix` |
 | `-normalize` | false | Collapse redundant whitespace in all scanned files; implies `-fix` |
 | `-quiet` | false | Suppress all output; exit code only (0 = clean, 1 = findings/errors) |
+| `-version` | false | Print the module version and exit 0 |
 
 ## Exit Codes
 
@@ -68,6 +69,15 @@ Binary files are auto-detected (NUL byte sniff) and skipped.
 Files larger than 1 MiB are skipped.
 
 ## Examples
+
+### Print version
+
+```bash
+go run ./cmd/demojify -version
+# demojify v0.2.1
+```
+
+For a local development build (`go run`), the version is reported as `(devel)`.
 
 ### Audit only (no writes)
 
@@ -148,6 +158,7 @@ The CLI is a thin wrapper around the library. The equivalent library calls are:
 
 | CLI flag combination | Library call |
 |----------------------|--------------|
+| `-version` | `runtime/debug.ReadBuildInfo()` (no library call) |
 | (audit only) | `ScanDir(DefaultScanConfig())` |
 | `-fix` | `ScanDir(cfg)` + `WriteFinding(path, f)` |
 | `-sub` | `ScanDir(cfg)` with `cfg.Replacements = DefaultReplacements()` + `ReplaceFile(path, repl)` |
