@@ -15,8 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `docs/cli.md` `-version` example corrected: `go run` always produces
-  `(devel)` because `debug.ReadBuildInfo()` returns an empty version for local
-  source builds; added `go install` form to demonstrate real semver output
+  `(devel)` because the Go toolchain sets that marker directly in
+  `debug.ReadBuildInfo()` for local source builds; added `go install` form
+  to demonstrate real semver output
 - `cmd/demojify/main_test.go` `TestMain` temp-dir leak: `defer os.RemoveAll`
   was bypassed by `os.Exit`; replaced with explicit cleanup before exit
 
