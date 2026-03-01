@@ -312,11 +312,7 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 
 		// Clean the file content. Emoji removal (or replacement-based
 		// substitution) runs first. Whitespace normalization, when enabled,
-		// is applied only if the emoji/replacement step actually changed
-		// the content -- matching the documented intent of cleaning up
-		// whitespace "left behind" by emoji removal.  When neither emoji
-		// removal nor replacements are active, normalization is the sole
-		// purpose of the scan and runs unconditionally.
+		// runs unconditionally on the result.
 		var cleaned string
 		if replacer != nil {
 			cleaned = Demojify(replacer.Replace(original))

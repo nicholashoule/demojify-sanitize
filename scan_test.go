@@ -511,11 +511,11 @@ func TestScanDirErrorOnBadRoot(t *testing.T) {
 	}
 }
 
-// TestScanDirNormalizeGatedOnEmojiChange verifies that NormalizeWhitespace
-// only applies to files where the emoji/replacement step actually changed the
-// content, preventing false-positive findings for files with irregular
-// whitespace but no emoji.
-func TestScanDirNormalizeGatedOnEmojiChange(t *testing.T) {
+// TestScanDirNormalizeUnconditional verifies that NormalizeWhitespace
+// runs unconditionally when enabled, producing findings for any file
+// whose whitespace can be collapsed -- regardless of whether the
+// emoji/replacement step also changed the content.
+func TestScanDirNormalizeUnconditional(t *testing.T) {
 	t.Run("whitespace-only file is a finding when emoji removal and normalization are active", func(t *testing.T) {
 		root := t.TempDir()
 		// Irregular whitespace (double spaces) but no emoji.

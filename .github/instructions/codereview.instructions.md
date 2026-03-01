@@ -6,9 +6,10 @@ applyTo: "**"
 
 Perform a full, end-to-end review of this Go module as a Sr. developer or SRE.
 Treat it as production-grade: idiomatic, stable, dependency-free, and ready for
-downstream consumers. The review output serves as an auditable proof of quality.
+downstream consumers.
 
-**Output location:** `docs/review.md`
+**Output location:** `docs/review.md` (transient -- create during review,
+delete after all findings are resolved; do not commit to main)
 
 **Related instructions:**
 [general](general.instructions.md) |
