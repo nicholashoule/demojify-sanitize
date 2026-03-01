@@ -28,20 +28,25 @@ func sortedKeys(m map[string]string) []string {
 // variation-selector sequences (e.g., WARNING sign U+26A0 with U+FE0F) correctly.
 //
 // Replace with a nil or empty replacements map behaves identically to [Demojify].
-// Replace is safe for concurrent use.
+// Replace is safe for concurrent use provided the replacements map is not
+// mutated concurrently.
 func Replace(text string, replacements map[string]string) string {
 	if len(replacements) == 0 {
 		return Demojify(text)
 	}
-	// Build a Replacer with keys ordered longest-first so that multi-codepoint
-	// sequences (e.g., U+26A0 U+FE0F) are consumed before their component codepoints.
-	keys := sortedKeys(replacements)
+	return applyReplacer(text, replacements, sortedKeys(replacements))
+}
+
+// applyReplacer substitutes emoji codepoints using keys (pre-sorted by
+// descending length) and the replacements map, then strips residual emoji
+// via [Demojify]. Called by [Replace], [ReplaceCount], and [ReplaceFile]
+// to avoid re-sorting keys in composed operations.
+func applyReplacer(text string, replacements map[string]string, keys []string) string {
 	args := make([]string, 0, len(keys)*2)
 	for _, k := range keys {
 		args = append(args, k, replacements[k])
 	}
-	text = strings.NewReplacer(args...).Replace(text)
-	return Demojify(text)
+	return Demojify(strings.NewReplacer(args...).Replace(text))
 }
 
 // FindAll returns the distinct emoji codepoint sequences found in text.
@@ -68,19 +73,32 @@ func FindAll(text string) []string {
 //
 // ReplaceFile returns an error for any filesystem failure. When count is zero
 // the file is unchanged and no write is performed.
-// ReplaceFile is safe for concurrent use provided callers do not share path.
+// ReplaceFile is safe for concurrent use provided callers do not share path
+// and the replacements map is not mutated concurrently.
 func ReplaceFile(path string, replacements map[string]string) (count int, err error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return 0, err
 	}
 	original := string(data)
-	cleaned := Replace(original, replacements)
+
+	var cleaned string
+	var keys []string
+	if len(replacements) > 0 {
+		keys = sortedKeys(replacements)
+		cleaned = applyReplacer(original, replacements, keys)
+	} else {
+		cleaned = Demojify(original)
+	}
 	if cleaned == original {
 		return 0, nil
 	}
 
-	count = countReplacements(original, replacements)
+	if len(keys) > 0 {
+		count = countWithKeys(original, keys)
+	} else {
+		count = len(emojiRE.FindAllString(original, -1))
+	}
 
 	// Preserve original permissions.
 	info, err := os.Stat(path)
@@ -126,7 +144,8 @@ func ReplaceFile(path string, replacements map[string]string) (count int, err er
 // matching the greedy behaviour of [Replace] (e.g., U+26A0 U+FE0F wins over
 // bare U+26A0 when both are in the map and the text contains the full sequence).
 //
-// FindAllMapped is safe for concurrent use.
+// FindAllMapped is safe for concurrent use provided the replacements map is
+// not mutated concurrently.
 func FindAllMapped(text string, replacements map[string]string) []string {
 	if len(replacements) == 0 || text == "" {
 		return nil
@@ -161,17 +180,25 @@ func FindAllMapped(text string, replacements map[string]string) []string {
 }
 
 // ReplaceCount applies [Replace] to text and returns both the cleaned string
-// and the total number of substitutions and removals performed. It is
-// equivalent to calling [Replace] and then counting replacements separately,
-// but does both in a single pass.
+// and the total number of substitutions and removals performed (mapped-key
+// matches plus residual emoji stripped by [Demojify]).
 //
-// ReplaceCount is safe for concurrent use.
+// ReplaceCount is safe for concurrent use provided the replacements map is
+// not mutated concurrently.
 func ReplaceCount(text string, replacements map[string]string) (string, int) {
-	cleaned := Replace(text, replacements)
+	if len(replacements) == 0 {
+		cleaned := Demojify(text)
+		if cleaned == text {
+			return text, 0
+		}
+		return cleaned, len(emojiRE.FindAllString(text, -1))
+	}
+	keys := sortedKeys(replacements)
+	cleaned := applyReplacer(text, replacements, keys)
 	if cleaned == text {
 		return text, 0
 	}
-	return cleaned, countReplacements(text, replacements)
+	return cleaned, countWithKeys(text, keys)
 }
 
 // FindMatchesInFile reads the file at path and returns a [Match] for every
@@ -192,24 +219,31 @@ func FindMatchesInFile(path string, replacements map[string]string) ([]Match, er
 	return buildMatches(string(data), replacements), nil
 }
 
-// countReplacements returns the total number of positions in original that
-// will be modified by Replace with the given replacements map. It counts each
-// map key occurrence once (longest-first, mirroring Replace's behaviour) then
-// adds the number of residual emoji codepoints that Demojify would remove.
-func countReplacements(original string, replacements map[string]string) int {
-	if len(replacements) == 0 {
-		return len(emojiRE.FindAllString(original, -1))
-	}
-	keys := sortedKeys(replacements)
+// countWithKeys performs a single left-to-right scan over text and returns the
+// number of emoji positions: mapped-key matches (longest first, greedy) plus
+// unmapped emoji codepoints found by [emojiRE]. This mirrors the matching
+// behaviour of [Replace] without building intermediate strings for each key.
+func countWithKeys(text string, keys []string) int {
 	count := 0
-	remaining := original
-	for _, k := range keys {
-		n := strings.Count(remaining, k)
-		count += n
-		if n > 0 {
-			remaining = strings.ReplaceAll(remaining, k, replacements[k])
+	for i := 0; i < len(text); {
+		matched := false
+		for _, k := range keys {
+			if strings.HasPrefix(text[i:], k) {
+				count++
+				i += len(k)
+				matched = true
+				break
+			}
+		}
+		if matched {
+			continue
+		}
+		if loc := emojiRE.FindStringIndex(text[i:]); loc != nil && loc[0] == 0 {
+			count++
+			i += loc[1]
+		} else {
+			i++
 		}
 	}
-	count += len(emojiRE.FindAllString(remaining, -1))
 	return count
 }

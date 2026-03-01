@@ -1,6 +1,7 @@
 package demojify
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -51,6 +52,13 @@ type ScanConfig struct {
 	// so matched sequences are substituted before any residual emoji are stripped.
 	// Longer keys are matched before shorter ones (variation-selector aware).
 	// Has no effect on [ScanFile], which accepts only [Options].
+	//
+	// NOTE: When Replacements is set, [Options.RemoveEmojis] and
+	// [Options.AllowedRanges] are ignored because [Replace] always strips
+	// residual emoji via [Demojify]. Only [Options.NormalizeWhitespace] is
+	// applied after substitution. To preserve specific Unicode ranges during
+	// replacement-based scans, add those codepoints to the Replacements map
+	// with identity values (key == value).
 	Replacements map[string]string
 
 	// CollectMatches controls whether [ScanDir] populates [Finding.Matches] for
@@ -65,7 +73,8 @@ type ScanConfig struct {
 // module repository or AI-agent workspace. It skips .git/, vendor/, and
 // node_modules/ directories, exempts *_test.go files, and scans all file
 // types by default (Extensions is nil). Files larger than 1 MiB are skipped
-// to avoid reading large or binary files into memory.
+// to avoid reading large files into memory, and binary files (detected by a
+// NUL byte in the first 512 bytes) are always skipped regardless of size.
 //
 // To restrict scanning to specific extensions, set Extensions explicitly:
 //
@@ -136,12 +145,27 @@ type Finding struct {
 	Matches []Match
 }
 
+// sniffSize is the number of bytes inspected for NUL when detecting binary files.
+const sniffSize = 512
+
+// isBinary reports whether data looks like a binary file by checking the first
+// 512 bytes for a NUL byte (\x00). This mirrors the heuristic used by Git and
+// other text-processing tools.
+func isBinary(data []byte) bool {
+	snip := data
+	if len(snip) > sniffSize {
+		snip = snip[:sniffSize]
+	}
+	return bytes.ContainsRune(snip, 0)
+}
+
 // ScanDir walks the directory tree rooted at cfg.Root and returns a [Finding]
 // for every file whose content would change after applying [Sanitize] with
 // cfg.Options. Files matching ExemptFiles, ExemptSuffixes, or outside the
 // Extensions filter are skipped. Directories matching SkipDirs are not entered.
 // Files larger than cfg.MaxFileBytes are silently skipped (zero disables the
-// limit).
+// limit). Binary files (detected by a NUL byte in the first 512 bytes) are
+// silently skipped.
 //
 // Unlike the pure-string functions in this package, ScanDir performs file I/O
 // and therefore returns an error when the filesystem is inaccessible.
@@ -164,15 +188,15 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 		}
 		norm := filepath.ToSlash(rel)
 
-		// Skip excluded directories.
+		// Skip excluded directories by base name. The root (norm == ".")
+		// is never skipped so that scanning always begins.
 		if d.IsDir() {
-			for _, skip := range cfg.SkipDirs {
-				dir := strings.TrimSuffix(skip, "/")
-				if norm == dir ||
-					strings.HasPrefix(norm, dir+"/") ||
-					strings.HasSuffix(norm, "/"+dir) ||
-					strings.Contains(norm, "/"+dir+"/") {
-					return filepath.SkipDir
+			if norm != "." {
+				name := d.Name()
+				for _, skip := range cfg.SkipDirs {
+					if name == strings.TrimSuffix(skip, "/") {
+						return filepath.SkipDir
+					}
 				}
 			}
 			return nil
@@ -223,6 +247,11 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 		if readErr != nil {
 			return readErr
 		}
+
+		// Skip binary files (NUL in first 512 bytes).
+		if isBinary(data) {
+			return nil
+		}
 		original := string(data)
 
 		var cleaned string
@@ -255,21 +284,52 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 }
 
 // buildMatches scans text line by line and returns a Match for every emoji
-// codepoint matched by emojiRE. Each Match records the matched sequence, its
-// 1-based line and 0-based byte-column within that line, the full line as
-// context, and the mapped replacement string (empty if not in replacements).
+// codepoint occurrence. Each Match records the matched sequence, its 1-based
+// line and 0-based byte-column within that line, the full line as context,
+// and the mapped replacement string (empty if not in replacements).
+//
+// Replacement lookup uses the same longest-key-first greedy walk as [Replace]
+// and [FindAllMapped], so a variation-selector sequence such as U+26A0 U+FE0F
+// is attributed to the combined key rather than the bare codepoint when both
+// appear in the map.
 func buildMatches(text string, replacements map[string]string) []Match {
+	keys := sortedKeys(replacements) // longest first; nil-safe (empty slice when map empty)
 	var matches []Match
 	for lineIdx, line := range strings.Split(text, "\n") {
-		for _, loc := range emojiRE.FindAllStringIndex(line, -1) {
-			seq := line[loc[0]:loc[1]]
-			matches = append(matches, Match{
-				Emoji:       seq,
-				Replacement: replacements[seq],
-				Line:        lineIdx + 1,
-				Column:      loc[0],
-				Context:     line,
-			})
+		for i := 0; i < len(line); {
+			// Try each replacement key longest-first so variation-selector
+			// sequences (e.g., U+26A0 U+FE0F) are attributed to the combined key.
+			matched := false
+			for _, k := range keys {
+				if strings.HasPrefix(line[i:], k) {
+					matches = append(matches, Match{
+						Emoji:       k,
+						Replacement: replacements[k],
+						Line:        lineIdx + 1,
+						Column:      i,
+						Context:     line,
+					})
+					i += len(k)
+					matched = true
+					break
+				}
+			}
+			if matched {
+				continue
+			}
+			// No replacement key matched; fall back to emojiRE for unmapped emoji.
+			if loc := emojiRE.FindStringIndex(line[i:]); loc != nil && loc[0] == 0 {
+				matches = append(matches, Match{
+					Emoji:       line[i : i+loc[1]],
+					Replacement: "",
+					Line:        lineIdx + 1,
+					Column:      i,
+					Context:     line,
+				})
+				i += loc[1]
+			} else {
+				i++
+			}
 		}
 	}
 	return matches

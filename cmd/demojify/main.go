@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	demojify "github.com/nicholashoule/demojify-sanitize"
@@ -74,14 +75,17 @@ func main() {
 		}
 
 		if *fix {
+			// f.Path is relative to cfg.Root with forward slashes;
+			// join it back to the root for filesystem operations.
+			absPath := filepath.Join(*root, filepath.FromSlash(f.Path))
 			var n int
 			var werr error
 			if *sub {
-				n, werr = demojify.ReplaceFile(f.Path, repl)
+				n, werr = demojify.ReplaceFile(absPath, repl)
 			} else {
-				cleaned := []byte(demojify.Sanitize(f.Original, demojify.DefaultOptions()))
-				werr = os.WriteFile(f.Path, cleaned, 0o644)
-				if werr == nil {
+				var changed bool
+				changed, werr = demojify.SanitizeFile(absPath, demojify.DefaultOptions())
+				if changed {
 					n = len(f.Matches)
 				}
 			}

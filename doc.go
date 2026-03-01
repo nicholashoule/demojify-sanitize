@@ -9,6 +9,8 @@
 //   - [Demojify] strips emoji and Unicode pictographic characters.
 //   - [ContainsEmoji] detects whether text contains emoji.
 //   - [Sanitize] applies a configurable pipeline controlled by [Options].
+//   - [SanitizeFile] applies [Sanitize] to a file atomically; no write
+//     occurs when the file is already clean.
 //   - [Normalize] collapses redundant whitespace and blank lines.
 //
 // For the most common use-case, pass [DefaultOptions] to [Sanitize]:

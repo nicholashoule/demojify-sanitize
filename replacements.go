@@ -5,15 +5,17 @@ package demojify
 // Because a fresh copy is returned on every call, callers can add, remove, or
 // override entries without affecting other callers.
 //
-// The map covers ~100 codepoint sequences across six categories:
+// The map covers ~97 codepoint sequences across nine categories:
 //
 //   - Warning and alert symbols (U+26A0, U+203C, ...)
 //   - Status symbols: pass/fail/alert indicators
 //   - Favorites, highlights, and annotations
 //   - Cloud, deployment, and technical pictographs
-//   - Arrows (U+2192 series) and status-direction indicators
+//   - Status indicators: pending, loading, directional
+//   - Arrows (U+2192 series) common in documentation
 //   - Geometric shapes and bullet-point codepoints
-//   - Checkboxes (U+2610 series) and common dingbats
+//   - Checkboxes (U+2610 series)
+//   - Common dingbats: hearts, diamonds, bullets
 //
 // Variation-selector suffixed sequences (e.g., U+26A0 U+FE0F) are listed
 // alongside their bare equivalents so that both forms are substituted.

@@ -206,11 +206,11 @@ func TestReplaceFile(t *testing.T) {
 			t.Fatalf("WriteFile: %v", err)
 		}
 		// Record permissions as set by the OS (Windows may normalise 0600 -> 0666).
-		infoBeore, err := os.Stat(path)
+		infoBefore, err := os.Stat(path)
 		if err != nil {
 			t.Fatalf("Stat before: %v", err)
 		}
-		wantPerm := infoBeore.Mode().Perm()
+		wantPerm := infoBefore.Mode().Perm()
 		if _, err := demojify.ReplaceFile(path, map[string]string{"\u2705": "[PASS]"}); err != nil {
 			t.Fatalf("ReplaceFile: %v", err)
 		}

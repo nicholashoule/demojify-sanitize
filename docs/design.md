@@ -127,9 +127,17 @@ entries) compared to the I/O in `ReplaceFile` or the regex in `Demojify`.
 **Why `ReplaceFile` uses an atomic rename:**
 Writing directly to the target file leaves a window where a crash or
 interruption would produce a truncated file. Writing to a sibling temp file
-and then calling `os.Rename` (which is atomic on POSIX filesystems and
-best-effort on Windows) means the file is either fully updated or fully
+and then calling `os.Rename` means the file is either fully updated or fully
 unchanged.
+
+On POSIX systems `rename(2)` is atomic and replaces the destination in a
+single filesystem operation. On Windows, Go 1.21+ (the minimum version for
+this module) implements `os.Rename` via `MoveFileEx` with
+`MOVEFILE_REPLACE_EXISTING`, which replaces the destination file but is **not**
+guaranteed to be atomic by the Windows kernel -- a crash during the move could
+theoretically leave the destination absent. In practice this is safe for
+single-file replace-in-place on the same volume (the temp file is always
+created in the same directory). Cross-volume renames are not attempted.
 
 ## Scope boundaries
 

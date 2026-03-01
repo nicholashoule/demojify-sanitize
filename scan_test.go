@@ -103,6 +103,65 @@ func TestScanDirMaxFileBytesZeroMeansNoLimit(t *testing.T) {
 	}
 }
 
+func TestScanDirSkipsBinaryFiles(t *testing.T) {
+	root := t.TempDir()
+
+	// Text file with emoji -- should produce a finding.
+	writeTempFile(t, root, "text.go", "package p // \U0001F680\n")
+
+	// Binary file: has a NUL byte in the first 512 bytes.
+	// Even though it contains an emoji codepoint, it should be skipped.
+	binary := []byte("binary \U0001F680 content\x00 rest of file\n")
+	writeTempFile(t, root, "image.dat", string(binary))
+
+	cfg := demojify.ScanConfig{
+		Root:    root,
+		Options: demojify.Options{RemoveEmojis: true},
+	}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 1 {
+		paths := make([]string, len(findings))
+		for i, f := range findings {
+			paths[i] = f.Path
+		}
+		t.Fatalf("got %d findings %v, want 1 (text.go only, binary skipped)",
+			len(findings), paths)
+	}
+	if findings[0].Path != "text.go" {
+		t.Errorf("finding path = %q, want \"text.go\"", findings[0].Path)
+	}
+}
+
+func TestScanDirBinaryNulAfterSniffSizeNotSkipped(t *testing.T) {
+	root := t.TempDir()
+
+	// Build a text file where the only NUL byte is at position 600
+	// (beyond the 512-byte sniff window). It should NOT be treated as binary.
+	buf := make([]byte, 700)
+	for i := range buf {
+		buf[i] = ' ' // fill with spaces (valid text)
+	}
+	copy(buf, []byte("package p // \U0001F680"))
+	buf[600] = 0x00
+	writeTempFile(t, root, "edge.go", string(buf))
+
+	cfg := demojify.ScanConfig{
+		Root:    root,
+		Options: demojify.Options{RemoveEmojis: true},
+	}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("got %d findings, want 1 (NUL past sniff window should not skip)",
+			len(findings))
+	}
+}
+
 func TestDefaultScanConfigScansAnyExtension(t *testing.T) {
 	root := t.TempDir()
 	writeTempFile(t, root, "notes.txt", "deploy \U0001F680\n")
@@ -534,6 +593,43 @@ func TestScanDirCollectMatches(t *testing.T) {
 	}
 	if m1.Line != 2 {
 		t.Errorf("Matches[1].Line = %d, want 2", m1.Line)
+	}
+}
+
+// TestScanDirCollectMatchesVariationSelector verifies that buildMatches
+// attributes a variation-selector sequence (e.g., U+26A0 U+FE0F) to the
+// combined key in the replacements map rather than to the bare codepoint.
+func TestScanDirCollectMatchesVariationSelector(t *testing.T) {
+	root := t.TempDir()
+	// U+26A0 U+FE0F: warning sign + variation selector 16
+	writeTempFile(t, root, "warn.txt", "\u26a0\ufe0f critical issue")
+
+	repl := map[string]string{
+		"\u26a0\ufe0f": "WARNING:", // combined key
+		"\u26a0":       "WARN:",    // bare codepoint fallback
+	}
+	cfg := demojify.ScanConfig{
+		Root:           root,
+		CollectMatches: true,
+		Replacements:   repl,
+		Options:        demojify.Options{RemoveEmojis: true},
+	}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("got %d findings, want 1", len(findings))
+	}
+	if len(findings[0].Matches) != 1 {
+		t.Fatalf("Matches count = %d, want 1 (combined key)", len(findings[0].Matches))
+	}
+	m := findings[0].Matches[0]
+	if m.Emoji != "\u26a0\ufe0f" {
+		t.Errorf("Emoji = %q, want combined sequence", m.Emoji)
+	}
+	if m.Replacement != "WARNING:" {
+		t.Errorf("Replacement = %q, want WARNING:", m.Replacement)
 	}
 }
 
