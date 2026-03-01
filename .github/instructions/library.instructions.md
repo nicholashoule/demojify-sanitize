@@ -115,7 +115,47 @@ golangci-lint run ./...
 
 ## Module Guidelines from pkg.go.dev
 
-Read the [pkg.go.dev guide](https://pkg.go.dev/about#adding-a-package) for instructions on publishing this module for public consumption. The API must be stable, well-documented, and idiomatic to be accepted.
+Source: [pkg.go.dev/about#adding-a-package](https://pkg.go.dev/about#adding-a-package)
+
+pkg.go.dev auto-indexes modules via `proxy.golang.org`. Once a tagged version is
+pushed to GitHub, the package appears within minutes -- no manual submission needed.
+
+### Best-Practice Checklist
+
+| Criterion | Status | Detail |
+|-----------|--------|--------|
+| `go.mod` present | PASS | `module github.com/nicholashoule/demojify-sanitize`, `go 1.21` |
+| Redistributable license | PASS | Apache 2.0 (`LICENSE`) |
+| Tagged version | PASS | `v0.1.0`, `v0.2.0` |
+| Stable version (`v1+`) | **GAP** | Latest tag is `v0.2.0`; pkg.go.dev treats `v0.x` as experimental |
+| Good package doc | PASS | `doc.go` opens with a one-sentence summary; all exported symbols have godoc |
+
+### The Stable Version Gap
+
+pkg.go.dev states:
+
+> *"Projects at v0 are assumed to be experimental. When a project reaches a stable
+> version -- major version v1 or higher -- breaking changes must be done in a new
+> major version."*
+
+Until `v1.0.0` is tagged:
+
+- pkg.go.dev displays a stability warning on the package page.
+- `go get` resolves pre-release semantics; consumers cannot rely on SemVer compatibility.
+- The pkg.go.dev scorecard will not show the green "Stable version" check.
+
+When the public API is locked, tag and push:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+### Documentation Rules (pkg.go.dev)
+
+- The **first sentence** of the package comment is indexed for search -- keep it clear and accurate.
+- Every exported symbol must have a godoc comment; unexported symbols may be omitted.
+- `example_test.go` functions appear as runnable examples on the pkg.go.dev page.
 
 ## References
 

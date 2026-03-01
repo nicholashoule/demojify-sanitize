@@ -265,6 +265,31 @@ func TestReplaceFile(t *testing.T) {
 			t.Errorf("binary file was modified: %q", string(data))
 		}
 	})
+
+	t.Run("CRLF file: emoji replaced, CR bytes pass through", func(t *testing.T) {
+		// Replace does not modify non-emoji bytes, so CR from CRLF endings must
+		// survive the round-trip unchanged.
+		dir := t.TempDir()
+		path := writeTempFile(t, dir, "crlf.txt", "\u2705 passed\r\n\u274c failed\r\n")
+		count, err := demojify.ReplaceFile(path, map[string]string{
+			"\u2705": "[PASS]",
+			"\u274c": "[FAIL]",
+		})
+		if err != nil {
+			t.Fatalf("ReplaceFile: %v", err)
+		}
+		if count != 2 {
+			t.Errorf("count = %d, want 2", count)
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("ReadFile: %v", err)
+		}
+		want := "[PASS] passed\r\n[FAIL] failed\r\n"
+		if string(data) != want {
+			t.Errorf("file = %q, want %q", string(data), want)
+		}
+	})
 }
 
 func TestFindAllMapped(t *testing.T) {

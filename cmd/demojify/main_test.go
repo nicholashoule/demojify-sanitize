@@ -1,0 +1,330 @@
+package main_test
+
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
+)
+
+// testBinary is the path to the compiled CLI binary used by all tests.
+var testBinary string
+
+func TestMain(m *testing.M) {
+	// Build the CLI binary once for all integration tests.
+	tmp, err := os.MkdirTemp("", "demojify-cli-test-*")
+	if err != nil {
+		panic(err)
+	}
+	bin := filepath.Join(tmp, "demojify")
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
+	cmd := exec.Command("go", "build", "-o", bin, ".")
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		panic("failed to build CLI binary: " + err.Error())
+	}
+	testBinary = bin
+
+	code := m.Run()
+	os.RemoveAll(tmp)
+	os.Exit(code)
+}
+
+// writeTempFile creates a file inside dir with the given name and content.
+func writeTempFile(t *testing.T, dir, name, content string) string {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+	return path
+}
+
+// runCLI executes the test binary with the given args and returns stdout,
+// stderr, and the exit code. A non-zero exit code is not treated as an error.
+func runCLI(t *testing.T, args ...string) (stdout, stderr string, exitCode int) {
+	t.Helper()
+	cmd := exec.Command(testBinary, args...)
+	var outBuf, errBuf strings.Builder
+	cmd.Stdout = &outBuf
+	cmd.Stderr = &errBuf
+	err := cmd.Run()
+	exitCode = 0
+	if err != nil {
+		if ee, ok := err.(*exec.ExitError); ok {
+			exitCode = ee.ExitCode()
+		} else {
+			t.Fatalf("exec error: %v", err)
+		}
+	}
+	return outBuf.String(), errBuf.String(), exitCode
+}
+
+func TestCleanDirectoryExitZero(t *testing.T) {
+	dir := t.TempDir()
+	writeTempFile(t, dir, "clean.txt", "No emoji here\n")
+
+	stdout, _, code := runCLI(t, "-root", dir)
+	if code != 0 {
+		t.Errorf("exit code = %d, want 0 for clean directory", code)
+	}
+	if !strings.Contains(stdout, "[PASS]") {
+		t.Errorf("stdout = %q, want [PASS] message", stdout)
+	}
+}
+
+func TestEmojiFoundExitOne(t *testing.T) {
+	dir := t.TempDir()
+	writeTempFile(t, dir, "emoji.txt", "\u2705 build passed\n")
+
+	stdout, _, code := runCLI(t, "-root", dir)
+	if code != 1 {
+		t.Errorf("exit code = %d, want 1 when emoji found (audit mode)", code)
+	}
+	if !strings.Contains(stdout, "[WARN]") {
+		t.Errorf("stdout = %q, want [WARN] report", stdout)
+	}
+}
+
+func TestFixStripsEmoji(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTempFile(t, dir, "fix.txt", "\U0001F680 Deploy complete\n")
+
+	stdout, _, code := runCLI(t, "-root", dir, "-fix")
+	if code != 0 {
+		t.Errorf("exit code = %d, want 0 after -fix", code)
+	}
+	if !strings.Contains(stdout, "[PASS]") {
+		t.Errorf("stdout = %q, want [PASS] confirmation", stdout)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read fixed file: %v", err)
+	}
+	if strings.ContainsAny(string(data), "\U0001F680") {
+		t.Errorf("file still contains emoji after -fix: %q", data)
+	}
+}
+
+func TestSubSubstitutesEmoji(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTempFile(t, dir, "sub.txt", "\u2705 tests passed\n")
+
+	stdout, _, code := runCLI(t, "-root", dir, "-sub")
+	if code != 0 {
+		t.Errorf("exit code = %d, want 0 after -sub", code)
+	}
+	if !strings.Contains(stdout, "[PASS]") {
+		t.Errorf("stdout = %q, want [PASS] confirmation", stdout)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read substituted file: %v", err)
+	}
+	content := string(data)
+	if !strings.Contains(content, "[PASS]") {
+		t.Errorf("file = %q, want checkmark replaced with [PASS]", content)
+	}
+}
+
+func TestSubNormalize(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTempFile(t, dir, "norm.txt", "\u2705 tests  passed\n\n\n\nDone.\n")
+
+	_, _, code := runCLI(t, "-root", dir, "-sub", "-normalize")
+	if code != 0 {
+		t.Errorf("exit code = %d, want 0 after -sub -normalize", code)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read file: %v", err)
+	}
+	content := string(data)
+	if strings.Contains(content, "\n\n\n") {
+		t.Errorf("file still has triple newlines after -normalize: %q", content)
+	}
+	if strings.Contains(content, "  ") {
+		t.Errorf("file still has double spaces after -normalize: %q", content)
+	}
+}
+
+func TestQuietSuppressesOutput(t *testing.T) {
+	dir := t.TempDir()
+	writeTempFile(t, dir, "emoji.txt", "\u2705 done\n")
+
+	stdout, _, code := runCLI(t, "-root", dir, "-quiet")
+	if code != 1 {
+		t.Errorf("exit code = %d, want 1 (audit mode, emoji found)", code)
+	}
+	if stdout != "" {
+		t.Errorf("stdout = %q, want empty with -quiet", stdout)
+	}
+}
+
+func TestQuietFixSuppressesOutput(t *testing.T) {
+	dir := t.TempDir()
+	writeTempFile(t, dir, "emoji.txt", "\u2705 done\n")
+
+	stdout, _, code := runCLI(t, "-root", dir, "-fix", "-quiet")
+	if code != 0 {
+		t.Errorf("exit code = %d, want 0 after -fix -quiet", code)
+	}
+	if stdout != "" {
+		t.Errorf("stdout = %q, want empty with -quiet", stdout)
+	}
+}
+
+func TestExtensionFilter(t *testing.T) {
+	dir := t.TempDir()
+	writeTempFile(t, dir, "emoji.md", "\u2705 done\n")
+	writeTempFile(t, dir, "emoji.txt", "\u274c fail\n")
+
+	// Only scan .md files; .txt should be ignored.
+	stdout, _, code := runCLI(t, "-root", dir, "-exts", ".md")
+	if code != 1 {
+		t.Errorf("exit code = %d, want 1 (emoji in .md)", code)
+	}
+	if strings.Contains(stdout, "emoji.txt") {
+		t.Errorf("stdout mentions emoji.txt but -exts .md should skip it: %s", stdout)
+	}
+	if !strings.Contains(stdout, "emoji.md") {
+		t.Errorf("stdout = %q, want emoji.md reported", stdout)
+	}
+}
+
+func TestExtensionFilterWithoutDot(t *testing.T) {
+	dir := t.TempDir()
+	writeTempFile(t, dir, "emoji.md", "\u2705 done\n")
+
+	// "md" without leading dot should still work.
+	_, _, code := runCLI(t, "-root", dir, "-exts", "md")
+	if code != 1 {
+		t.Errorf("exit code = %d, want 1 (emoji in .md via -exts md)", code)
+	}
+}
+
+func TestBadRootExitsNonZero(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "no-such-dir", "deep")
+	_, stderr, code := runCLI(t, "-root", missing)
+	if code == 0 {
+		t.Error("exit code = 0, want non-zero for missing root")
+	}
+	if !strings.Contains(stderr, "root directory") {
+		t.Errorf("stderr = %q, want 'root directory' error", stderr)
+	}
+}
+
+func TestRootNotDirectoryExitsNonZero(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTempFile(t, dir, "file.txt", "not a dir\n")
+
+	_, stderr, code := runCLI(t, "-root", path)
+	if code == 0 {
+		t.Error("exit code = 0, want non-zero when root is a file")
+	}
+	if !strings.Contains(stderr, "not a directory") {
+		t.Errorf("stderr = %q, want 'not a directory' error", stderr)
+	}
+}
+
+func TestFixIdempotent(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTempFile(t, dir, "idem.txt", "\U0001F680 rocket\n")
+
+	// First fix
+	_, _, code := runCLI(t, "-root", dir, "-fix")
+	if code != 0 {
+		t.Fatalf("first -fix exit code = %d, want 0", code)
+	}
+
+	data1, _ := os.ReadFile(path)
+
+	// Second run should find nothing
+	stdout, _, code := runCLI(t, "-root", dir)
+	if code != 0 {
+		t.Errorf("second audit exit code = %d, want 0 (already clean)", code)
+	}
+	if !strings.Contains(stdout, "[PASS]") {
+		t.Errorf("stdout = %q, want [PASS] after fix", stdout)
+	}
+
+	data2, _ := os.ReadFile(path)
+	if string(data1) != string(data2) {
+		t.Errorf("file changed between runs: %q -> %q", data1, data2)
+	}
+}
+
+func TestVersionFlag(t *testing.T) {
+	stdout, stderr, code := runCLI(t, "-version")
+	if code != 0 {
+		t.Errorf("exit code = %d, want 0 for -version", code)
+	}
+	if stderr != "" {
+		t.Errorf("stderr = %q, want empty for -version", stderr)
+	}
+	if !strings.HasPrefix(stdout, "demojify ") {
+		t.Fatalf("stdout = %q, want output beginning with \"demojify \"", stdout)
+	}
+	// Version token must be non-empty and either a semver tag or "(devel)".
+	token := strings.TrimSpace(strings.TrimPrefix(stdout, "demojify "))
+	if token == "" {
+		t.Error("version token is empty")
+	}
+	isSemver := strings.HasPrefix(token, "v") && strings.Contains(token, ".")
+	isDevel := strings.HasPrefix(token, "(devel)")
+	if !isSemver && !isDevel {
+		t.Errorf("version token %q is neither a semver tag nor \"(devel)\"", token)
+	}
+	// Output must end with a newline (fmt.Println guarantee).
+	if !strings.HasSuffix(stdout, "\n") {
+		t.Errorf("stdout = %q, want trailing newline", stdout)
+	}
+}
+
+// TestVersionFlagNoScan verifies that -version exits immediately without
+// performing a directory scan, even when -root points to a directory that
+// contains emoji.
+func TestVersionFlagNoScan(t *testing.T) {
+	dir := t.TempDir()
+	writeTempFile(t, dir, "emoji.txt", "\u2705 check\n")
+
+	stdout, _, code := runCLI(t, "-version", "-root", dir)
+	if code != 0 {
+		t.Errorf("exit code = %d, want 0 for -version", code)
+	}
+	if strings.Contains(stdout, "[WARN]") || strings.Contains(stdout, "[PASS]") {
+		t.Errorf("stdout = %q, want no scan output when -version is set", stdout)
+	}
+}
+
+// TestNestedFilePathForwardSlash verifies that [WARN] output always contains
+// forward-slash separators regardless of the host OS. ScanDir normalises paths
+// with filepath.ToSlash so Windows callers get "sub/file.txt" rather than
+// "sub\file.txt".
+func TestNestedFilePathForwardSlash(t *testing.T) {
+	root := t.TempDir()
+	sub := filepath.Join(root, "sub")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	writeTempFile(t, sub, "nested.txt", "\u2705 done\n")
+
+	stdout, _, code := runCLI(t, "-root", root)
+	if code != 1 {
+		t.Errorf("exit code = %d, want 1 (emoji found)", code)
+	}
+	// Path must use forward slashes on every platform.
+	if !strings.Contains(stdout, "sub/nested.txt") {
+		t.Errorf("stdout = %q, want forward-slash path \"sub/nested.txt\"", stdout)
+	}
+	if strings.Contains(stdout, `sub\nested.txt`) {
+		t.Errorf("stdout = %q, contains backslash path; want forward slash", stdout)
+	}
+}
