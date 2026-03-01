@@ -21,6 +21,11 @@ go test ./...   # confirm baseline passes
 No additional tooling is required. Optional:
 - `golangci-lint` for `make lint` ([installation](https://golangci-lint.run/usage/install/))
 
+> **Windows note:** `make race` requires CGO and a C compiler (`gcc`).
+> Install gcc via [TDM-GCC](https://jmeubank.github.io/tdm-gcc/) or [MSYS2](https://www.msys2.org/),
+> then set `CGO_ENABLED=1`. If gcc is unavailable, skip `make race` locally --
+> the race detector runs automatically in CI (Ubuntu) on every push.
+
 ## Making Changes
 
 1. Fork the repository and create a feature branch.

@@ -12,6 +12,10 @@ test:
 	go test ./...
 
 # Run tests with race detector
+# NOTE: The race detector requires CGO (and gcc on Windows).
+# On Windows without gcc: set CGO_ENABLED=1 or install gcc via TDM-GCC / MSYS2.
+# If CGO is unavailable locally, `make race` will fail -- CI (Linux) runs it on
+# every push via .github/workflows/ci.yml.
 race:
 	go test -race ./...
 
