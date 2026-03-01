@@ -35,10 +35,12 @@ documentation files, normalizing whitespace in automated text pipelines.
 ├── demojify.go          # Demojify / ContainsEmoji -- emoji removal
 ├── normalize.go         # Normalize -- whitespace normalization
 ├── sanitize.go          # Sanitize / Options / DefaultOptions -- pipeline
+├── scan.go              # ScanConfig / ScanDir / ScanFile / Finding -- scanner
 ├── doc.go               # Package-level documentation
 ├── demojify_test.go     # Tests for demojify.go
 ├── normalize_test.go    # Tests for normalize.go
 ├── sanitize_test.go     # Tests for sanitize.go
+├── scan_test.go         # Tests for scan.go
 ├── example_test.go      # Runnable pkg.go.dev examples
 ├── repo_test.go         # Dogfooding tests -- validates repo with own API
 ├── go.mod               # Module definition
@@ -59,6 +61,11 @@ documentation files, normalizing whitespace in automated text pipelines.
 | `Sanitize(text string, opts Options) string` | sanitize.go | Full configurable pipeline |
 | `Options` struct | sanitize.go | Pipeline configuration |
 | `DefaultOptions() Options` | sanitize.go | All steps enabled |
+| `ScanConfig` struct | scan.go | Scanner configuration (dirs, files, suffixes) |
+| `DefaultScanConfig() ScanConfig` | scan.go | Sensible defaults, scans all file types |
+| `ScanDir(cfg ScanConfig) ([]Finding, error)` | scan.go | Walk directory tree, return findings |
+| `ScanFile(path string, opts Options) (*Finding, error)` | scan.go | Check a single file |
+| `Finding` struct | scan.go | File path, emoji flag, original/cleaned content |
 
 ## Development Workflow
 

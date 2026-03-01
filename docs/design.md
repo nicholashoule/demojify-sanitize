@@ -7,8 +7,8 @@ audits, detects, and fixes content issues before they reach production.
 
 ## Zero-dependency policy
 
-The library imports only the Go standard library (`regexp`, `strings`, `unicode`,
-`unicode/utf8`).
+The library imports only the Go standard library (`os`, `path/filepath`,
+`regexp`, `strings`, `unicode`, `unicode/utf8`).
 
 **Why:** Every dependency in a shared library becomes a transitive dependency
 for every project that imports it. In enterprise environments this creates
@@ -92,6 +92,23 @@ the document. The library's contract is to remove *decorative* emoji, not all
 non-ASCII characters. The Unicode emoji specification is the authoritative
 source for which codepoints are emoji; ranges outside that specification are
 left alone.
+
+## File scanner and error handling
+
+`ScanDir` and `ScanFile` are the only public functions that return an `error`.
+The text-processing functions (`Demojify`, `Normalize`, `Sanitize`) cannot fail
+on string input, so they omit errors entirely (see "No returned errors" above).
+
+The scanner performs file I/O -- reading files, walking directory trees -- which
+can fail for reasons outside the library's control (permissions, missing paths,
+filesystem errors). Returning an error from these functions is the idiomatic Go
+approach and does not weaken the library's error-handling contract.
+
+`ScanConfig` provides three exemption axes -- directories (`SkipDirs`), files
+(`ExemptFiles`), and suffixes (`ExemptSuffixes`) -- plus an extension filter
+(`Extensions`). `DefaultScanConfig` returns safe defaults for a typical Go
+module repo. The scanner reuses the same `Options` struct and `Sanitize` pipeline
+that callers already know, keeping the API surface consistent.
 
 ## Scope boundaries
 

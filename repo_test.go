@@ -9,8 +9,8 @@ package demojify_test
 //   These files are EXEMPT from hygiene enforcement -- they are the proof that
 //   the module works on real-world emoji codepoints.
 //
-//   Non-test Go source files and all Markdown documentation (except README.md)
-//   MUST be emoji-free. If an AI agent writes emoji into any of these files
+//   Non-test Go source files and all Markdown documentation MUST be
+//   emoji-free. If an AI agent writes emoji into any of these files
 //   while ignoring emoji-prevention.md or copilot-instructions.md, the tests
 //   below will catch it and identify the file and the fix.
 //
@@ -29,12 +29,6 @@ import (
 // skipDirs are never walked during repo hygiene checks.
 // Add any generated or third-party directories here.
 var skipDirs = []string{".git/", "vendor/", "docs/"}
-
-// exemptMarkdown lists Markdown files that intentionally contain literal emoji
-// in code-fence examples to illustrate library behaviour.
-var exemptMarkdown = map[string]bool{
-	"README.md": true,
-}
 
 // readRepoFiles walks from root and returns paths to all files with the given
 // extension, excluding directories listed in skipDirs.
@@ -108,9 +102,6 @@ func TestRepoProductionSourceFilesEmojiClean(t *testing.T) {
 // If this test fails, apply demojify.Sanitize to the reported file.
 func TestRepoAllDocsEmojiClean(t *testing.T) {
 	for _, path := range readRepoFiles(t, ".", ".md") {
-		if exemptMarkdown[filepath.Base(path)] {
-			continue
-		}
 		path := path
 		t.Run(filepath.ToSlash(path), func(t *testing.T) {
 			data, err := os.ReadFile(path)
@@ -164,9 +155,7 @@ func TestRepoProductionFilesIdempotent(t *testing.T) {
 		}
 	}
 	for _, path := range readRepoFiles(t, ".", ".md") {
-		if !exemptMarkdown[filepath.Base(path)] {
-			check(path)
-		}
+		check(path)
 	}
 }
 

@@ -16,6 +16,7 @@ It applies to all Go source files.
 | [demojify.go](../../demojify.go) | `Demojify`, `ContainsEmoji` -- emoji detection/removal |
 | [normalize.go](../../normalize.go) | `Normalize` -- whitespace normalization |
 | [sanitize.go](../../sanitize.go) | `Sanitize`, `Options`, `DefaultOptions` -- pipeline |
+| [scan.go](../../scan.go) | `ScanConfig`, `DefaultScanConfig`, `ScanDir`, `ScanFile`, `Finding` -- scanner |
 | [doc.go](../../doc.go) | Package-level godoc comment |
 
 ## Design Principles

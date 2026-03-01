@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ScanConfig` struct -- configures directory/file exemptions (`SkipDirs`,
+  `ExemptFiles`, `ExemptSuffixes`), extension filters, and sanitization
+  `Options` for file-level scanning.
+- `DefaultScanConfig()` -- returns a config suitable for Go module and AI-agent
+  repos (skips `.git/`, `vendor/`, `node_modules/`; exempts `*_test.go`; scans
+  all file types by default). Set `Extensions` to restrict to specific types.
+- `ScanDir(ScanConfig) ([]Finding, error)` -- walks a directory tree and
+  returns a `Finding` for every file whose content would change after
+  sanitization.
+- `ScanFile(path, Options) (*Finding, error)` -- checks a single file and
+  returns a `Finding` or nil if already clean.
+- `Finding` struct with `Path`, `HasEmoji`, `Original`, and `Cleaned` fields.
 - `Options.AllowedRanges []*unicode.RangeTable` -- preserves specific emoji
   codepoints during removal while stripping all others (backward-compatible;
   `nil` default removes everything as before).
