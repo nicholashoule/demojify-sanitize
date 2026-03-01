@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cmd/demojify` `-version` flag -- prints module version from build metadata
   and exits 0; reports `(devel)` for local `go run` builds
 
+### Fixed
+
+- `docs/cli.md` `-version` example corrected: `go run` always produces
+  `(devel)` because `debug.ReadBuildInfo()` returns an empty version for local
+  source builds; added `go install` form to demonstrate real semver output
+- `cmd/demojify/main_test.go` `TestMain` temp-dir leak: `defer os.RemoveAll`
+  was bypassed by `os.Exit`; replaced with explicit cleanup before exit
+
 ## [0.2.0] - 2026-03-01
 
 ### Added

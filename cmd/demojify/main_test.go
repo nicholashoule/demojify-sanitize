@@ -18,8 +18,6 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(tmp)
-
 	bin := filepath.Join(tmp, "demojify")
 	if runtime.GOOS == "windows" {
 		bin += ".exe"
@@ -31,7 +29,9 @@ func TestMain(m *testing.M) {
 	}
 	testBinary = bin
 
-	os.Exit(m.Run())
+	code := m.Run()
+	os.RemoveAll(tmp)
+	os.Exit(code)
 }
 
 // writeTempFile creates a file inside dir with the given name and content.

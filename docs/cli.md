@@ -74,10 +74,19 @@ Files larger than 1 MiB are skipped.
 
 ```bash
 go run ./cmd/demojify -version
-# demojify v0.2.1
+# demojify (devel)
 ```
 
-For a local development build (`go run`), the version is reported as `(devel)`.
+`go run` always builds from local source, so `debug.ReadBuildInfo()` returns an
+empty version string and the output is always `(devel)`.
+
+To see a real semver tag, install a published version and invoke the binary:
+
+```bash
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.2.0
+demojify -version
+# demojify v0.2.0
+```
 
 ### Audit only (no writes)
 
