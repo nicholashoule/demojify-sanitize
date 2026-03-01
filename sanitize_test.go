@@ -229,6 +229,31 @@ func TestSanitizeFile(t *testing.T) {
 			t.Error("expected error for nonexistent file, got nil")
 		}
 	})
+
+	t.Run("CRLF file is sanitized and line endings are normalized to LF", func(t *testing.T) {
+		// SanitizeFile passes content through Normalize which converts CRLF to LF.
+		// Verify the written file contains LF-only endings on every platform.
+		dir := t.TempDir()
+		path := writeTempFile(t, dir, "crlf.txt", "\u2705 passed\r\nDone.\r\n")
+		changed, err := demojify.SanitizeFile(path, demojify.DefaultOptions())
+		if err != nil {
+			t.Fatalf("SanitizeFile: %v", err)
+		}
+		if !changed {
+			t.Error("changed = false, want true")
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("ReadFile: %v", err)
+		}
+		content := string(data)
+		if strings.Contains(content, "\r") {
+			t.Errorf("file still contains CR after SanitizeFile: %q", content)
+		}
+		if strings.Contains(content, "\u2705") {
+			t.Errorf("file still contains emoji after SanitizeFile: %q", content)
+		}
+	})
 }
 
 // TestSanitizeAgentOutputRemediation proves that the module detects and fully

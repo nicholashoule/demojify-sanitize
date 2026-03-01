@@ -303,3 +303,28 @@ func TestVersionFlagNoScan(t *testing.T) {
 		t.Errorf("stdout = %q, want no scan output when -version is set", stdout)
 	}
 }
+
+// TestNestedFilePathForwardSlash verifies that [WARN] output always contains
+// forward-slash separators regardless of the host OS. ScanDir normalises paths
+// with filepath.ToSlash so Windows callers get "sub/file.txt" rather than
+// "sub\file.txt".
+func TestNestedFilePathForwardSlash(t *testing.T) {
+	root := t.TempDir()
+	sub := filepath.Join(root, "sub")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	writeTempFile(t, sub, "nested.txt", "\u2705 done\n")
+
+	stdout, _, code := runCLI(t, "-root", root)
+	if code != 1 {
+		t.Errorf("exit code = %d, want 1 (emoji found)", code)
+	}
+	// Path must use forward slashes on every platform.
+	if !strings.Contains(stdout, "sub/nested.txt") {
+		t.Errorf("stdout = %q, want forward-slash path \"sub/nested.txt\"", stdout)
+	}
+	if strings.Contains(stdout, `sub\nested.txt`) {
+		t.Errorf("stdout = %q, contains backslash path; want forward slash", stdout)
+	}
+}

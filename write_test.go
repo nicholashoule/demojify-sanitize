@@ -138,4 +138,35 @@ func TestWriteFinding(t *testing.T) {
 			t.Errorf("file = %q, want %q", string(data), f.Cleaned)
 		}
 	})
+
+	t.Run("CRLF content in Cleaned is written verbatim", func(t *testing.T) {
+		// Verify that WriteFinding treats Cleaned as opaque bytes and does not
+		// perform any additional line-ending conversion.  On all platforms the
+		// written bytes must match Finding.Cleaned exactly.
+		dir := t.TempDir()
+		original := "check \u2705\r\n"
+		cleaned := "check \r\n"
+		path := writeTempFile(t, dir, "crlf.txt", original)
+
+		f := demojify.Finding{
+			Path:     "crlf.txt",
+			HasEmoji: true,
+			Original: original,
+			Cleaned:  cleaned,
+		}
+		changed, err := demojify.WriteFinding(path, f)
+		if err != nil {
+			t.Fatalf("WriteFinding: %v", err)
+		}
+		if !changed {
+			t.Error("changed = false, want true")
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("ReadFile: %v", err)
+		}
+		if string(data) != cleaned {
+			t.Errorf("file = %q, want %q", string(data), cleaned)
+		}
+	})
 }
