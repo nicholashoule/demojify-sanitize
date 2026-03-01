@@ -27,7 +27,8 @@ import (
 )
 
 // skipDirs are never walked during repo hygiene checks.
-var skipDirs = []string{".git/"}
+// Add any generated or third-party directories here.
+var skipDirs = []string{".git/", "vendor/", "node_modules/"}
 
 // exemptMarkdown lists Markdown files that intentionally contain literal emoji
 // in code-fence examples to illustrate library behaviour.

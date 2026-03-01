@@ -122,12 +122,27 @@ clean := demojify.Sanitize(text, demojify.Options{RemoveEmojis: true})
 
 ```go
 type Options struct {
-    RemoveEmojis        bool // strip emoji / pictographic characters
-    RemoveAIClutter     bool // strip AI preamble and boilerplate phrases
-    NormalizeWhitespace bool // collapse redundant spaces and blank lines
+    RemoveEmojis        bool                 // strip emoji / pictographic characters
+    RemoveAIClutter     bool                 // strip AI preamble and boilerplate phrases
+    NormalizeWhitespace bool                 // collapse redundant spaces and blank lines
+    AllowedRanges       []*unicode.RangeTable // emoji codepoints to preserve during removal
 }
 
-func DefaultOptions() Options // all fields true
+func DefaultOptions() Options // all fields true; AllowedRanges nil (no exceptions)
+```
+
+`AllowedRanges` lets callers preserve specific emoji codepoints while still
+removing all others. A codepoint is kept when it belongs to any table in the
+slice. `nil` (the default) removes every matched codepoint.
+
+```go
+// Remove all emoji except the rocket (U+1F680).
+clean := demojify.Sanitize(text, demojify.Options{
+    RemoveEmojis: true,
+    AllowedRanges: []*unicode.RangeTable{
+        {R32: []unicode.Range32{{Lo: 0x1F680, Hi: 0x1F680, Stride: 1}}},
+    },
+})
 ```
 
 **AI-clutter patterns removed** (case-insensitive, must start a line):

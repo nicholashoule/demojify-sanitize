@@ -1,6 +1,9 @@
 package demojify
 
-import "regexp"
+import (
+	"regexp"
+	"unicode"
+)
 
 // Options configures the sanitization pipeline used by [Sanitize].
 // Zero value disables all steps; use [DefaultOptions] for sensible defaults.
@@ -17,6 +20,12 @@ type Options struct {
 	// NormalizeWhitespace collapses redundant spaces and blank lines.
 	// Equivalent to calling [Normalize] on the input.
 	NormalizeWhitespace bool
+
+	// AllowedRanges lists Unicode ranges whose codepoints are preserved during
+	// emoji removal. A codepoint that would normally be stripped by [Demojify]
+	// is kept when it belongs to any table in this slice. Has no effect when
+	// RemoveEmojis is false or the slice is nil.
+	AllowedRanges []*unicode.RangeTable
 }
 
 // DefaultOptions returns an Options value with all sanitization steps enabled.
@@ -60,7 +69,11 @@ var aiClutterRE = regexp.MustCompile(
 //  3. Whitespace normalization ([Normalize]) when opts.NormalizeWhitespace is true.
 func Sanitize(text string, opts Options) string {
 	if opts.RemoveEmojis {
-		text = Demojify(text)
+		if len(opts.AllowedRanges) == 0 {
+			text = Demojify(text)
+		} else {
+			text = demojifyAllowed(text, opts.AllowedRanges)
+		}
 	}
 	if opts.RemoveAIClutter {
 		text = aiClutterRE.ReplaceAllString(text, "")

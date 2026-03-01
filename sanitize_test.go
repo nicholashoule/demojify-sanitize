@@ -2,6 +2,7 @@ package demojify_test
 
 import (
 	"testing"
+	"unicode"
 
 	demojify "github.com/nicholashoule/demojify-sanitize"
 )
@@ -91,6 +92,23 @@ func TestSanitize(t *testing.T) {
 			input: "The answer is 42.\nI hope this helps!",
 			opts:  demojify.DefaultOptions(),
 			want:  "The answer is 42.",
+		},
+		{
+			name:  "AllowedRanges – preserve rocket, remove bar chart",
+			input: "Deploy \U0001F680 done. Check \U0001F4CA.",
+			opts: demojify.Options{
+				RemoveEmojis: true,
+				AllowedRanges: []*unicode.RangeTable{
+					{R32: []unicode.Range32{{Lo: 0x1F680, Hi: 0x1F680, Stride: 1}}},
+				},
+			},
+			want: "Deploy \U0001F680 done. Check .",
+		},
+		{
+			name:  "AllowedRanges nil – behaves identically to Demojify",
+			input: "Hello \U0001F600 World",
+			opts:  demojify.Options{RemoveEmojis: true, AllowedRanges: nil},
+			want:  "Hello  World",
 		},
 		{
 			name:  "empty string",

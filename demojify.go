@@ -1,6 +1,10 @@
 package demojify
 
-import "regexp"
+import (
+	"regexp"
+	"unicode"
+	"unicode/utf8"
+)
 
 // emojiRE matches individual emoji code points including ZWJ sequences,
 // variation selectors, and combining enclosing keycaps. Unicode ranges
@@ -68,4 +72,17 @@ func Demojify(text string) string {
 // Unicode pictographic character recognised by [Demojify].
 func ContainsEmoji(text string) bool {
 	return emojiRE.MatchString(text)
+}
+
+// demojifyAllowed removes emoji codepoints from text while preserving any rune
+// that belongs to at least one of the provided Unicode range tables. Callers
+// pass this from [Sanitize] when Options.AllowedRanges is non-nil.
+func demojifyAllowed(text string, allowed []*unicode.RangeTable) string {
+	return emojiRE.ReplaceAllStringFunc(text, func(s string) string {
+		r, _ := utf8.DecodeRuneInString(s)
+		if unicode.IsOneOf(allowed, r) {
+			return s
+		}
+		return ""
+	})
 }
