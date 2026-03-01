@@ -16,6 +16,9 @@ applyTo: "**/*_test.go"
 | `normalize_test.go` | `TestNormalize` |
 | `sanitize_test.go` | `TestDefaultOptions`, `TestSanitize` |
 | `scan_test.go` | `TestDefaultScanConfig`, `TestScanDir`, `TestScanDirFindingFields`, `TestScanFile`, `TestScanFileNotFound`, `TestScanDirErrorOnBadRoot` |
+| `replace_test.go` | `TestFindAll`, `TestReplace`, `TestReplaceFile`, `TestFindAllMapped`, `TestReplaceCount`, `TestFindMatchesInFile` |
+| `replacements_test.go` | `TestDefaultReplacements`, `TestDefaultReplacementsEntries`, `TestReplaceWithDefaultReplacements` |
+| `write_test.go` | `TestWriteFinding` |
 | `repo_test.go` | `TestRepoProductionSourceFilesEmojiClean`, `TestRepoAllDocsEmojiClean`, `TestRepoProductionFilesIdempotent`, `TestRepoTestFilesContainEmoji`, `TestRepoAgentOutputRemediation` |
 | `example_test.go` | `Example*` functions (rendered on pkg.go.dev) |
 

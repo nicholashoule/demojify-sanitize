@@ -481,15 +481,17 @@ func TestScanFile(t *testing.T) {
 }
 
 func TestScanFileNotFound(t *testing.T) {
-	_, err := demojify.ScanFile("/nonexistent/path/file.go", demojify.DefaultOptions())
+	missing := filepath.Join(t.TempDir(), "no-such-dir", "file.go")
+	_, err := demojify.ScanFile(missing, demojify.DefaultOptions())
 	if err == nil {
 		t.Error("expected error for nonexistent file, got nil")
 	}
 }
 
 func TestScanDirErrorOnBadRoot(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "no-such-dir", "deep")
 	cfg := demojify.ScanConfig{
-		Root: "/nonexistent/directory/that/should/not/exist",
+		Root: missing,
 	}
 	_, err := demojify.ScanDir(cfg)
 	if err == nil {
@@ -567,8 +569,11 @@ func TestScanDirCollectMatches(t *testing.T) {
 
 	// First match: checkmark on line 1
 	m0 := f.Matches[0]
-	if m0.Emoji != "\u2705" {
-		t.Errorf("Matches[0].Emoji = %q, want checkmark", m0.Emoji)
+	if m0.Sequence != "\u2705" {
+		t.Errorf("Matches[0].Sequence = %q, want checkmark", m0.Sequence)
+	}
+	if m0.Emoji != m0.Sequence {
+		t.Errorf("Matches[0].Emoji = %q, want same as Sequence %q (deprecated field)", m0.Emoji, m0.Sequence)
 	}
 	if m0.Replacement != "[PASS]" {
 		t.Errorf("Matches[0].Replacement = %q, want [PASS]", m0.Replacement)
@@ -585,8 +590,11 @@ func TestScanDirCollectMatches(t *testing.T) {
 
 	// Second match: rocket on line 2
 	m1 := f.Matches[1]
-	if m1.Emoji != "\U0001F680" {
-		t.Errorf("Matches[1].Emoji = %q, want rocket", m1.Emoji)
+	if m1.Sequence != "\U0001F680" {
+		t.Errorf("Matches[1].Sequence = %q, want rocket", m1.Sequence)
+	}
+	if m1.Emoji != m1.Sequence {
+		t.Errorf("Matches[1].Emoji = %q, want same as Sequence %q (deprecated field)", m1.Emoji, m1.Sequence)
 	}
 	if m1.Replacement != "" {
 		t.Errorf("Matches[1].Replacement = %q, want empty (unmapped)", m1.Replacement)
@@ -625,8 +633,11 @@ func TestScanDirCollectMatchesVariationSelector(t *testing.T) {
 		t.Fatalf("Matches count = %d, want 1 (combined key)", len(findings[0].Matches))
 	}
 	m := findings[0].Matches[0]
-	if m.Emoji != "\u26a0\ufe0f" {
-		t.Errorf("Emoji = %q, want combined sequence", m.Emoji)
+	if m.Sequence != "\u26a0\ufe0f" {
+		t.Errorf("Sequence = %q, want combined sequence", m.Sequence)
+	}
+	if m.Emoji != m.Sequence {
+		t.Errorf("Emoji = %q, want same as Sequence %q (deprecated field)", m.Emoji, m.Sequence)
 	}
 	if m.Replacement != "WARNING:" {
 		t.Errorf("Replacement = %q, want WARNING:", m.Replacement)
@@ -687,8 +698,11 @@ func TestScanDirCollectMatchesNonEmojiKey(t *testing.T) {
 		t.Fatalf("Matches count = %d, want 1", len(f.Matches))
 	}
 	m := f.Matches[0]
-	if m.Emoji != "\u2192" {
-		t.Errorf("Emoji = %q, want U+2192 arrow", m.Emoji)
+	if m.Sequence != "\u2192" {
+		t.Errorf("Sequence = %q, want U+2192 arrow", m.Sequence)
+	}
+	if m.Emoji != m.Sequence {
+		t.Errorf("Emoji = %q, want same as Sequence %q (deprecated field)", m.Emoji, m.Sequence)
 	}
 	if m.Replacement != "->" {
 		t.Errorf("Replacement = %q, want \"->\"", m.Replacement)

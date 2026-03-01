@@ -11,6 +11,9 @@
 //   - [Sanitize] applies a configurable pipeline controlled by [Options].
 //   - [SanitizeFile] applies [Sanitize] to a file atomically; no write
 //     occurs when the file is already clean.
+//   - [WriteFinding] writes a [Finding.Cleaned] result back to disk
+//     atomically, avoiding the re-read that [SanitizeFile] or [ReplaceFile]
+//     would perform after a [ScanDir] pass.
 //   - [Normalize] collapses redundant whitespace and blank lines.
 //
 // For the most common use-case, pass [DefaultOptions] to [Sanitize]:

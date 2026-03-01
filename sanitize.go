@@ -2,7 +2,6 @@ package demojify
 
 import (
 	"os"
-	"path/filepath"
 	"unicode"
 )
 
@@ -69,37 +68,9 @@ func SanitizeFile(path string, opts Options) (changed bool, err error) {
 		return false, nil
 	}
 
-	// Preserve original permissions.
 	info, err := os.Stat(path)
 	if err != nil {
 		return false, err
 	}
-	perm := info.Mode().Perm()
-
-	// Atomic write: write to a sibling temp file, then rename.
-	dir := filepath.Dir(path)
-	tmp, err := os.CreateTemp(dir, ".demojify-*")
-	if err != nil {
-		return false, err
-	}
-	tmpName := tmp.Name()
-	defer func() {
-		if err != nil {
-			os.Remove(tmpName)
-		}
-	}()
-	if _, err = tmp.WriteString(cleaned); err != nil {
-		tmp.Close()
-		return false, err
-	}
-	if err = tmp.Close(); err != nil {
-		return false, err
-	}
-	if err = os.Chmod(tmpName, perm); err != nil {
-		return false, err
-	}
-	if err = os.Rename(tmpName, path); err != nil {
-		return false, err
-	}
-	return true, nil
+	return true, atomicWrite(path, cleaned, info.Mode().Perm())
 }

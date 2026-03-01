@@ -106,10 +106,17 @@ func DefaultScanConfig() ScanConfig {
 // empty, only emoji codepoints are recorded.
 // It is populated in [Finding.Matches] when [ScanConfig.CollectMatches] is true.
 type Match struct {
-	// Emoji is the matched codepoint sequence. Despite the field name, this
-	// may hold non-emoji sequences (such as arrows or geometric shapes) when
-	// [ScanConfig.Replacements] maps those codepoints. The field name is
-	// retained for backward compatibility.
+	// Sequence is the matched codepoint sequence. This may hold non-emoji
+	// sequences (such as arrows or geometric shapes) when
+	// [ScanConfig.Replacements] maps those codepoints.
+	Sequence string
+
+	// Emoji is the matched codepoint sequence.
+	//
+	// Deprecated: Use [Match.Sequence] instead. Emoji is populated with the
+	// same value as Sequence for backward compatibility, but Sequence is the
+	// preferred field because matches may include non-emoji codepoints when
+	// [ScanConfig.Replacements] maps them.
 	Emoji string
 
 	// Replacement is the value from [ScanConfig.Replacements] for this
@@ -259,32 +266,37 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 			}
 		}
 
-		// Sniff the first 512 bytes for a NUL byte to detect binary files
-		// before committing to reading the entire file into memory.
+		// Two-phase read: sniff the first 512 bytes for a NUL byte
+		// to detect binary files before committing to a full read.
+		// This avoids unnecessary I/O and allocations for large
+		// binary files, especially when MaxFileBytes is 0 (disabled).
 		f, openErr := os.Open(path)
 		if openErr != nil {
 			return openErr
 		}
-		var sniffBuf [sniffSize]byte
-		n, _ := io.ReadFull(f, sniffBuf[:])
-		if isBinary(sniffBuf[:n]) {
+		var sniff [sniffSize]byte
+		n, sniffErr := io.ReadFull(f, sniff[:])
+		if sniffErr != nil && sniffErr != io.ErrUnexpectedEOF && sniffErr != io.EOF {
+			f.Close()
+			return sniffErr
+		}
+		if isBinary(sniff[:n]) {
 			f.Close()
 			return nil
 		}
-
-		// File is text -- read the remainder and combine with the sniffed prefix.
+		// Text file -- read the remainder and combine.
 		rest, readErr := io.ReadAll(f)
 		f.Close()
 		if readErr != nil {
 			return readErr
 		}
 		var data []byte
-		if n > 0 {
+		if len(rest) > 0 {
 			data = make([]byte, n+len(rest))
-			copy(data, sniffBuf[:n])
+			copy(data, sniff[:n])
 			copy(data[n:], rest)
 		} else {
-			data = rest
+			data = sniff[:n]
 		}
 		original := string(data)
 
@@ -338,6 +350,7 @@ func buildMatches(text string, replacements map[string]string) []Match {
 			for _, k := range keys {
 				if strings.HasPrefix(line[i:], k) {
 					matches = append(matches, Match{
+						Sequence:    k,
 						Emoji:       k,
 						Replacement: replacements[k],
 						Line:        lineIdx + 1,
@@ -354,8 +367,10 @@ func buildMatches(text string, replacements map[string]string) []Match {
 			}
 			// No replacement key matched; fall back to emojiRE for unmapped emoji.
 			if loc := emojiRE.FindStringIndex(line[i:]); loc != nil && loc[0] == 0 {
+				seq := line[i : i+loc[1]]
 				matches = append(matches, Match{
-					Emoji:       line[i : i+loc[1]],
+					Sequence:    seq,
+					Emoji:       seq,
 					Replacement: "",
 					Line:        lineIdx + 1,
 					Column:      i,

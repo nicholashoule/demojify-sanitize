@@ -34,13 +34,19 @@ documentation files, normalizing whitespace in automated text pipelines.
 .
 ├── demojify.go          # Demojify / ContainsEmoji -- emoji removal
 ├── normalize.go         # Normalize -- whitespace normalization
-├── sanitize.go          # Sanitize / Options / DefaultOptions -- pipeline
-├── scan.go              # ScanConfig / ScanDir / ScanFile / Finding -- scanner
+├── sanitize.go          # Sanitize / SanitizeFile / Options / DefaultOptions -- pipeline
+├── scan.go              # ScanConfig / ScanDir / ScanFile / Finding / Match -- scanner
+├── replace.go           # Replace / ReplaceFile / ReplaceCount / FindAll / FindAllMapped / FindMatchesInFile
+├── replacements.go      # DefaultReplacements -- built-in emoji-to-text map
+├── write.go             # WriteFinding -- atomic write-back for scan results
 ├── doc.go               # Package-level documentation
 ├── demojify_test.go     # Tests for demojify.go
 ├── normalize_test.go    # Tests for normalize.go
 ├── sanitize_test.go     # Tests for sanitize.go
 ├── scan_test.go         # Tests for scan.go
+├── replace_test.go      # Tests for replace.go
+├── replacements_test.go # Tests for replacements.go
+├── write_test.go        # Tests for write.go
 ├── example_test.go      # Runnable pkg.go.dev examples
 ├── repo_test.go         # Dogfooding tests -- validates repo with own API
 ├── go.mod               # Module definition
@@ -48,7 +54,10 @@ documentation files, normalizing whitespace in automated text pipelines.
 ├── CHANGELOG.md         # Release history
 ├── CONTRIBUTING.md      # Contributor guide
 ├── SECURITY.md          # Security policy
-└── README.md            # User-facing documentation
+├── README.md            # User-facing documentation
+└── cmd/
+    └── demojify/
+        └── main.go      # CLI tool for directory auditing and fixing
 ```
 
 ## Public API
@@ -59,13 +68,23 @@ documentation files, normalizing whitespace in automated text pipelines.
 | `ContainsEmoji(text string) bool` | demojify.go | Detect emoji presence |
 | `Normalize(text string) string` | normalize.go | Collapse redundant whitespace |
 | `Sanitize(text string, opts Options) string` | sanitize.go | Full configurable pipeline |
+| `SanitizeFile(path string, opts Options) (bool, error)` | sanitize.go | Sanitize a file atomically |
 | `Options` struct | sanitize.go | Pipeline configuration |
 | `DefaultOptions() Options` | sanitize.go | All steps enabled |
-| `ScanConfig` struct | scan.go | Scanner configuration (dirs, files, suffixes) |
+| `Replace(text string, repl map[string]string) string` | replace.go | Substitute emoji with text equivalents |
+| `ReplaceFile(path string, repl map[string]string) (int, error)` | replace.go | Replace emoji in a file atomically |
+| `ReplaceCount(text string, repl map[string]string) (string, int)` | replace.go | Replace and return count |
+| `FindAll(text string) []string` | replace.go | Distinct emoji sequences in text |
+| `FindAllMapped(text string, repl map[string]string) []string` | replace.go | Mapped keys found in text |
+| `FindMatchesInFile(path string, repl map[string]string) ([]Match, error)` | replace.go | Per-occurrence match detail |
+| `DefaultReplacements() map[string]string` | replacements.go | Built-in emoji-to-text map |
+| `ScanConfig` struct | scan.go | Scanner configuration |
 | `DefaultScanConfig() ScanConfig` | scan.go | Sensible defaults, scans all file types |
 | `ScanDir(cfg ScanConfig) ([]Finding, error)` | scan.go | Walk directory tree, return findings |
 | `ScanFile(path string, opts Options) (*Finding, error)` | scan.go | Check a single file |
 | `Finding` struct | scan.go | File path, emoji flag, original/cleaned content |
+| `Match` struct | scan.go | Per-occurrence match with line, column, context |
+| `WriteFinding(path string, f Finding) (bool, error)` | write.go | Write scan result back without re-reading |
 
 ## Development Workflow
 
