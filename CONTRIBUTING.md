@@ -42,8 +42,10 @@ No additional tooling is required. Optional:
 - **Table-driven tests.** See existing `*_test.go` files for the pattern.
 - **`gofmt -s` formatting.** Run `make fmt` before committing.
 - **Godoc comments on all exported symbols.**
-- **No emoji in source code, comments, or output.** Use `[PASS]`, `[FAIL]`,
-  `WARNING:` etc.
+- **No emoji in production source, comments, or output.** Use `[PASS]`, `[FAIL]`,
+  `WARNING:` etc. The sole exception is `*_test.go` files, where literal emoji
+  is permitted (and required) as test-input data. See
+  [`.github/emoji-prevention.md`](.github/emoji-prevention.md) for the full policy.
 
 ## Commit Message Format
 

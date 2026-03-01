@@ -62,6 +62,31 @@ func TestNormalize(t *testing.T) {
 			input: "Para one.\n\nPara two.",
 			want:  "Para one.\n\nPara two.",
 		},
+		{
+			name:  "CRLF line endings normalized to LF",
+			input: "Hello\r\nWorld\r\n",
+			want:  "Hello\nWorld",
+		},
+		{
+			name:  "bare CR line endings normalized to LF",
+			input: "Hello\rWorld\r",
+			want:  "Hello\nWorld",
+		},
+		{
+			name:  "CRLF with trailing spaces cleaned correctly",
+			input: "Hello   \r\nWorld\r\n",
+			want:  "Hello\nWorld",
+		},
+		{
+			name:  "CRLF excess blank lines collapsed",
+			input: "A\r\n\r\n\r\n\r\nB",
+			want:  "A\n\nB",
+		},
+		{
+			name:  "mixed CRLF and LF normalized",
+			input: "line1\r\nline2\nline3\r\n",
+			want:  "line1\nline2\nline3",
+		},
 	}
 
 	for _, tt := range tests {

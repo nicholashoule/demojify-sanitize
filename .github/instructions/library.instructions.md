@@ -68,8 +68,7 @@ func DefaultOptions() Options {
 
 Steps must follow this order:
 1. `RemoveEmojis` -- structural characters removed first
-2. `RemoveAIClutter` -- line-level phrases removed before whitespace normalisation
-3. `NormalizeWhitespace` -- final pass; collapses gaps left by previous steps
+2. `NormalizeWhitespace` -- final pass; collapses gaps left by emoji removal
 
 ## Unicode Emoji Ranges
 
@@ -78,17 +77,6 @@ Defined in `demojify.go` as `emojiRE`. When adding a new block:
 2. Add the hex range in the same format: `\x{NNNN}-\x{NNNN}` or single `\x{NNNN}`
 3. Keep the range list sorted by codepoint
 4. Update the coverage table in `README.md`
-
-## AI Clutter Patterns
-
-Defined in `sanitize.go` as `aiClutterRE`. When adding a new phrase:
-1. Use `(?im)` flags -- case-insensitive, multiline
-2. Anchor with `^` to match only at line start
-3. Require trailing punctuation (`[!,.]`) for short/ambiguous words
-4. Allow optional punctuation for long, structurally distinctive phrases
-5. End the subpattern with `[ \t]*\n?` to consume trailing whitespace/newline
-6. Add both a positive test case (phrase is removed) and a negative test case
-   (similar phrase NOT at line start is preserved)
 
 ## Code Style
 

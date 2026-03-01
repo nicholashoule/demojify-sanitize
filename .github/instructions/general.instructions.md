@@ -130,7 +130,7 @@ Format: `<type>(<scope>): <subject>`
 4. **Performance** -- compile regexes at package init (`var re = regexp.MustCompile(...)`), never inside functions
 5. **Error Handling** -- functions in this library do not return errors; panics are only permitted in `MustCompile` at init time
 6. **Testing** -- table-driven tests, `testing` package, >80% coverage target; update `example_test.go` when API changes
-7. **No Emoji in Code** -- use text alternatives (`[PASS]`, `[FAIL]`, `WARNING:`) in all output and comments
+7. **No Emoji in Production Code** -- use text alternatives (`[PASS]`, `[FAIL]`, `WARNING:`) in all production source, comments, and output. Exception: literal emoji is permitted (and required) as test-input data inside `*_test.go` files
 8. **Backward Compatibility** -- do not remove or rename exported symbols; add new `Options` fields instead
 
 ## Agent Token Optimization

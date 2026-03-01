@@ -42,8 +42,8 @@ func TestDefaultScanConfig(t *testing.T) {
 	if cfg.Extensions != nil {
 		t.Errorf("Extensions = %v, want nil (scan all file types by default)", cfg.Extensions)
 	}
-	if !cfg.Options.RemoveEmojis || !cfg.Options.RemoveAIClutter {
-		t.Error("DefaultScanConfig Options should enable emoji and AI-clutter removal")
+	if !cfg.Options.RemoveEmojis {
+		t.Error("DefaultScanConfig Options should enable emoji removal")
 	}
 	if cfg.Options.NormalizeWhitespace {
 		t.Error("DefaultScanConfig should not enable NormalizeWhitespace (file formatters own trailing-newline conventions)")
@@ -212,19 +212,6 @@ func TestScanDir(t *testing.T) {
 			wantLen: 0, // .png not in explicit extensions list
 		},
 		{
-			name: "AI clutter detected when RemoveAIClutter enabled",
-			setup: func(t *testing.T, root string) {
-				writeTempFile(t, root, "doc.md", "Certainly! Here is the doc.\n")
-			},
-			cfg: func(root string) demojify.ScanConfig {
-				cfg := demojify.DefaultScanConfig()
-				cfg.Root = root
-				return cfg
-			},
-			wantLen:  1,
-			wantPath: "doc.md",
-		},
-		{
 			name: "nested skip dir is excluded",
 			setup: func(t *testing.T, root string) {
 				sub := writeTempDir(t, root, filepath.Join("subdir", "vendor"))
@@ -238,20 +225,6 @@ func TestScanDir(t *testing.T) {
 					Options: demojify.Options{
 						RemoveEmojis: true,
 					},
-				}
-			},
-			wantLen: 0,
-		},
-		{
-			name: "empty root defaults to current directory",
-			setup: func(t *testing.T, root string) {
-				// not used; we test that empty root works (no crash)
-			},
-			cfg: func(root string) demojify.ScanConfig {
-				return demojify.ScanConfig{
-					Root:       "",
-					Extensions: []string{".nonexistent-extension-12345"},
-					Options:    demojify.DefaultOptions(),
 				}
 			},
 			wantLen: 0,
@@ -279,6 +252,44 @@ func TestScanDir(t *testing.T) {
 				t.Errorf("finding path = %q, want %q", findings[0].Path, tt.wantPath)
 			}
 		})
+	}
+}
+
+// TestScanDirEmptyRootDefaultsToDot verifies that ScanConfig.Root="" causes
+// ScanDir to walk "." (the process working directory) without error.
+// The test changes into a small temp directory so the walk is deterministic
+// and fast -- it never touches the real repository tree.
+func TestScanDirEmptyRootDefaultsToDot(t *testing.T) {
+	root := t.TempDir()
+	writeTempFile(t, root, "clean.go", "package main\n")
+	writeTempFile(t, root, "dirty.go", "package main // \U0001F680\n")
+
+	orig, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(orig) })
+
+	cfg := demojify.ScanConfig{
+		Root:    "", // should default to "."
+		Options: demojify.Options{RemoveEmojis: true},
+	}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir with empty root: %v", err)
+	}
+	if len(findings) != 1 {
+		paths := make([]string, len(findings))
+		for i, f := range findings {
+			paths[i] = f.Path
+		}
+		t.Fatalf("got %d findings %v, want 1 (dirty.go)", len(findings), paths)
+	}
+	if findings[0].Path != "dirty.go" {
+		t.Errorf("finding path = %q, want \"dirty.go\"", findings[0].Path)
 	}
 }
 
@@ -313,10 +324,8 @@ func TestScanDirFindingFields(t *testing.T) {
 }
 
 func TestScanFile(t *testing.T) {
-	// Use options without NormalizeWhitespace to avoid trailing-newline diffs.
 	opts := demojify.Options{
-		RemoveEmojis:    true,
-		RemoveAIClutter: true,
+		RemoveEmojis: true,
 	}
 	tests := []struct {
 		name     string
@@ -334,12 +343,6 @@ func TestScanFile(t *testing.T) {
 			content:  "package main // \U0001F680\n",
 			wantNil:  false,
 			wantEmoj: true,
-		},
-		{
-			name:     "file with AI clutter returns finding",
-			content:  "Certainly! Here is the code.\n",
-			wantNil:  false,
-			wantEmoj: false,
 		},
 	}
 

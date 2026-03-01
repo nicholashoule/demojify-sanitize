@@ -3,10 +3,10 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/nicholashoule/demojify-sanitize.svg)](https://pkg.go.dev/github.com/nicholashoule/demojify-sanitize)
 
 A dependency-free Go module that helps developers of web applications and APIs
-audit, detect, and fix emoji clutter, AI-generated preamble phrases, and
-redundant whitespace before they reach production. Run it as a post-processing
-step after AI agent output, as a content gate in your request pipeline, or as a
-CI check -- one call to `Sanitize` finds and fixes every issue in one pass.
+audit, detect, and fix emoji clutter and redundant whitespace in text content
+before it reaches production. Run it as a post-processing step after AI agent
+output, as a content gate in your request pipeline, or as a CI quality gate --
+one call to `Sanitize` finds and fixes every issue in one pass.
 
 ## Install
 
@@ -35,7 +35,7 @@ aiResponse := "Certainly! Here is a summary.\n\n" +
     "Check the dashboard \U0001F4CA for metrics."
 
 clean := demojify.Sanitize(aiResponse, demojify.DefaultOptions())
-// "Here is a summary.\n\nThe deployment pipeline  runs on every push to main.\nCheck the dashboard  for metrics."
+// "Certainly! Here is a summary.\n\nThe deployment pipeline runs on every push to main.\nCheck the dashboard for metrics."
 ```
 
 ### Content gate — reject or flag emoji-bearing input
@@ -122,9 +122,8 @@ demojify.Normalize("Hello World\n\n\n\nMore text")
 
 ### `Sanitize(text string, opts Options) string`
 
-Applies a configurable pipeline in order: emoji removal → AI-clutter removal
-→ whitespace normalization. Each step is independently toggled through
-`Options`.
+Applies a configurable pipeline in order: emoji removal → whitespace
+normalization. Each step is independently toggled through `Options`.
 
 ```go
 // All steps on (recommended).
@@ -138,10 +137,9 @@ clean := demojify.Sanitize(text, demojify.Options{RemoveEmojis: true})
 
 ```go
 type Options struct {
- RemoveEmojis bool // strip emoji / pictographic characters
- RemoveAIClutter bool // strip AI preamble and boilerplate phrases
- NormalizeWhitespace bool // collapse redundant spaces and blank lines
- AllowedRanges []*unicode.RangeTable // emoji codepoints to preserve during removal
+ RemoveEmojis        bool                  // strip emoji / pictographic characters
+ NormalizeWhitespace bool                  // collapse redundant spaces and blank lines
+ AllowedRanges       []*unicode.RangeTable // emoji codepoints to preserve during removal
 }
 
 func DefaultOptions() Options // all fields true; AllowedRanges nil (no exceptions)
@@ -180,7 +178,7 @@ type ScanConfig struct {
 func DefaultScanConfig() ScanConfig
 // Root: ".", SkipDirs: [".git/", "vendor/", "node_modules/"],
 // ExemptSuffixes: ["_test.go"], Extensions: nil (all file types),
-// Options: RemoveEmojis + RemoveAIClutter
+// Options: RemoveEmojis only
 ```
 
 By default all file types are scanned (`.go`, `.md`, `.txt`, `.yaml`, `.ini`,
@@ -209,28 +207,6 @@ type Finding struct {
  Cleaned string // content after Sanitize
 }
 ```
-
-**AI-clutter patterns removed** (case-insensitive, must start a line):
-
-| Pattern | Example match |
-|---|---|
-| `Certainly[!,.]` | `Certainly! Here is…` |
-| `Sure[!,.]` | `Sure, ` |
-| `Of course[!,.]` | `Of course! ` |
-| `Absolutely[!,.]` | `Absolutely, ` |
-| `Great[!,.]` | `Great! ` |
-| `Excellent[!,.]` | `Excellent. ` |
-| `Noted[!,.]` | `Noted. ` |
-| `I'd be happy to…` | `I'd be happy to help!` |
-| `I can help…` | `I can certainly help with that.` |
-| `I'll help you with that` | `I'll help you with that.` |
-| `Let me help you` | `Let me help you.` |
-| `I hope this helps` | `I hope this helps!` |
-| `Feel free to ask…` | `Feel free to ask if you need help.` |
-
-Unambiguous short words (`Sure`, `Great`, etc.) require trailing punctuation
-(`!`, `,`, or `.`) to prevent false positives on legitimate text like
-`"Sure enough, the build passed."`.
 
 ## Unicode emoji coverage
 

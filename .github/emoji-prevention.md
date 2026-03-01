@@ -49,7 +49,7 @@ using this module's own API against the repository's files:
 | Test | What it checks |
 |------|---------------|
 | `TestRepoProductionSourceFilesEmojiClean` | Every non-test `.go` file contains no literal emoji |
-| `TestRepoAllDocsEmojiClean` | Every `.md` file (except README.md and files under `docs/`) contains no emoji, including all `.github/` files |
+| `TestRepoAllDocsEmojiClean` | Every `.md` file (excluding files under `docs/`) contains no emoji -- covers README.md, CHANGELOG.md, CONTRIBUTING.md, SECURITY.md, and all `.github/` files |
 | `TestRepoProductionFilesIdempotent` | `Sanitize` (emoji + AI clutter removal) on every production file is a no-op -- files are already clean |
 | `TestRepoTestFilesContainEmoji` | Meta-test: at least one `*_test.go` file contains literal emoji, proving test data is present |
 | `TestRepoAgentOutputRemediation` | Proves the module detects and fully cleans realistic rogue AI output, and that the result is idempotent |
@@ -93,13 +93,16 @@ mathematical arrows (U+2190–U+2193), and all language scripts.
 
 ## What is not checked
 
-`README.md` is intentionally excluded from `TestRepoAllDocsEmojiClean` because it
-contains emoji inside code-fence examples to illustrate what the API removes.
-Those appear as string literals in example output, not as decorative content.
+`README.md` is scanned by `TestRepoAllDocsEmojiClean` along with every other
+`.md` file in the repository. It currently contains no literal emoji: code
+examples describe emoji behavior using text, and any string literals that would
+contain emoji use Unicode escape sequences (e.g. `\U0001F680`) so that
+`ContainsEmoji` reports false on the file itself.
 
-If you need to add emoji to other documentation for a legitimate illustrative
-purpose, use Unicode escape sequences in source (e.g. `\U0001F680`) rather than
-literal characters, so the file itself passes `ContainsEmoji`.
+Files under `docs/` are excluded from all repo hygiene checks (the directory
+appears in `skipDirs` in `repo_test.go`). If you need to add illustrative emoji
+to documentation, place the file under `docs/` or use Unicode escape sequences
+so the file passes `ContainsEmoji`.
 
 ## In code: production vs test files
 

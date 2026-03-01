@@ -12,7 +12,10 @@ type ScanConfig struct {
 	// Root is the directory to scan. An empty string is treated as ".".
 	Root string
 
-	// SkipDirs lists directory path prefixes to skip during scanning.
+	// SkipDirs lists directory names (or trailing-slash variants) to skip
+	// during scanning. A directory is skipped whenever its name matches an
+	// entry exactly, regardless of how deep it is in the tree -- so "vendor/"
+	// skips both a top-level vendor/ directory and any nested subdir/vendor/.
 	// Use forward slashes regardless of operating system (e.g., ".git/",
 	// "vendor/", "node_modules/").
 	SkipDirs []string
@@ -57,8 +60,7 @@ func DefaultScanConfig() ScanConfig {
 		ExemptSuffixes: []string{"_test.go"},
 		Extensions:     nil, // scan all file types
 		Options: Options{
-			RemoveEmojis:    true,
-			RemoveAIClutter: true,
+			RemoveEmojis: true,
 		},
 	}
 }
@@ -67,7 +69,13 @@ func DefaultScanConfig() ScanConfig {
 // Callers can inspect [Finding.HasEmoji] to determine if emoji was detected
 // and write [Finding.Cleaned] back to the file to remediate it.
 type Finding struct {
-	// Path is the file path (forward-slash normalized) relative to the scan root.
+	// Path is the forward-slash normalized file path.
+	//
+	// When produced by [ScanDir], Path is relative to cfg.Root.
+	// When produced by [ScanFile], Path is the argument as passed by the caller
+	// (absolute or relative to the process working directory), forward-slash
+	// normalized. The two sources are therefore not directly comparable unless
+	// the caller passes a root-relative path to [ScanFile].
 	Path string
 
 	// HasEmoji reports whether [ContainsEmoji] detected emoji in the file.
@@ -175,7 +183,9 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 
 // ScanFile checks a single file against opts and returns a [Finding] if the
 // file's content would change after sanitization, or nil if the file is
-// already clean.
+// already clean. [Finding.Path] is set to path with forward slashes;
+// it is not made relative to any root. Pass a root-relative path to obtain
+// a [Finding] whose Path is comparable to those returned by [ScanDir].
 //
 // Unlike the pure-string functions in this package, ScanFile performs file I/O
 // and therefore returns an error when the file is inaccessible.

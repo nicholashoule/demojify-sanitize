@@ -93,10 +93,11 @@ func TestRepoProductionSourceFilesEmojiClean(t *testing.T) {
 	}
 }
 
-// TestRepoAllDocsEmojiClean asserts that every Markdown file (except exempted
-// ones and files under skipped directories like docs/) contains no literal
-// emoji. Covers .github/instructions/, .github/ISSUE_TEMPLATE/, and all
-// .github/ root files -- every file an AI agent might write to when ignoring
+// TestRepoAllDocsEmojiClean asserts that every Markdown file (excluding files
+// under directories listed in skipDirs, such as docs/) contains no literal
+// emoji. Covers README.md, CHANGELOG.md, CONTRIBUTING.md, SECURITY.md,
+// .github/instructions/, .github/ISSUE_TEMPLATE/, and all .github/ root
+// files -- every file an AI agent might write to when ignoring
 // emoji-prevention.md.
 //
 // If this test fails, apply demojify.Sanitize to the reported file.
@@ -118,19 +119,18 @@ func TestRepoAllDocsEmojiClean(t *testing.T) {
 	}
 }
 
-// TestRepoProductionFilesIdempotent asserts that running Sanitize (emoji removal
-// + AI-clutter removal) on every non-test Go source file and every non-exempted
-// Markdown file is a no-op -- the files are already clean.
+// TestRepoProductionFilesIdempotent asserts that running Sanitize (emoji removal)
+// on every non-test Go source file and every Markdown file is a no-op -- the
+// files are already clean.
 //
 // Test files are exempt: their contents ARE the module's input data.
 // Whitespace normalization is excluded: gofmt owns Go source formatting.
 //
-// If this test fails, Sanitize changes the file -- it contains emoji or AI
-// preamble clutter. Write the Sanitize output back to the file to fix it.
+// If this test fails, Sanitize changes the file -- it contains emoji.
+// Write the Sanitize output back to the file to fix it.
 func TestRepoProductionFilesIdempotent(t *testing.T) {
 	opts := demojify.Options{
-		RemoveEmojis:    true,
-		RemoveAIClutter: true,
+		RemoveEmojis: true,
 	}
 
 	check := func(path string) {
@@ -143,8 +143,8 @@ func TestRepoProductionFilesIdempotent(t *testing.T) {
 			original := string(data)
 			cleaned := demojify.Sanitize(original, opts)
 			if cleaned != original {
-				t.Errorf("%s: Sanitize modifies this file -- it contains emoji or AI preamble clutter.\n"+
-					"Fix: write demojify.Sanitize(content, demojify.DefaultOptions()) back to the file.", path)
+				t.Errorf("%s: Sanitize modifies this file -- it contains emoji.\n"+
+					"Fix: run demojify.Sanitize(content, demojify.Options{RemoveEmojis: true}) on the file.", path)
 			}
 		})
 	}
@@ -185,24 +185,18 @@ func TestRepoTestFilesContainEmoji(t *testing.T) {
 }
 
 // TestRepoAgentOutputRemediation proves that the module detects and fully
-// remediates the kind of content a rogue AI agent produces when it ignores
-// emoji-prevention.md or copilot-instructions.md. This is the core value
-// demonstration: ContainsEmoji catches the violation, Sanitize removes emoji
-// and AI preamble in one call, and the result is idempotent.
+// remediates emoji in AI-generated content. ContainsEmoji catches the
+// violation, Sanitize removes emoji in one call, and the result is idempotent.
 func TestRepoAgentOutputRemediation(t *testing.T) {
-	// Simulate text a rogue agent writes, mixing preamble, emoji, and real content.
+	// Simulate AI-generated content with decorative emoji mixed into real text.
 	rogueOutput := strings.Join([]string{
-		"Certainly! Here is the updated documentation.",
-		"",
 		"\U0001F680 Deployment",
 		"",
 		"Run the following command to deploy:",
 		"",
 		"    go build ./...",
 		"",
-		"I hope this helps! \U0001F4CA",
-		"",
-		"Feel free to ask if you need further assistance.",
+		"Check the docs \U0001F4CA for details.",
 	}, "\n")
 
 	// Step 1: ContainsEmoji detects the violation before the file is written.
@@ -210,7 +204,7 @@ func TestRepoAgentOutputRemediation(t *testing.T) {
 		t.Fatal("ContainsEmoji: expected true for rogue agent output, got false")
 	}
 
-	// Step 2: Sanitize remediates emoji, preamble, and trailing clutter in one call.
+	// Step 2: Sanitize remediates emoji in one call.
 	clean := demojify.Sanitize(rogueOutput, demojify.DefaultOptions())
 
 	// Step 3: output is now emoji-free.
@@ -218,21 +212,14 @@ func TestRepoAgentOutputRemediation(t *testing.T) {
 		t.Errorf("after Sanitize, output still contains emoji:\n%s", clean)
 	}
 
-	// Step 4: AI preamble and filler phrases are removed.
-	for _, banned := range []string{"Certainly!", "I hope this helps", "Feel free to ask"} {
-		if strings.Contains(clean, banned) {
-			t.Errorf("after Sanitize, output still contains banned phrase %q:\n%s", banned, clean)
-		}
-	}
-
-	// Step 5: substantive content is preserved.
+	// Step 4: substantive content is preserved.
 	for _, required := range []string{"Deployment", "go build ./..."} {
 		if !strings.Contains(clean, required) {
 			t.Errorf("after Sanitize, output is missing expected content %q:\n%s", required, clean)
 		}
 	}
 
-	// Step 6: running Sanitize again produces identical output -- idempotent.
+	// Step 5: running Sanitize again produces identical output -- idempotent.
 	if twice := demojify.Sanitize(clean, demojify.DefaultOptions()); twice != clean {
 		t.Errorf("Sanitize is not idempotent:\nfirst:  %q\nsecond: %q", clean, twice)
 	}
