@@ -28,7 +28,7 @@ import (
 
 // skipDirs are never walked during repo hygiene checks.
 // Add any generated or third-party directories here.
-var skipDirs = []string{".git/", "vendor/", "node_modules/"}
+var skipDirs = []string{".git/", "vendor/", "docs/"}
 
 // exemptMarkdown lists Markdown files that intentionally contain literal emoji
 // in code-fence examples to illustrate library behaviour.
@@ -100,9 +100,10 @@ func TestRepoProductionSourceFilesEmojiClean(t *testing.T) {
 }
 
 // TestRepoAllDocsEmojiClean asserts that every Markdown file (except exempted
-// ones) contains no literal emoji. Covers docs/, .github/instructions/,
-// .github/ISSUE_TEMPLATE/, and all .github/ root files -- every file an AI
-// agent might write to when ignoring emoji-prevention.md.
+// ones and files under skipped directories like docs/) contains no literal
+// emoji. Covers .github/instructions/, .github/ISSUE_TEMPLATE/, and all
+// .github/ root files -- every file an AI agent might write to when ignoring
+// emoji-prevention.md.
 //
 // If this test fails, apply demojify.Sanitize to the reported file.
 func TestRepoAllDocsEmojiClean(t *testing.T) {

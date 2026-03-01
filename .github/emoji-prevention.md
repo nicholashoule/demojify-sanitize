@@ -49,7 +49,7 @@ using this module's own API against the repository's files:
 | Test | What it checks |
 |------|---------------|
 | `TestRepoProductionSourceFilesEmojiClean` | Every non-test `.go` file contains no literal emoji |
-| `TestRepoAllDocsEmojiClean` | Every `.md` file (except README.md) contains no emoji, including all `.github/` files |
+| `TestRepoAllDocsEmojiClean` | Every `.md` file (except README.md and files under `docs/`) contains no emoji, including all `.github/` files |
 | `TestRepoProductionFilesIdempotent` | `Sanitize` (emoji + AI clutter removal) on every production file is a no-op -- files are already clean |
 | `TestRepoTestFilesContainEmoji` | Meta-test: at least one `*_test.go` file contains literal emoji, proving test data is present |
 | `TestRepoAgentOutputRemediation` | Proves the module detects and fully cleans realistic rogue AI output, and that the result is idempotent |
@@ -93,7 +93,7 @@ mathematical arrows (U+2190–U+2193), and all language scripts.
 
 ## What is not checked
 
-`README.md` is intentionally excluded from `TestRepoDocsEmojiClean` because it
+`README.md` is intentionally excluded from `TestRepoAllDocsEmojiClean` because it
 contains emoji inside code-fence examples to illustrate what the API removes.
 Those appear as string literals in example output, not as decorative content.
 

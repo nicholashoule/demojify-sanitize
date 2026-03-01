@@ -6,7 +6,8 @@ the *why*, not just the *what*.
 
 ## Zero-dependency policy
 
-The library imports only the Go standard library (`regexp`, `strings`).
+The library imports only the Go standard library (`regexp`, `strings`, `unicode`,
+`unicode/utf8`).
 
 **Why:** Every dependency in a shared library becomes a transitive dependency
 for every project that imports it. In enterprise environments this creates
@@ -31,8 +32,9 @@ into production.
 
 ## No returned errors
 
-All public functions have the signature `func(string) string` or
-`func(string) bool`. None return `error`.
+The primary functions have the signature `func(string) string` or
+`func(string) bool`; `Sanitize` additionally accepts an `Options` value.
+None return `error`.
 
 **Why:** The operations performed — regex replacement, string trimming — cannot
 fail on valid UTF-8 input, and Go strings are always valid sequences of bytes
