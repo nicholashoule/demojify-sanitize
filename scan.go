@@ -2,6 +2,7 @@ package demojify
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,12 +49,12 @@ type ScanConfig struct {
 	Options Options
 
 	// Replacements maps emoji (or other Unicode) sequences to text substitutes.
-	// When non-nil, [ScanDir] cleans files with [Replace] instead of [Sanitize],
+	// When non-empty, [ScanDir] cleans files with [Replace] instead of [Sanitize],
 	// so matched sequences are substituted before any residual emoji are stripped.
 	// Longer keys are matched before shorter ones (variation-selector aware).
 	// Has no effect on [ScanFile], which accepts only [Options].
 	//
-	// NOTE: When Replacements is set, [Options.RemoveEmojis] and
+	// NOTE: When Replacements is non-empty, [Options.RemoveEmojis] and
 	// [Options.AllowedRanges] are ignored because [Replace] always strips
 	// residual emoji via [Demojify]. Only [Options.NormalizeWhitespace] is
 	// applied after substitution. To preserve specific Unicode ranges during
@@ -62,10 +63,12 @@ type ScanConfig struct {
 	Replacements map[string]string
 
 	// CollectMatches controls whether [ScanDir] populates [Finding.Matches] for
-	// each file that has emoji. When true, every emoji codepoint occurrence is
-	// recorded with its line, column, and surrounding context. Setting this flag
-	// carries a small per-file allocation cost; leave it false for bulk audits
-	// that only need the cleaned text.
+	// each file whose content differs from its sanitized form. When true, every
+	// matched codepoint sequence -- replacement keys (which may include
+	// non-emoji characters) and unmapped emoji -- is recorded with its line,
+	// column, and surrounding context. Setting this flag carries a small
+	// per-file allocation cost; leave it false for bulk audits that only need
+	// the cleaned text.
 	CollectMatches bool
 }
 
@@ -96,10 +99,17 @@ func DefaultScanConfig() ScanConfig {
 	}
 }
 
-// Match describes a single emoji occurrence within a scanned file.
+// Match describes a single matched codepoint sequence within a scanned file.
+// A match may be an emoji detected by the internal regex, or any mapped
+// sequence from [ScanConfig.Replacements] (which may include non-emoji
+// codepoints such as arrows or geometric shapes). When Replacements is
+// empty, only emoji codepoints are recorded.
 // It is populated in [Finding.Matches] when [ScanConfig.CollectMatches] is true.
 type Match struct {
-	// Emoji is the matched codepoint sequence (e.g., U+2705 for a check mark).
+	// Emoji is the matched codepoint sequence. Despite the field name, this
+	// may hold non-emoji sequences (such as arrows or geometric shapes) when
+	// [ScanConfig.Replacements] maps those codepoints. The field name is
+	// retained for backward compatibility.
 	Emoji string
 
 	// Replacement is the value from [ScanConfig.Replacements] for this
@@ -139,8 +149,10 @@ type Finding struct {
 	// configured [Options].
 	Cleaned string
 
-	// Matches holds per-occurrence detail for every emoji codepoint found in
-	// Original. It is only populated when [ScanConfig.CollectMatches] is true;
+	// Matches holds per-occurrence detail for every matched codepoint sequence
+	// found in Original. When [ScanConfig.Replacements] is non-empty, this includes
+	// both replacement keys (which may be non-emoji) and unmapped emoji.
+	// It is only populated when [ScanConfig.CollectMatches] is true;
 	// otherwise it is nil.
 	Matches []Match
 }
@@ -160,8 +172,13 @@ func isBinary(data []byte) bool {
 }
 
 // ScanDir walks the directory tree rooted at cfg.Root and returns a [Finding]
-// for every file whose content would change after applying [Sanitize] with
-// cfg.Options. Files matching ExemptFiles, ExemptSuffixes, or outside the
+// for every file whose content would change after cleaning. When
+// [ScanConfig.Replacements] is non-empty, each file is cleaned with [Replace]
+// (mapped-sequence substitution followed by residual-emoji stripping via
+// [Demojify]); otherwise [Sanitize] is applied with cfg.Options.
+// If [Options.NormalizeWhitespace] is enabled, whitespace normalization is
+// applied in both modes.
+// Files matching ExemptFiles, ExemptSuffixes, or outside the
 // Extensions filter are skipped. Directories matching SkipDirs are not entered.
 // Files larger than cfg.MaxFileBytes are silently skipped (zero disables the
 // limit). Binary files (detected by a NUL byte in the first 512 bytes) are
@@ -231,7 +248,7 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 			}
 		}
 
-		// MaxFileBytes size guard -- skip large/binary files.
+		// MaxFileBytes size guard -- skip large files.
 		if cfg.MaxFileBytes > 0 {
 			info, infoErr := d.Info()
 			if infoErr != nil {
@@ -242,15 +259,32 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 			}
 		}
 
-		// Read, sanitize, and compare.
-		data, readErr := os.ReadFile(path)
+		// Sniff the first 512 bytes for a NUL byte to detect binary files
+		// before committing to reading the entire file into memory.
+		f, openErr := os.Open(path)
+		if openErr != nil {
+			return openErr
+		}
+		var sniffBuf [sniffSize]byte
+		n, _ := io.ReadFull(f, sniffBuf[:])
+		if isBinary(sniffBuf[:n]) {
+			f.Close()
+			return nil
+		}
+
+		// File is text -- read the remainder and combine with the sniffed prefix.
+		rest, readErr := io.ReadAll(f)
+		f.Close()
 		if readErr != nil {
 			return readErr
 		}
-
-		// Skip binary files (NUL in first 512 bytes).
-		if isBinary(data) {
-			return nil
+		var data []byte
+		if n > 0 {
+			data = make([]byte, n+len(rest))
+			copy(data, sniffBuf[:n])
+			copy(data[n:], rest)
+		} else {
+			data = rest
 		}
 		original := string(data)
 
@@ -283,15 +317,16 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 	return findings, err
 }
 
-// buildMatches scans text line by line and returns a Match for every emoji
-// codepoint occurrence. Each Match records the matched sequence, its 1-based
-// line and 0-based byte-column within that line, the full line as context,
-// and the mapped replacement string (empty if not in replacements).
+// buildMatches scans text line by line and returns a Match for every matched
+// codepoint sequence. When replacements is non-empty, replacement keys are
+// matched first using the same longest-key-first greedy walk as [Replace]
+// and [FindAllMapped]; remaining unmapped emoji are then matched via emojiRE.
+// Replacement keys may include non-emoji sequences (such as arrows or
+// geometric shapes); those are recorded alongside emoji matches.
 //
-// Replacement lookup uses the same longest-key-first greedy walk as [Replace]
-// and [FindAllMapped], so a variation-selector sequence such as U+26A0 U+FE0F
-// is attributed to the combined key rather than the bare codepoint when both
-// appear in the map.
+// Each Match records the matched sequence, its 1-based line and 0-based
+// byte-column within that line, the full line as context, and the mapped
+// replacement string (empty if not in replacements).
 func buildMatches(text string, replacements map[string]string) []Match {
 	keys := sortedKeys(replacements) // longest first; nil-safe (empty slice when map empty)
 	var matches []Match

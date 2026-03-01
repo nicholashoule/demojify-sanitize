@@ -84,7 +84,7 @@ func main() {
 				n, werr = demojify.ReplaceFile(absPath, repl)
 			} else {
 				var changed bool
-				changed, werr = demojify.SanitizeFile(absPath, demojify.DefaultOptions())
+				changed, werr = demojify.SanitizeFile(absPath, cfg.Options)
 				if changed {
 					n = len(f.Matches)
 				}

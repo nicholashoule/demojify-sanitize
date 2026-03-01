@@ -68,7 +68,7 @@ func FindAll(text string) []string {
 // ReplaceFile reads the file at path, applies [Replace] with the provided
 // replacements map, and writes the result back only if changes were made.
 // The original file permissions are preserved. Returns the number of
-// substitutions and removals performed (emoji codepoints from the replacement
+// substitutions and removals performed (mapped sequences from the replacement
 // map plus any residual emoji codepoints stripped by [Demojify]).
 //
 // ReplaceFile returns an error for any filesystem failure. When count is zero

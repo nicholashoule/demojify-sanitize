@@ -654,6 +654,47 @@ func TestScanDirCollectMatchesFalseGivesNilMatches(t *testing.T) {
 	}
 }
 
+// TestScanDirCollectMatchesNonEmojiKey verifies that replacement keys outside
+// the emoji regex (such as arrows U+2192) are still recorded as Matches, and
+// that the resulting Finding has HasEmoji == false when no actual emoji is
+// present in the file.
+func TestScanDirCollectMatchesNonEmojiKey(t *testing.T) {
+	root := t.TempDir()
+	// U+2192 (RIGHTWARDS ARROW) is not in emojiRE, but is a valid
+	// replacement key in DefaultReplacements.
+	writeTempFile(t, root, "arrows.txt", "step \u2192 next")
+
+	repl := map[string]string{"\u2192": "->"}
+	cfg := demojify.ScanConfig{
+		Root:           root,
+		CollectMatches: true,
+		Replacements:   repl,
+		Options:        demojify.Options{RemoveEmojis: true},
+	}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("got %d findings, want 1", len(findings))
+	}
+	f := findings[0]
+	// Arrow is not an emoji per emojiRE, so HasEmoji must be false.
+	if f.HasEmoji {
+		t.Error("HasEmoji = true, want false (arrow is not in emojiRE)")
+	}
+	if len(f.Matches) != 1 {
+		t.Fatalf("Matches count = %d, want 1", len(f.Matches))
+	}
+	m := f.Matches[0]
+	if m.Emoji != "\u2192" {
+		t.Errorf("Emoji = %q, want U+2192 arrow", m.Emoji)
+	}
+	if m.Replacement != "->" {
+		t.Errorf("Replacement = %q, want \"->\"", m.Replacement)
+	}
+}
+
 // TestScanDirFilterByExtension verifies that ScanDir with an Extensions filter
 // returns only files matching those extensions, mirroring the
 // directory-scanning integration pattern used by emoji-cleaner tooling.

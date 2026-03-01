@@ -297,7 +297,7 @@ content would change after sanitization. Configure exemptions through
 ```go
 type ScanConfig struct {
  Root string // directory to scan ("." if empty)
- SkipDirs []string // directory prefixes to skip (e.g., ".git/", "vendor/")
+ SkipDirs []string // directory names to skip at any depth (e.g., ".git/", "vendor/")
  ExemptFiles []string // base filenames to skip (e.g., "README.md")
  ExemptSuffixes []string // file suffixes to skip (e.g., "_test.go")
  Extensions []string // file types to scan; nil (default) = all files
