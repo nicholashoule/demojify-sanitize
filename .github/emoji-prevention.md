@@ -29,7 +29,7 @@ codebase for this repository itself -- dogfooding the library against its own so
 ## Detection: using the module
 
 [`ContainsEmoji`](../demojify.go) detects emoji in any string.
-[`Sanitize`](../sanitize.go) removes them along with AI clutter and whitespace.
+[`Sanitize`](../sanitize.go) removes them and normalizes whitespace.
 
 ```go
 import demojify "github.com/nicholashoule/demojify-sanitize"
@@ -50,7 +50,7 @@ using this module's own API against the repository's files:
 |------|---------------|
 | `TestRepoProductionSourceFilesEmojiClean` | Every non-test `.go` file contains no literal emoji |
 | `TestRepoAllDocsEmojiClean` | Every `.md` file (excluding files under `docs/`) contains no emoji -- covers README.md, CHANGELOG.md, CONTRIBUTING.md, SECURITY.md, and all `.github/` files |
-| `TestRepoProductionFilesIdempotent` | `Sanitize` (emoji + AI clutter removal) on every production file is a no-op -- files are already clean |
+| `TestRepoProductionFilesIdempotent` | `Sanitize` (emoji removal + whitespace normalization) on every production file is a no-op -- files are already clean |
 | `TestRepoTestFilesContainEmoji` | Meta-test: at least one `*_test.go` file contains literal emoji, proving test data is present |
 | `TestRepoAgentOutputRemediation` | Proves the module detects and fully cleans realistic rogue AI output, and that the result is idempotent |
 

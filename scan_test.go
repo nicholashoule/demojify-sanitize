@@ -48,6 +48,58 @@ func TestDefaultScanConfig(t *testing.T) {
 	if cfg.Options.NormalizeWhitespace {
 		t.Error("DefaultScanConfig should not enable NormalizeWhitespace (file formatters own trailing-newline conventions)")
 	}
+	if cfg.MaxFileBytes != 1<<20 {
+		t.Errorf("MaxFileBytes = %d, want %d (1 MiB)", cfg.MaxFileBytes, 1<<20)
+	}
+}
+
+func TestScanDirMaxFileBytes(t *testing.T) {
+	root := t.TempDir()
+	// small file (5 bytes: 4-byte emoji + newline) with emoji -- should be found
+	writeTempFile(t, root, "small.go", "\U0001F680\n")
+	// large file (10 bytes) with emoji -- should be skipped
+	large := make([]byte, 10)
+	copy(large, []byte("\U0001F680\n"))
+	writeTempFile(t, root, "large.go", string(large))
+
+	cfg := demojify.ScanConfig{
+		Root:         root,
+		MaxFileBytes: 8, // small.go (5 bytes) passes; large.go (10 bytes) is skipped
+		Options:      demojify.Options{RemoveEmojis: true},
+	}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 1 {
+		paths := make([]string, len(findings))
+		for i, f := range findings {
+			paths[i] = f.Path
+		}
+		t.Fatalf("got %d findings %v, want 1 (small.go only)", len(findings), paths)
+	}
+	if findings[0].Path != "small.go" {
+		t.Errorf("finding path = %q, want \"small.go\"", findings[0].Path)
+	}
+}
+
+func TestScanDirMaxFileBytesZeroMeansNoLimit(t *testing.T) {
+	root := t.TempDir()
+	writeTempFile(t, root, "a.go", "package p // \U0001F680\n")
+	writeTempFile(t, root, "b.go", "package p // \U0001F680\n")
+
+	cfg := demojify.ScanConfig{
+		Root:         root,
+		MaxFileBytes: 0, // zero = no limit
+		Options:      demojify.Options{RemoveEmojis: true},
+	}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 2 {
+		t.Errorf("got %d findings, want 2 (no size limit)", len(findings))
+	}
 }
 
 func TestDefaultScanConfigScansAnyExtension(t *testing.T) {

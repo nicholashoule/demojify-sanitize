@@ -60,7 +60,7 @@ No additional tooling is required. Optional:
 **Examples:**
 - `feat(sanitize): add RemoveMarkdownFences option`
 - `fix(demojify): add missing U+2640-U+2642 gender sign range`
-- `docs: update AI clutter pattern table`
+- `docs: update Unicode emoji coverage table`
 
 ## Pull Request Checklist
 

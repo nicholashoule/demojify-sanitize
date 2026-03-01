@@ -6,9 +6,12 @@ import (
 	"unicode/utf8"
 )
 
-// emojiRE matches individual emoji code points including ZWJ sequences,
-// variation selectors, and combining enclosing keycaps. Unicode ranges
-// follow the Unicode 15 emoji/pictographic assignments.
+// emojiRE is a character class that matches individual emoji-related codepoints:
+// pictographic symbols, Zero Width Joiner (U+200D), variation selectors
+// (U+FE00–U+FE0F), and Combining Enclosing Keycap (U+20E3). Each codepoint is
+// matched and removed independently -- ZWJ and variation selectors are stripped
+// as isolated characters, not as part of a multi-codepoint sequence.
+// Unicode ranges follow the Unicode 15 emoji/pictographic assignments.
 //
 // Ranges covered:
 //
@@ -32,7 +35,7 @@ import (
 //	U+3297           Circled Congratulation
 //	U+3299           Circled Secret
 //	U+1F000–U+1FAFF All supplementary emoji blocks
-//	U+200D           Zero Width Joiner (joins sequences)
+//	U+200D           Zero Width Joiner (stripped as an individual codepoint)
 //	U+20E3           Combining Enclosing Keycap
 //	U+FE00–U+FE0F   Variation Selectors 1–16
 var emojiRE = regexp.MustCompile(
@@ -76,7 +79,7 @@ func ContainsEmoji(text string) bool {
 
 // demojifyAllowed removes emoji codepoints from text while preserving any rune
 // that belongs to at least one of the provided Unicode range tables. Callers
-// pass this from [Sanitize] when Options.AllowedRanges is non-nil.
+// pass this from [Sanitize] when len(opts.AllowedRanges) > 0 (a non-empty slice).
 func demojifyAllowed(text string, allowed []*unicode.RangeTable) string {
 	return emojiRE.ReplaceAllStringFunc(text, func(s string) string {
 		r, _ := utf8.DecodeRuneInString(s)

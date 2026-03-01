@@ -30,8 +30,15 @@ the sanitization pipeline. Keep it that way.
 **Compiled regexes only:** All `regexp.MustCompile` calls must be at package-level
 `var` declarations, never inside functions. This keeps execution fast and predictable.
 
-**No returned errors:** Public functions accept a string and return a string (or bool).
-They do not return errors.
+**No returned errors (pure text APIs):** The core text-processing functions
+(`Demojify`, `ContainsEmoji`, `Normalize`, `Sanitize`) accept a string and return
+a string or bool. They never return errors; panics are only permitted in
+`regexp.MustCompile` at package-init time.
+
+**Scanner functions are the exception:** `ScanDir` and `ScanFile` perform file I/O
+and return `error` for filesystem failures (unreadable files, bad root path, etc.).
+New scanner functions must also return errors for I/O failures. Do not add error
+returns to the pure text-processing functions.
 
 ## Code Patterns
 

@@ -19,7 +19,7 @@ go get github.com/nicholashoule/demojify-sanitize
 ```go
 import demojify "github.com/nicholashoule/demojify-sanitize"
 
-// Remove all emojis, AI preamble phrases, and redundant whitespace in one call.
+// Remove all emojis and normalize whitespace in one call.
 clean := demojify.Sanitize(text, demojify.DefaultOptions())
 ```
 

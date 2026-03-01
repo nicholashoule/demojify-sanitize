@@ -7,10 +7,10 @@ applyTo: "**"
 ## Project Overview
 
 **demojify-sanitize** -- a dependency-free Go library that helps developers of web
-applications and APIs audit, detect, and fix emoji clutter, AI-generated preamble
-phrases, and redundant whitespace before content reaches production. AI agents can
-import it to self-correct their output, and applications can run it as a gate in
-their request or CI pipeline to catch and fix every issue in one pass.
+applications and APIs audit, detect, and fix emoji clutter and redundant whitespace
+before content reaches production. AI agents can import it to self-correct their
+output, and applications can run it as a gate in their request or CI pipeline to
+catch and fix every issue in one pass.
 
 **Module path:** `github.com/nicholashoule/demojify-sanitize`
 
@@ -128,7 +128,7 @@ Format: `<type>(<scope>): <subject>`
 2. **Cross-Platform** -- test and run correctly on Windows, Linux, and macOS
 3. **No Dependencies** -- this library is intentionally dependency-free; do not add `go get` imports
 4. **Performance** -- compile regexes at package init (`var re = regexp.MustCompile(...)`), never inside functions
-5. **Error Handling** -- functions in this library do not return errors; panics are only permitted in `MustCompile` at init time
+5. **Error Handling** -- pure text-processing functions (`Demojify`, `ContainsEmoji`, `Normalize`, `Sanitize`) do not return errors; panics are only permitted in `MustCompile` at init time. Scanner functions (`ScanDir`, `ScanFile`) are the exception and must return `error` for filesystem failures.
 6. **Testing** -- table-driven tests, `testing` package, >80% coverage target; update `example_test.go` when API changes
 7. **No Emoji in Production Code** -- use text alternatives (`[PASS]`, `[FAIL]`, `WARNING:`) in all production source, comments, and output. Exception: literal emoji is permitted (and required) as test-input data inside `*_test.go` files
 8. **Backward Compatibility** -- do not remove or rename exported symbols; add new `Options` fields instead

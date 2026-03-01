@@ -36,6 +36,12 @@ type ScanConfig struct {
 	// restrict scanning to those file types only.
 	Extensions []string
 
+	// MaxFileBytes is the maximum file size in bytes that ScanDir will read.
+	// Files larger than this value are silently skipped. A value of zero
+	// disables the limit and all files are read regardless of size.
+	// DefaultScanConfig sets this to 1 MiB (1 << 20).
+	MaxFileBytes int64
+
 	// Options configures the sanitization pipeline applied to each file's
 	// content. See [Options] and [DefaultOptions].
 	Options Options
@@ -44,7 +50,8 @@ type ScanConfig struct {
 // DefaultScanConfig returns a ScanConfig suitable for auditing a typical Go
 // module repository or AI-agent workspace. It skips .git/, vendor/, and
 // node_modules/ directories, exempts *_test.go files, and scans all file
-// types by default (Extensions is nil).
+// types by default (Extensions is nil). Files larger than 1 MiB are skipped
+// to avoid reading large or binary files into memory.
 //
 // To restrict scanning to specific extensions, set Extensions explicitly:
 //
@@ -58,7 +65,8 @@ func DefaultScanConfig() ScanConfig {
 		Root:           ".",
 		SkipDirs:       []string{".git/", "vendor/", "node_modules/"},
 		ExemptSuffixes: []string{"_test.go"},
-		Extensions:     nil, // scan all file types
+		Extensions:     nil,     // scan all file types
+		MaxFileBytes:   1 << 20, // 1 MiB
 		Options: Options{
 			RemoveEmojis: true,
 		},
@@ -93,6 +101,8 @@ type Finding struct {
 // for every file whose content would change after applying [Sanitize] with
 // cfg.Options. Files matching ExemptFiles, ExemptSuffixes, or outside the
 // Extensions filter are skipped. Directories matching SkipDirs are not entered.
+// Files larger than cfg.MaxFileBytes are silently skipped (zero disables the
+// limit).
 //
 // Unlike the pure-string functions in this package, ScanDir performs file I/O
 // and therefore returns an error when the filesystem is inaccessible.
@@ -154,6 +164,17 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 		// Exempt files by suffix.
 		for _, suffix := range cfg.ExemptSuffixes {
 			if strings.HasSuffix(base, suffix) {
+				return nil
+			}
+		}
+
+		// MaxFileBytes size guard -- skip large/binary files.
+		if cfg.MaxFileBytes > 0 {
+			info, infoErr := d.Info()
+			if infoErr != nil {
+				return infoErr
+			}
+			if info.Size() > cfg.MaxFileBytes {
 				return nil
 			}
 		}

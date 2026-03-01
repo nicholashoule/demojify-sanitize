@@ -9,9 +9,23 @@
 
 ## Scope
 
-`demojify-sanitize` is a text-processing library with no network access, no file
-I/O, no external dependencies, and no execution of user-supplied code. The attack
-surface is intentionally minimal:
+`demojify-sanitize` is a text-processing library with no network access, no
+external dependencies, and no execution of user-supplied code.
+
+The package has two distinct tiers with different attack surfaces:
+
+**Pure text-processing functions** (`Demojify`, `ContainsEmoji`, `Normalize`,
+`Sanitize`): no file I/O. Input is an in-memory string; output is a string.
+The attack surface is limited to regex and Unicode processing on caller-supplied
+data.
+
+**Scanner functions** (`ScanDir`, `ScanFile`): perform filesystem reads and
+directory walking via `os.ReadFile` and `filepath.WalkDir`. The attack surface
+includes path traversal (callers should validate `ScanConfig.Root`), large or
+binary files (mitigated by `ScanConfig.MaxFileBytes`, defaulting to 1 MiB), and
+the same regex/memory considerations as the text-processing tier.
+
+Shared security properties:
 
 - **Regex denial-of-service (ReDoS):** All regexes are pre-compiled at package
   init using `regexp.MustCompile`. Go's `regexp` package uses RE2 semantics

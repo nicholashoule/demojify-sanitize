@@ -18,7 +18,7 @@ type Options struct {
 	// AllowedRanges lists Unicode ranges whose codepoints are preserved during
 	// emoji removal. A codepoint that would normally be stripped by [Demojify]
 	// is kept when it belongs to any table in this slice. Has no effect when
-	// RemoveEmojis is false or the slice is nil.
+	// RemoveEmojis is false or the slice is nil or empty.
 	AllowedRanges []*unicode.RangeTable
 }
 
