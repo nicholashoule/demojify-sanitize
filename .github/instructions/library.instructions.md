@@ -52,7 +52,7 @@ returns to the pure text-processing functions.
 var myRuleRE = regexp.MustCompile(`(?im)^pattern[ \t]*\n?`)
 
 func applyMyRule(text string) string {
-    return myRuleRE.ReplaceAllString(text, "")
+ return myRuleRE.ReplaceAllString(text, "")
 }
 ```
 
@@ -60,17 +60,17 @@ func applyMyRule(text string) string {
 
 ```go
 type Options struct {
-    // ...existing fields...
+ // ...existing fields...
 
-    // RemoveNewFeature describes what this option does.
-    RemoveNewFeature bool
+ // RemoveNewFeature describes what this option does.
+ RemoveNewFeature bool
 }
 
 func DefaultOptions() Options {
-    return Options{
-        // ...existing fields...
-        RemoveNewFeature: true, // enable by default if generally useful
-    }
+ return Options{
+ // ...existing fields...
+ RemoveNewFeature: true, // enable by default if generally useful
+ }
 }
 ```
 

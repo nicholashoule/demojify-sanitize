@@ -6,7 +6,7 @@ Go library for text sanitization. Contributions should remain within that scope.
 ## Before You Start
 
 - Search [existing issues](https://github.com/nicholashoule/demojify-sanitize/issues)
-  to avoid duplicate work.
+ to avoid duplicate work.
 - For non-trivial changes, open an issue first to discuss the approach.
 - All contributions must maintain the library's zero-dependency guarantee.
 
@@ -15,7 +15,7 @@ Go library for text sanitization. Contributions should remain within that scope.
 ```bash
 git clone https://github.com/nicholashoule/demojify-sanitize.git
 cd demojify-sanitize
-go test ./...   # confirm baseline passes
+go test ./... # confirm baseline passes
 ```
 
 No additional tooling is required. Optional:
@@ -38,14 +38,14 @@ No additional tooling is required. Optional:
 
 - **No external dependencies.** This is a hard requirement.
 - **Compiled regexes at package level.** All `regexp.MustCompile` calls must be
-  `var` declarations, never inside functions.
+ `var` declarations, never inside functions.
 - **Table-driven tests.** See existing `*_test.go` files for the pattern.
 - **`gofmt -s` formatting.** Run `make fmt` before committing.
 - **Godoc comments on all exported symbols.**
 - **No emoji in production source, comments, or output.** Use `[PASS]`, `[FAIL]`,
-  `WARNING:` etc. The sole exception is `*_test.go` files, where literal emoji
-  is permitted (and required) as test-input data. See
-  [`.github/emoji-prevention.md`](.github/emoji-prevention.md) for the full policy.
+ `WARNING:` etc. The sole exception is `*_test.go` files, where literal emoji
+ is permitted (and required) as test-input data. See
+ [`.github/emoji-prevention.md`](.github/emoji-prevention.md) for the full policy.
 
 ## Commit Message Format
 

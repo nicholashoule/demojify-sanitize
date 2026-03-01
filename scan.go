@@ -433,10 +433,20 @@ func ScanFile(path string, opts Options) (*Finding, error) {
 }
 
 // FindMatchesInFile reads the file at path and returns a [Match] for every
-// emoji codepoint found, with [Match.Replacement] populated from the
-// replacements map (empty string if the codepoint is not mapped). Matches
-// are ordered by line then column. Returns nil and no error when the file
-// contains no emoji.
+// matched sequence found, with [Match.Replacement] populated from the
+// replacements map (empty string if the sequence is not mapped). Matches
+// are ordered by line then column.
+//
+// Matching uses two passes per line: replacement keys are tried first
+// (longest-first, so variation-selector sequences are consumed atomically),
+// then any remaining codepoints are checked against the internal emoji regex.
+// Because replacement keys may include non-emoji sequences (e.g., arrows),
+// the returned matches are not limited to emoji codepoints. Returns nil and
+// no error when the file contains no matched sequences.
+//
+// Binary files (detected by a NUL byte in the first 512 bytes) are silently
+// skipped and return (nil, nil), matching the behaviour of [ScanDir] and
+// [ScanFile].
 //
 // Unlike [ScanDir] with CollectMatches, this function does not filter or
 // sanitize the file; it only collects match metadata.
@@ -446,6 +456,9 @@ func FindMatchesInFile(path string, replacements map[string]string) ([]Match, er
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
+	}
+	if isBinary(data) {
+		return nil, nil
 	}
 	return buildMatches(string(data), replacements, sortedKeys(replacements)), nil
 }

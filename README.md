@@ -40,8 +40,8 @@ Clean LLM output before storing or displaying it:
 
 ```go
 aiResponse := "Certainly! Here is a summary.\n\n" +
-    "The deployment pipeline \U0001F680 runs on every push to main.\n" +
-    "Check the dashboard \U0001F4CA for metrics."
+ "The deployment pipeline \U0001F680 runs on every push to main.\n" +
+ "Check the dashboard \U0001F4CA for metrics."
 
 clean := demojify.Sanitize(aiResponse, demojify.DefaultOptions())
 // "Certainly! Here is a summary.\n\nThe deployment pipeline runs on every push to main.\nCheck the dashboard for metrics."
@@ -202,21 +202,26 @@ temp-file-plus-rename strategy. No write occurs when `f.Cleaned` equals
 
 #### `DefaultReplacements() map[string]string`
 
-Returns a fresh copy of the built-in ~100-entry emoji-to-text map. Callers
+Returns a fresh copy of the built-in ~135-entry emoji-to-text map. Callers
 may add, remove, or override entries without affecting other callers.
 
 Categories covered:
 
 | Category | Examples |
 |---|---|
-| Warning / alerts | U+26A0 (warning sign) -> `WARNING`, U+203C (double exclamation) -> `[ALERT]` |
-| Status symbols | U+2705 (check mark) -> `[PASS]`, U+274C (cross mark) -> `[FAIL]`, U+2757 -> `[ALERT]` |
-| Favorites / annotations | U+2B50 (star) -> `[FEATURED]`, U+1F4A1 (light bulb) -> `[TIP]`, U+1F4CC (pushpin) -> `[PINNED]` |
-| Tech / deployment | U+1F4BB (laptop) -> `Code`, U+1F5A5 (computer) -> `Server`, U+2699 (gear) -> `Configuration` |
-| Arrows | U+2192 (right arrow) -> `->`, U+2190 (left arrow) -> `<-`, U+21D2 (double right) -> `=>` |
-| Geometric shapes | U+25CF (black circle) -> `*`, U+25CB (white circle) -> `o`, U+25B2 (up triangle) -> `^` |
-| Checkboxes | U+2610 (ballot box) -> `[ ]`, U+2611 (checked box) -> `[x]`, U+2612 (X box) -> `[x]` |
-| Dingbats | U+2022 (bullet) -> `*`, U+2764 (heart) -> `<3`, U+2666 (diamond suit) -> `<>` |
+| Warning / alerts | U+26A0 -> `WARNING`, U+203C -> `[ALERT]`, U+2753 -> `[?]` |
+| Status symbols | U+2705 -> `[PASS]`, U+274C -> `[FAIL]`, U+2757 -> `[ALERT]` |
+| Information | U+2139 () -> `[INFO]` |
+| Severity circles | U+1F534 (red) -> `[ERROR]`, U+1F7E2 (green) -> `[OK]`, U+1F535 (blue) -> `[INFO]`, U+1F7E0 (orange) -> `[WARNING]`, U+1F7E1 (yellow) -> `[CAUTION]`, U+26AB/U+26AA -> `[INACTIVE]` |
+| Stop / prohibition | U+1F6D1 -> `[STOP]`, U+26D4 -> `[NO ENTRY]`, U+1F6AB -> `[PROHIBITED]` |
+| Favorites / annotations | U+2B50 -> `[FEATURED]`, U+1F4A1 -> `[TIP]`, U+1F4CC -> `[PINNED]` |
+| Tech / deployment | U+1F4BB -> `Code`, U+1F5A5 -> `Server`, U+2699 -> `Configuration` |
+| CI/CD workflow | U+1F680 -> `[DEPLOY]`, U+1F4E6 -> `[PACKAGE]`, U+1F389 -> `[SUCCESS]`, U+1F527 -> `[FIX]`, U+267B -> `[RECYCLE]`, U+1F525 -> `[HOT]`, U+1F4AF -> `[100]` |
+| Arrows | U+2192 -> `->`, U+2190 -> `<-`, U+21D2 -> `=>` |
+| Math operators | U+2716 -> `x`, U+2795 -> `+`, U+2796 -> `-`, U+2797 -> `/`, U+267E -> `[INFINITY]` |
+| Geometric shapes | U+25CF -> `*`, U+25CB -> `o`, U+25B2 -> `^` |
+| Checkboxes | U+2610 -> `[ ]`, U+2611 -> `[x]`, U+2612 -> `[x]` |
+| Dingbats | U+2022 -> `*`, U+2764 -> `<3`, U+2666 -> `<>` |
 
 #### `Match` struct
 
@@ -250,27 +255,27 @@ Reports whether `text` contains at least one emoji or Unicode pictographic
 character recognised by `Demojify`.
 
 ```go
-demojify.ContainsEmoji("Hello \U0001F600")  // -> true
-demojify.ContainsEmoji("Hello")              // -> false
+demojify.ContainsEmoji("Hello \U0001F600") // -> true
+demojify.ContainsEmoji("Hello") // -> false
 ```
 
 ### `Normalize(text string) string`
 
 Collapses redundant whitespace:
 
-- consecutive spaces/tabs → single space
-- trailing whitespace before a newline → removed
-- three or more consecutive blank lines → two blank lines
-- leading/trailing whitespace of the whole string → trimmed
+- consecutive spaces/tabs -> single space
+- trailing whitespace before a newline -> removed
+- three or more consecutive blank lines -> two blank lines
+- leading/trailing whitespace of the whole string -> trimmed
 
 ```go
 demojify.Normalize("Hello World\n\n\n\nMore text")
-// → "Hello World\n\nMore text"
+// -> "Hello World\n\nMore text"
 ```
 
 ### `Sanitize(text string, opts Options) string`
 
-Applies a configurable pipeline in order: emoji removal → whitespace
+Applies a configurable pipeline in order: emoji removal -> whitespace
 normalization. Each step is independently toggled through `Options`.
 
 ```go
@@ -285,24 +290,31 @@ clean := demojify.Sanitize(text, demojify.Options{RemoveEmojis: true})
 
 ```go
 type Options struct {
- RemoveEmojis        bool                  // strip emoji / pictographic characters
- NormalizeWhitespace bool                  // collapse redundant spaces and blank lines
- AllowedRanges       []*unicode.RangeTable // emoji codepoints to preserve during removal
+ RemoveEmojis bool // strip emoji / pictographic characters
+ NormalizeWhitespace bool // collapse redundant spaces and blank lines
+ AllowedRanges []*unicode.RangeTable // preserve emoji in these Unicode ranges
+ AllowedEmojis []string // preserve specific emoji strings (exact match)
 }
 
-func DefaultOptions() Options // all fields true; AllowedRanges nil (no exceptions)
+func DefaultOptions() Options // RemoveEmojis+NormalizeWhitespace true; allowed lists nil
 ```
 
-`AllowedRanges` lets callers preserve specific emoji codepoints while still
-removing all others. A codepoint is kept when it belongs to any table in the
-slice. `nil` (the default) removes every matched codepoint.
+`AllowedRanges` preserves every codepoint that falls within any supplied
+`unicode.RangeTable`. `AllowedEmojis` preserves exact multi-codepoint sequences
+(e.g. `"\U0001F680"`, `"\U0001F3F4\U000E0067..."`). Both can be combined.
 
 ```go
-// Remove all emoji except the rocket (U+1F680).
+// Remove all emoji except rocket (U+1F680) and thumbs-up.
 clean := demojify.Sanitize(text, demojify.Options{
  RemoveEmojis: true,
+ AllowedEmojis: []string{"\U0001F680", "\U0001F44D"},
+})
+
+// Remove all emoji except an entire Unicode block.
+clean = demojify.Sanitize(text, demojify.Options{
+ RemoveEmojis: true,
  AllowedRanges: []*unicode.RangeTable{
- {R32: []unicode.Range32{{Lo: 0x1F680, Hi: 0x1F680, Stride: 1}}},
+ {R32: []unicode.Range32{{Lo: 0x1F600, Hi: 0x1F64F, Stride: 1}}},
  },
 })
 ```
@@ -365,26 +377,31 @@ The following Unicode blocks are stripped by `Demojify`:
 
 | Range | Block |
 |---|---|
+| U+2139 | Information Source () |
 | U+2600–U+27BF | Miscellaneous Symbols + Dingbats |
 | U+231A–U+23FA | Clocks, media controls |
 | U+25AA–U+25FE | Geometric shapes used as emoji |
 | U+2934–U+2935, U+2B05–U+2B07 | Curved / directional arrows |
 | U+2B1B–U+2B55 | Large squares, star, circle |
 | U+3030, U+303D, U+3297, U+3299 | CJK/wavy dash symbols |
-| U+1F000–U+1FAFF | All supplementary emoji blocks |
+| U+1F000–U+1FAFF | All supplementary emoji blocks (Regional Indicators, skin-tone modifiers, Emoji 17.0 additions) |
 | U+200D | Zero Width Joiner |
 | U+20E3 | Combining Enclosing Keycap |
+| U+E0020–U+E007F | Tags block (subdivision flag sequences: England, Scotland, Wales) |
 | U+FE00–U+FE0F | Variation Selectors 1–16 |
 
 Intentionally **not** removed: `©` (U+00A9), `®` (U+00AE), `™` (U+2122),
 basic mathematical/technical arrows (U+2190–U+2193), and all non-emoji Unicode
 scripts.
 
-## Design
+## Design and documentation
 
-See [docs/design.md](docs/design.md) for the rationale behind key technical
-decisions (zero-dependency policy, pipeline order, false-positive prevention,
-and intentional Unicode exclusions).
+| Document | Contents |
+|----------|----------|
+| [docs/design.md](docs/design.md) | Architecture rationale: zero-dependency policy, pipeline order, error handling, atomic writes |
+| [docs/replacements.md](docs/replacements.md) | Full `DefaultReplacements()` reference: all ~135 entries organized by category |
+| [docs/unicode-coverage.md](docs/unicode-coverage.md) | `emojiRE` ranges, intentional exclusions (copyright, trademark, math arrows), substitution vs. stripping |
+| [docs/cli.md](docs/cli.md) | `cmd/demojify` CLI reference: flags, exit codes, output format, examples |
 
 ## License
 

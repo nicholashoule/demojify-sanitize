@@ -16,7 +16,7 @@ assignees: ''
 - [ ] CONTRIBUTING.md
 - [ ] API Documentation (Swagger)
 - [ ] Code Comments
-- [ ] Other: 
+- [ ] Other:
 
 ## Suggested Improvement
 <!-- How should it be improved? -->

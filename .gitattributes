@@ -1,5 +1,6 @@
-# Normalize line endings to LF for all files by default
-* text=auto
+# Normalize line endings to LF for all text files by default.
+# text=auto lets Git detect text vs binary; eol=lf forces LF on checkout.
+* text=auto eol=lf
 
 # Go source and module files
 *.go text eol=lf

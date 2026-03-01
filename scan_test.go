@@ -867,16 +867,17 @@ func TestFindMatchesInFile(t *testing.T) {
 
 	t.Run("unmapped emoji has empty replacement", func(t *testing.T) {
 		dir := t.TempDir()
-		path := writeTempFile(t, dir, "log.txt", "\U0001F680 deployed\n")
+		// U+1F600 GRINNING FACE -- not in DefaultReplacements, so replacement is empty.
+		path := writeTempFile(t, dir, "log.txt", "\U0001F600 hello\n")
 
 		matches, err := demojify.FindMatchesInFile(path, repl)
 		if err != nil {
 			t.Fatalf("FindMatchesInFile: %v", err)
 		}
 		if len(matches) == 0 {
-			t.Fatal("expected at least one match for rocket emoji")
+			t.Fatal("expected at least one match for grinning face emoji")
 		}
-		// Rocket is not in DefaultReplacements; replacement should be empty.
+		// Grinning face is not in DefaultReplacements; replacement should be empty.
 		if matches[0].Replacement != "" {
 			t.Errorf("Replacement = %q, want empty for unmapped emoji", matches[0].Replacement)
 		}
@@ -887,6 +888,20 @@ func TestFindMatchesInFile(t *testing.T) {
 		_, err := demojify.FindMatchesInFile(missing, repl)
 		if err == nil {
 			t.Error("expected error for nonexistent file, got nil")
+		}
+	})
+
+	t.Run("binary file is skipped", func(t *testing.T) {
+		dir := t.TempDir()
+		// Embed a NUL byte in the first 512 bytes so isBinary returns true.
+		path := writeTempFile(t, dir, "data.bin", "hello\x00\u2705 world\n")
+
+		matches, err := demojify.FindMatchesInFile(path, repl)
+		if err != nil {
+			t.Fatalf("FindMatchesInFile: %v", err)
+		}
+		if matches != nil {
+			t.Errorf("got %d matches, want nil for binary file", len(matches))
 		}
 	})
 }

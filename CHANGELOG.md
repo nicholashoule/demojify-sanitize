@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `DefaultReplacements()` expanded from ~97 to ~135 entries across eleven
+  categories. New entries:
+  - **Information symbol** -- U+2139 -> `[INFO]`
+  - **Severity circles** -- U+1F534 -> `[ERROR]`, U+1F7E0 -> `[WARNING]`,
+    U+1F7E1 -> `[CAUTION]`, U+1F7E2 -> `[OK]`, U+1F535 -> `[INFO]`,
+    U+26AB/U+26AA (medium circles) -> `[INACTIVE]`
+  - **Stop / prohibition** -- U+1F6D1 -> `[STOP]`, U+26D4 -> `[NO ENTRY]`,
+    U+1F6AB -> `[PROHIBITED]`
+  - **CI/CD workflow** -- U+1F680 -> `[DEPLOY]`, U+1F4E6 -> `[PACKAGE]`,
+    U+1F389 -> `[SUCCESS]`, U+2728 -> `[NEW]`, U+1F3C1 -> `[DONE]`,
+    U+1F527 -> `[FIX]`, U+1F6E0 -> `[TOOLS]`, U+267B -> `[RECYCLE]`,
+    U+1F4BE -> `[SAVE]`, U+1F525 -> `[HOT]`, U+1F4AF -> `[100]`
+  - **Math operators** -- U+2716 -> `x`, U+2795 -> `+`, U+2796 -> `-`,
+    U+2797 -> `/`, U+267E -> `[INFINITY]`
+  - **Expanded FE0F variants** -- added variation-selector-suffixed forms for
+    U+2705, U+274C, U+2757, U+2755, U+23F3, U+231B, U+23F1
+- `emojiRE` in `demojify.go` extended with two new ranges:
+  - **U+2139** -- Information Source, previously undetected by `Demojify` /
+    `ContainsEmoji`
+  - **U+E0020–U+E007F** -- Tags block; covers subdivision flag sequences
+    (England, Scotland, Wales) that slipped through before
+- `Options.AllowedEmojis []string` -- preserves exact emoji strings during
+  removal (complements `AllowedRanges` which works at the Unicode block level)
+
+### Changed (previously listed)
+
 - `ScanConfig` struct -- configures directory/file exemptions (`SkipDirs`,
   `ExemptFiles`, `ExemptSuffixes`), extension filters, and sanitization
   `Options` for file-level scanning.
@@ -34,29 +60,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Windows note in `Makefile` and `CONTRIBUTING.md`: race detector requires
   CGO and gcc.
 
-### Removed
-
-- `Options.RemoveAIClutter` and `aiClutterRE` -- removed conversational filler
-  phrase removal. The feature was too narrow to address real-world AI content
-  clutter. `Sanitize` now pipelines emoji removal and whitespace normalization
-  only.
-
-## [0.1.0] - 2026-02-28
-
-### Added
-
-- `Demojify(text string) string` -- removes emoji and Unicode pictographic
-  characters using a compiled regex covering Unicode 15 ranges.
-- `ContainsEmoji(text string) bool` -- reports whether text contains an emoji.
-- `Normalize(text string) string` -- collapses redundant whitespace and blank lines.
-- `Sanitize(text string, opts Options) string` -- configurable pipeline combining
-  all three operations in order: emoji removal, AI-clutter removal, normalization.
-- `Options` struct with `RemoveEmojis`, `RemoveAIClutter`, `NormalizeWhitespace` fields.
-- `DefaultOptions()` returns all fields set to `true`.
-- AI-clutter removal for 13 common preamble phrases (case-insensitive, line-anchored).
-- Runnable `Example*` functions verified by `go test`.
-- Zero external dependencies; requires Go 1.21+.
-- CI workflow (GitHub Actions) with race detector and coverage reporting.
-
 [Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/nicholashoule/demojify-sanitize/releases/tag/v0.1.0

@@ -59,6 +59,24 @@ func TestDefaultReplacementsEntries(t *testing.T) {
 		{"locked", "\U0001f512", "LOCKED"},
 		{"unlocked", "\U0001f513", "UNLOCKED"},
 
+		// Information symbol
+		{"info bare", "\u2139", "[INFO]"},
+		{"info with selector", "\u2139\ufe0f", "[INFO]"},
+
+		// Severity indicators (colored circles)
+		{"red circle - error", "\U0001f534", "[ERROR]"},
+		{"orange circle - warning", "\U0001f7e0", "[WARNING]"},
+		{"yellow circle - caution", "\U0001f7e1", "[CAUTION]"},
+		{"green circle - ok", "\U0001f7e2", "[OK]"},
+		{"blue circle - info", "\U0001f535", "[INFO]"},
+		{"black circle - inactive", "\u26ab", "[INACTIVE]"},
+		{"white circle - inactive", "\u26aa", "[INACTIVE]"},
+
+		// Stop and prohibition
+		{"stop sign", "\U0001f6d1", "[STOP]"},
+		{"no entry", "\u26d4", "[NO ENTRY]"},
+		{"prohibited", "\U0001f6ab", "[PROHIBITED]"},
+
 		// Cloud and deployment
 		{"cloud", "\u2601", "Cloud"},
 		{"cloud with selector", "\u2601\ufe0f", "Cloud"},
@@ -67,6 +85,29 @@ func TestDefaultReplacementsEntries(t *testing.T) {
 		{"gear", "\u2699", "Configuration"},
 		{"gear with selector", "\u2699\ufe0f", "Configuration"},
 		{"laptop", "\U0001f4bb", "Code"},
+
+		// CI/CD workflow
+		{"rocket - deploy", "\U0001f680", "[DEPLOY]"},
+		{"package", "\U0001f4e6", "[PACKAGE]"},
+		{"party popper - success", "\U0001f389", "[SUCCESS]"},
+		{"sparkles - new", "\u2728", "[NEW]"},
+		{"checkered flag - done", "\U0001f3c1", "[DONE]"},
+		{"wrench - fix", "\U0001f527", "[FIX]"},
+		{"tools", "\U0001f6e0", "[TOOLS]"},
+		{"recycle bare", "\u267b", "[RECYCLE]"},
+		{"recycle with selector", "\u267b\ufe0f", "[RECYCLE]"},
+		{"floppy disk - save", "\U0001f4be", "[SAVE]"},
+		{"fire - hot", "\U0001f525", "[HOT]"},
+		{"hundred points", "\U0001f4af", "[100]"},
+
+		// Math operators
+		{"heavy multiplication x", "\u2716", "x"},
+		{"heavy multiplication x with selector", "\u2716\ufe0f", "x"},
+		{"heavy plus", "\u2795", "+"},
+		{"heavy minus", "\u2796", "-"},
+		{"heavy division", "\u2797", "/"},
+		{"infinity bare", "\u267e", "[INFINITY]"},
+		{"infinity with selector", "\u267e\ufe0f", "[INFINITY]"},
 
 		// Arrows
 		{"rightwards arrow", "\u2192", "->"},
@@ -167,13 +208,33 @@ func TestReplaceWithDefaultReplacements(t *testing.T) {
 		},
 		{
 			name:  "unmapped emoji is stripped",
-			input: "\U0001F680 launch",
-			want:  " launch",
+			input: "\U0001F600 laugh", // grinning face, not in DefaultReplacements
+			want:  " laugh",
 		},
 		{
 			name:  "mixed: mapped and unmapped",
-			input: "\u2705 tests \U0001F680 deployed",
+			input: "\u2705 tests \U0001F600 deployed",
 			want:  "[PASS] tests  deployed",
+		},
+		{
+			name:  "rocket deploy",
+			input: "\U0001F680 launch to production",
+			want:  "[DEPLOY] launch to production",
+		},
+		{
+			name:  "severity colored circles",
+			input: "\U0001f534 error \U0001f7e2 ok \U0001f7e1 caution",
+			want:  "[ERROR] error [OK] ok [CAUTION] caution",
+		},
+		{
+			name:  "information symbol",
+			input: "\u2139\ufe0f read the docs",
+			want:  "[INFO] read the docs",
+		},
+		{
+			name:  "math operators",
+			input: "a \u2795 b \u2796 c \u2716 d",
+			want:  "a + b - c x d",
 		},
 		{
 			name:  "no emoji unchanged",

@@ -117,6 +117,15 @@ func TestSanitize(t *testing.T) {
 			want:  "Hello  World",
 		},
 		{
+			name:  "AllowedEmojis – placeholder collision in input text",
+			input: "\uFDD00\uFDD0 keep \U0001F680 remove \U0001F600",
+			opts: demojify.Options{
+				RemoveEmojis:  true,
+				AllowedEmojis: []string{"\U0001F680"},
+			},
+			want: "\uFDD00\uFDD0 keep \U0001F680 remove ",
+		},
+		{
 			name:  "empty string",
 			input: "",
 			opts:  demojify.DefaultOptions(),
