@@ -86,7 +86,7 @@ To see a real semver tag, install a published version and invoke the binary:
 ```bash
 go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest
 demojify -version
-# demojify v0.2.1
+# demojify vX.Y.Z
 ```
 
 ### Audit only (no writes)
