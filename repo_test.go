@@ -158,3 +158,145 @@ func TestRepoLicenseStartsOnLineOne(t *testing.T) {
 			"Fix: remove all blank lines before the license header")
 	}
 }
+
+// TestRepoLicenseApache20Canonical verifies that the LICENSE file contains
+// every structural landmark that github.com/google/licensecheck (used by
+// pkg.go.dev) requires to identify Apache-2.0. The scanner is word-based and
+// case-insensitive, but all canonical section anchors must be present.
+//
+// Regression test for: pkg.go.dev reporting "Unknown license" because the
+// APPENDIX section was missing from the file after "END OF TERMS AND CONDITIONS".
+//
+// Required landmarks (in order):
+//
+//  1. Apache License header with version and URL
+//  2. END OF TERMS AND CONDITIONS terminator
+//  3. APPENDIX boilerplate instructions (added to canonical text after §9)
+//  4. Apache LICENSE-2.0 copy URL
+//  5. AS IS disclaimer (part of the boilerplate notice)
+func TestRepoLicenseApache20Canonical(t *testing.T) {
+	data, err := os.ReadFile("LICENSE")
+	if err != nil {
+		t.Fatalf("read LICENSE: %v", err)
+	}
+	text := string(data)
+	upper := strings.ToUpper(text)
+
+	landmarks := []struct {
+		name   string
+		needle string // checked case-insensitively
+		fix    string
+	}{
+		{
+			name:   "Apache License header",
+			needle: "APACHE LICENSE",
+			fix:    "Add the canonical Apache License header at the top of the file",
+		},
+		{
+			name:   "version 2.0 declaration",
+			needle: "VERSION 2.0",
+			fix:    "The header must state 'Version 2.0'",
+		},
+		{
+			name:   "Apache license URL in header",
+			needle: "HTTP://WWW.APACHE.ORG/LICENSES/",
+			fix:    "Add 'http://www.apache.org/licenses/' to the header",
+		},
+		{
+			name:   "END OF TERMS AND CONDITIONS terminator",
+			needle: "END OF TERMS AND CONDITIONS",
+			fix:    "The canonical Apache-2.0 text ends with 'END OF TERMS AND CONDITIONS'",
+		},
+		{
+			name:   "APPENDIX section",
+			needle: "APPENDIX: HOW TO APPLY THE APACHE LICENSE TO YOUR WORK",
+			fix: "Add the APPENDIX boilerplate after 'END OF TERMS AND CONDITIONS'.\n" +
+				"Without it, pkg.go.dev's licensecheck cannot identify Apache-2.0 and\n" +
+				"will suppress documentation for the module.",
+		},
+		{
+			name:   "Apache LICENSE-2.0 copy URL in boilerplate",
+			needle: "HTTP://WWW.APACHE.ORG/LICENSES/LICENSE-2.0",
+			fix:    "The APPENDIX boilerplate must include the copy URL 'http://www.apache.org/licenses/LICENSE-2.0'",
+		},
+		{
+			name:   "AS IS disclaimer in boilerplate",
+			needle: `"AS IS" BASIS`,
+			fix:    `The APPENDIX boilerplate must include the '"AS IS" BASIS' disclaimer`,
+		},
+	}
+
+	for _, lm := range landmarks {
+		if !strings.Contains(upper, lm.needle) {
+			t.Errorf("LICENSE missing %q landmark\nFix: %s", lm.name, lm.fix)
+		}
+	}
+}
+
+// TestRepoLicenseApache20SectionOrder verifies that the canonical Apache-2.0
+// structural landmarks appear in the correct order. An out-of-order or
+// duplicated section would also confuse licensecheck.
+func TestRepoLicenseApache20SectionOrder(t *testing.T) {
+	data, err := os.ReadFile("LICENSE")
+	if err != nil {
+		t.Fatalf("read LICENSE: %v", err)
+	}
+	upper := strings.ToUpper(string(data))
+
+	ordered := []string{
+		"APACHE LICENSE",
+		"VERSION 2.0",
+		"TERMS AND CONDITIONS FOR USE",
+		"END OF TERMS AND CONDITIONS",
+		"APPENDIX: HOW TO APPLY THE APACHE LICENSE TO YOUR WORK",
+		"HTTP://WWW.APACHE.ORG/LICENSES/LICENSE-2.0",
+	}
+
+	prev := 0
+	for _, section := range ordered {
+		idx := strings.Index(upper[prev:], section)
+		if idx < 0 {
+			t.Errorf("LICENSE section %q not found after position %d", section, prev)
+			continue
+		}
+		prev += idx + len(section)
+	}
+}
+
+// TestRepoLicenseFilename verifies the LICENSE file uses the exact filename
+// that pkg.go.dev's crawler accepts. The match is case-insensitive on the
+// server, but the canonical casing is "LICENSE" (no extension).
+func TestRepoLicenseFilename(t *testing.T) {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		t.Fatalf("ReadDir: %v", err)
+	}
+	found := false
+	for _, e := range entries {
+		if e.Name() == "LICENSE" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error(`LICENSE file not found in module root.\n` +
+			`pkg.go.dev looks for: LICENSE, LICENSE.md, LICENSE.txt, LICENCE, etc.\n` +
+			`The canonical Go module filename is "LICENSE" (no extension).`)
+	}
+}
+
+// TestRepoLicenseNotEmpty verifies the LICENSE file has meaningful content.
+// An empty or near-empty file will score too low in licensecheck's coverage
+// threshold and be treated as unknown.
+func TestRepoLicenseNotEmpty(t *testing.T) {
+	info, err := os.Stat("LICENSE")
+	if err != nil {
+		t.Fatalf("stat LICENSE: %v", err)
+	}
+	const minBytes = 10_000 // canonical Apache-2.0 text is ~11 KB
+	if info.Size() < minBytes {
+		t.Errorf("LICENSE is only %d bytes (want >= %d).\n"+
+			"The full Apache-2.0 canonical text is required for licensecheck detection.",
+			info.Size(), minBytes)
+	}
+}
