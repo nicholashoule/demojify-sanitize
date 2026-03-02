@@ -300,3 +300,70 @@ func TestRepoLicenseNotEmpty(t *testing.T) {
 			info.Size(), minBytes)
 	}
 }
+
+// TestRepoLicenseApache20ExactPhrases verifies that key phrases in the LICENSE
+// file match the official Apache-2.0 text word-for-word. licensecheck uses
+// word-based LRE matching; even a single extra or substituted word (e.g.,
+// "the Licensor" vs "Licensor", "any notices" vs "those notices") can drop
+// the coverage score below the detection threshold.
+//
+// Reference: https://www.apache.org/licenses/LICENSE-2.0.txt
+//
+// Regression test for: pkg.go.dev reporting "UNKNOWN" license due to three
+// word-level deviations from the canonical text.
+func TestRepoLicenseApache20ExactPhrases(t *testing.T) {
+	data, err := os.ReadFile("LICENSE")
+	if err != nil {
+		t.Fatalf("read LICENSE: %v", err)
+	}
+	text := string(data)
+
+	// Each phrase is copied verbatim from the official Apache-2.0 text.
+	// If the LICENSE file has a word-level deviation, the test will fail
+	// and identify the exact phrase that needs correction.
+	exactPhrases := []struct {
+		canonical string
+		badAlt    string // common mistake to watch for
+		desc      string
+	}{
+		{
+			canonical: "submitted to Licensor for inclusion in the Work",
+			badAlt:    "submitted to the Licensor for inclusion",
+			desc:      "extra 'the' before 'Licensor' in Contribution definition",
+		},
+		{
+			canonical: "has been received by Licensor and",
+			badAlt:    "has been received by the Licensor and",
+			desc:      "extra 'the' before 'Licensor' in Contributor definition",
+		},
+		{
+			canonical: "excluding those notices that do not",
+			badAlt:    "excluding any notices that do not",
+			desc:      "'any' used instead of canonical 'those' in s4(d)",
+		},
+		{
+			canonical: "submitted to Licensor for inclusion in the Work by the copyright owner",
+			badAlt:    "",
+			desc:      "full Contribution 'submitted' clause",
+		},
+		{
+			canonical: "on behalf of whom a Contribution has been received by Licensor and",
+			badAlt:    "",
+			desc:      "full Contributor definition clause",
+		},
+	}
+
+	for _, p := range exactPhrases {
+		if !strings.Contains(text, p.canonical) {
+			msg := "LICENSE missing canonical phrase: %q\nDescription: %s\n"
+			if p.badAlt != "" && strings.Contains(text, p.badAlt) {
+				msg += "Found incorrect variant: %q\n"
+				msg += "Fix: replace with the exact text from https://www.apache.org/licenses/LICENSE-2.0.txt"
+				t.Errorf(msg, p.canonical, p.desc, p.badAlt)
+			} else {
+				msg += "Fix: compare against https://www.apache.org/licenses/LICENSE-2.0.txt"
+				t.Errorf(msg, p.canonical, p.desc)
+			}
+		}
+	}
+}

@@ -14,13 +14,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   boilerplate after `END OF TERMS AND CONDITIONS`; omitting it caused
   `github.com/google/licensecheck` (used by pkg.go.dev) to score coverage
   below its match threshold and report the license as unknown
+- `LICENSE` three word-level deviations from the official Apache-2.0 text
+  corrected -- `"the Licensor"` vs canonical `"Licensor"` (two occurrences)
+  and `"any notices"` vs canonical `"those notices"` (one occurrence); these
+  caused `licensecheck`'s word-based LRE matcher to score below its
+  detection threshold even with the APPENDIX present
 
 ### Added
 
-- `repo_test.go` five new license-hygiene tests pin every structural
-  landmark that `licensecheck` requires for Apache-2.0 detection:
+- `repo_test.go` six license-hygiene tests pin every structural landmark
+  and exact phrase that `licensecheck` requires for Apache-2.0 detection:
   - `TestRepoLicenseApache20Canonical` -- all 7 canonical text landmarks present
   - `TestRepoLicenseApache20SectionOrder` -- landmarks appear in correct order
+  - `TestRepoLicenseApache20ExactPhrases` -- word-level canonical phrase checks
   - `TestRepoLicenseFilename` -- file named exactly `LICENSE` in module root
   - `TestRepoLicenseNotEmpty` -- file is >= 10 KB (full canonical text required)
   - `TestRepoLicenseStartsOnLineOne` (pre-existing) retained and relocated
