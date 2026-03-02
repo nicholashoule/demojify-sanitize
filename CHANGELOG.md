@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-03-01
+
+### Fixed
+
+- `LICENSE` three word-level deviations from the official Apache-2.0 text
+  corrected -- `"the Licensor"` vs canonical `"Licensor"` (two occurrences)
+  and `"any notices"` vs canonical `"those notices"` (one occurrence); these
+  caused `licensecheck`'s word-based LRE matcher to score below its
+  detection threshold even with the APPENDIX present
+
+### Added
+
+- `repo_test.go` `TestRepoLicenseApache20ExactPhrases` -- pins 5 canonical
+  phrases from the official Apache-2.0 text and detects known bad variants
+  to prevent word-level drift from recurring
+
 ## [0.2.3] - 2026-03-01
 
 ### Fixed
@@ -14,19 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   boilerplate after `END OF TERMS AND CONDITIONS`; omitting it caused
   `github.com/google/licensecheck` (used by pkg.go.dev) to score coverage
   below its match threshold and report the license as unknown
-- `LICENSE` three word-level deviations from the official Apache-2.0 text
-  corrected -- `"the Licensor"` vs canonical `"Licensor"` (two occurrences)
-  and `"any notices"` vs canonical `"those notices"` (one occurrence); these
-  caused `licensecheck`'s word-based LRE matcher to score below its
-  detection threshold even with the APPENDIX present
 
 ### Added
 
-- `repo_test.go` six license-hygiene tests pin every structural landmark
-  and exact phrase that `licensecheck` requires for Apache-2.0 detection:
+- `repo_test.go` five license-hygiene tests pin every structural landmark
+  that `licensecheck` requires for Apache-2.0 detection:
   - `TestRepoLicenseApache20Canonical` -- all 7 canonical text landmarks present
   - `TestRepoLicenseApache20SectionOrder` -- landmarks appear in correct order
-  - `TestRepoLicenseApache20ExactPhrases` -- word-level canonical phrase checks
   - `TestRepoLicenseFilename` -- file named exactly `LICENSE` in module root
   - `TestRepoLicenseNotEmpty` -- file is >= 10 KB (full canonical text required)
   - `TestRepoLicenseStartsOnLineOne` (pre-existing) retained and relocated
@@ -112,6 +122,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `example_test.go` with 17 runnable examples for pkg.go.dev
 - Apache License 2.0
 
+[0.2.4]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.2.0...v0.2.1
