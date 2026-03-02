@@ -21,6 +21,7 @@ package demojify_test
 // directory walking, proving the scanner API works on a real repository.
 
 import (
+	"bufio"
 	"os"
 	"path/filepath"
 	"strings"
@@ -134,5 +135,26 @@ func TestRepoTestFilesContainEmoji(t *testing.T) {
 	if !found {
 		t.Error("no test file contains literal emoji -- test data is missing;\n" +
 			"unit test files must contain real emoji codepoints to prove the module processes them")
+	}
+}
+
+// TestRepoLicenseStartsOnLineOne verifies that LICENSE begins with non-whitespace
+// on its very first line. pkg.go.dev's licensecheck scanner reads from byte 0;
+// a leading blank line prevents Apache-2.0 detection and suppresses documentation.
+func TestRepoLicenseStartsOnLineOne(t *testing.T) {
+	f, err := os.Open("LICENSE")
+	if err != nil {
+		t.Fatalf("open LICENSE: %v", err)
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	if !scanner.Scan() {
+		t.Fatal("LICENSE is empty")
+	}
+	firstLine := scanner.Text()
+	if strings.TrimSpace(firstLine) == "" {
+		t.Error("LICENSE has a leading blank line -- pkg.go.dev will not detect the license;\n" +
+			"Fix: remove all blank lines before the license header")
 	}
 }
