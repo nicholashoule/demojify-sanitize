@@ -126,6 +126,7 @@ pushed to GitHub, the package appears within minutes -- no manual submission nee
 |-----------|--------|--------|
 | `go.mod` present | PASS | `module github.com/nicholashoule/demojify-sanitize`, `go 1.21` |
 | Redistributable license | PASS | Apache 2.0 (`LICENSE`) |
+| `LICENSE` starts on line 1 | CHECK | pkg.go.dev `licensecheck` reads from byte 0 -- any leading blank line prevents detection; verify with `Get-Content LICENSE \| Select-Object -First 1` |
 | Tagged version | PASS | `v0.1.0`, `v0.2.0` |
 | Stable version (`v1+`) | **GAP** | Latest tag is `v0.2.0`; pkg.go.dev treats `v0.x` as experimental |
 | Good package doc | PASS | `doc.go` opens with a one-sentence summary; all exported symbols have godoc |
