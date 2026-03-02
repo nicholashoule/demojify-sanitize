@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/github/license/nicholashoule/demojify-sanitize)](LICENSE)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)](go.mod)
 
-A dependency-free Go module for auditing, detecting, removing, and substituting emoji clutter and redundant whitespace in text content before it reaches production. Use it as a post-processing step after AI agent output, as a content gate in your request pipeline, or as a CI quality gate -- one call to `Sanitize` strips and normalizes in a single pass, `Replace` maps emoji to meaningful text equivalents, and `ScanDir` with `ContainsEmoji` cover detection and auditing across entire directory trees.
+A dependency-free Go module for auditing, detecting, removing, and substituting emoji clutter and redundant whitespace in text content before it reaches production. Use it as a post-processing step after AI agent output, as a content gate in your request pipeline, or as a CI quality gate -- one call to `Sanitize` strips and normalizes in a single pass, `Replace` maps emoji to meaningful text equivalents, `ScanDir` audits entire directory trees (it calls `ContainsEmoji` internally per file), and `ContainsEmoji` is available directly for ad-hoc single-string detection.
 
 ## Install
 
