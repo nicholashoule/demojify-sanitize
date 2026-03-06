@@ -25,6 +25,15 @@ includes path traversal (callers should validate `ScanConfig.Root`), large or
 binary files (mitigated by `ScanConfig.MaxFileBytes`, defaulting to 1 MiB), and
 the same regex/memory considerations as the text-processing tier.
 
+**Write-back functions** (`WriteFinding`, `SanitizeFile`, `ReplaceFile`,
+`FixDir`): write sanitized content to filesystem paths. `FixDir` validates that
+every resolved write target stays within the root directory, preventing path
+traversal via `..` components in `Finding.Path`. `WriteFinding`, `SanitizeFile`,
+and `ReplaceFile` write to the exact path provided by the caller -- callers
+processing untrusted input should validate paths before passing them to these
+functions. All write-back functions preserve original file permissions and use
+an atomic temp-file-plus-rename strategy.
+
 Shared security properties:
 
 - **Regex denial-of-service (ReDoS):** All regexes are pre-compiled at package

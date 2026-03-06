@@ -16,6 +16,9 @@
 //	-quiet           suppress all output; exit code only (0 = clean, 1 = findings/errors)
 //	-exts <.go,.md>  comma-separated extensions to scan (default: all files);
 //	                 a leading dot is added automatically if omitted
+//	-skip <dirs>     comma-separated directory names to skip in addition to the
+//	                 defaults (.git, vendor, node_modules); a trailing slash is
+//	                 added automatically if omitted
 //	-version         print version and exit
 package main
 
@@ -38,6 +41,7 @@ func main() {
 	normalize := flag.Bool("normalize", false, "collapse redundant whitespace in all scanned files (implies -fix)")
 	quiet := flag.Bool("quiet", false, "suppress all output; exit code only (0 = clean, 1 = findings/errors)")
 	exts := flag.String("exts", "", "comma-separated extensions to scan, e.g. .go,.md (default: all)")
+	skip := flag.String("skip", "", "comma-separated directory names to skip in addition to defaults, e.g. dist,build")
 	version := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 
@@ -64,6 +68,20 @@ func main() {
 	cfg.CollectMatches = true
 	if *normalize {
 		cfg.Options.NormalizeWhitespace = true
+	}
+
+	if *skip != "" {
+		for _, d := range strings.Split(*skip, ",") {
+			d = strings.TrimSpace(d)
+			if d == "" {
+				continue
+			}
+			// Auto-append trailing slash if missing, matching SkipDirs convention.
+			if !strings.HasSuffix(d, "/") {
+				d = d + "/"
+			}
+			cfg.SkipDirs = append(cfg.SkipDirs, d)
+		}
 	}
 
 	if *exts != "" {

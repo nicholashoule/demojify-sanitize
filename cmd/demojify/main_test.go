@@ -210,6 +210,48 @@ func TestExtensionFilterWithoutDot(t *testing.T) {
 	}
 }
 
+func TestSkipFlag(t *testing.T) {
+	root := t.TempDir()
+	// Create two subdirectories, each with an emoji file.
+	for _, sub := range []string{"keep", "skipme"} {
+		d := filepath.Join(root, sub)
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatalf("MkdirAll: %v", err)
+		}
+		writeTempFile(t, d, "emoji.txt", "\u2705 done\n")
+	}
+
+	stdout, _, code := runCLI(t, "-root", root, "-skip", "skipme")
+	if code != 1 {
+		t.Errorf("exit code = %d, want 1 (emoji in keep/)", code)
+	}
+	if strings.Contains(stdout, "skipme") {
+		t.Errorf("stdout mentions skipme but it should be skipped: %s", stdout)
+	}
+	if !strings.Contains(stdout, "keep/emoji.txt") {
+		t.Errorf("stdout = %q, want keep/emoji.txt reported", stdout)
+	}
+}
+
+func TestSkipFlagWithTrailingSlash(t *testing.T) {
+	root := t.TempDir()
+	d := filepath.Join(root, "dist")
+	if err := os.MkdirAll(d, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	writeTempFile(t, d, "emoji.txt", "\u2705 done\n")
+	writeTempFile(t, root, "clean.txt", "no emoji\n")
+
+	// Trailing slash already present -- should still work.
+	stdout, _, code := runCLI(t, "-root", root, "-skip", "dist/")
+	if code != 0 {
+		t.Errorf("exit code = %d, want 0 (dist/ skipped, root is clean)", code)
+	}
+	if strings.Contains(stdout, "dist") {
+		t.Errorf("stdout mentions dist but it should be skipped: %s", stdout)
+	}
+}
+
 func TestBadRootExitsNonZero(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "no-such-dir", "deep")
 	_, stderr, code := runCLI(t, "-root", missing)
