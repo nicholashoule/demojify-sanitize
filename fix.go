@@ -14,7 +14,7 @@ import (
 //
 // The clean count includes every text file that passed all filters
 // (extensions, exempt files/suffixes, size limit, binary detection) and
-// whose sanitised content was identical to its original content.
+// whose sanitized content was identical to its original content.
 //
 // FixDir sets cfg.Root to root before scanning, so callers do not need to
 // set it separately. All other [ScanConfig] fields -- SkipDirs, Extensions,
@@ -25,15 +25,16 @@ import (
 // path-traversal writes via ".." components or symlinks in [Finding.Path].
 // Both the root and each target are resolved through [filepath.EvalSymlinks]
 // before comparison, so a symlink inside root that points outside it is
-// also rejected. Files that fail validation or write are silently skipped;
-// use [ScanDir] plus [WriteFinding] directly if per-file error handling is
-// required.
+// also rejected.
 //
 // Original file permissions are preserved (see [WriteFinding]).
 //
 // FixDir returns an error when the directory scan fails (e.g., the root
-// directory does not exist) or when root cannot be resolved to an absolute
-// path.
+// directory does not exist), when root cannot be resolved to an absolute
+// path, or when one or more files are skipped due to path-resolution or
+// write errors. In the partial-failure case the fixed and clean counts are
+// still valid; callers that need per-file detail should use [ScanDir] plus
+// [WriteFinding] directly.
 func FixDir(root string, cfg ScanConfig) (fixed, clean int, err error) {
 	cfg.Root = root
 
@@ -57,6 +58,7 @@ func FixDir(root string, cfg ScanConfig) (fixed, clean int, err error) {
 		return 0, 0, fmt.Errorf("resolve root symlinks: %w", evalErr)
 	}
 
+	var skipped int
 	for _, f := range findings {
 		absPath := filepath.Join(root, filepath.FromSlash(f.Path))
 
@@ -65,18 +67,22 @@ func FixDir(root string, cfg ScanConfig) (fixed, clean int, err error) {
 		// via ".." components and via symlinks that point outside root.
 		resolved, resolveErr := filepath.Abs(absPath)
 		if resolveErr != nil {
+			skipped++
 			continue
 		}
 		real, evalErr := filepath.EvalSymlinks(resolved)
 		if evalErr != nil {
+			skipped++
 			continue
 		}
 		if !isInsideDir(real, realRoot) {
+			skipped++
 			continue
 		}
 
 		changed, werr := WriteFinding(real, f)
 		if werr != nil {
+			skipped++
 			continue
 		}
 		if changed {
@@ -85,6 +91,9 @@ func FixDir(root string, cfg ScanConfig) (fixed, clean int, err error) {
 	}
 
 	clean = scanned - len(findings)
+	if skipped > 0 {
+		return fixed, clean, fmt.Errorf("fixdir: %d file(s) skipped due to path-resolution or write errors", skipped)
+	}
 	return fixed, clean, nil
 }
 

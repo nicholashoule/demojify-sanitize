@@ -142,7 +142,11 @@ func main() {
 	fmt.Printf("  fixed %d file(s)\n", fixed)
 
 	// Verify idempotency -- second run should find nothing.
-	fixed2, _, _ := demojify.FixDir(fixDir, fixCfg)
+	fixed2, _, fixErr2 := demojify.FixDir(fixDir, fixCfg)
+	if fixErr2 != nil {
+		fmt.Fprintf(os.Stderr, "FixDir (idempotency): %v\n", fixErr2)
+		os.Exit(1)
+	}
 	fmt.Printf("  idempotent re-run: %d file(s) fixed\n", fixed2)
 
 	fmt.Println("\n[PASS] driver completed successfully")

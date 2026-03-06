@@ -185,19 +185,52 @@ func TestFixDir(t *testing.T) {
 	})
 
 	t.Run("bad root returns error", func(t *testing.T) {
+		badRoot := filepath.Join(t.TempDir(), "missing")
 		cfg := demojify.DefaultScanConfig()
 
-		_, _, err := demojify.FixDir("/no/such/directory/ever", cfg)
+		_, _, err := demojify.FixDir(badRoot, cfg)
 		if err == nil {
 			t.Error("want error for nonexistent root, got nil")
+		}
+	})
+
+	t.Run("fixes files in nested subdirectories", func(t *testing.T) {
+		root := t.TempDir()
+		sub := writeTempDir(t, root, "level1")
+		deep := writeTempDir(t, sub, "level2")
+		writeTempFile(t, root, "top.txt", "\U0001F680 rocket\n")
+		writeTempFile(t, sub, "mid.txt", "\u2705 check\n")
+		writeTempFile(t, deep, "bottom.txt", "\u274C fail\n")
+
+		cfg := demojify.DefaultScanConfig()
+
+		fixed, clean, err := demojify.FixDir(root, cfg)
+		if err != nil {
+			t.Fatalf("FixDir: %v", err)
+		}
+		if fixed != 3 {
+			t.Errorf("fixed = %d, want 3", fixed)
+		}
+		if clean != 0 {
+			t.Errorf("clean = %d, want 0", clean)
+		}
+
+		// Verify every file on disk is now emoji-free.
+		for _, rel := range []string{"top.txt", "level1/mid.txt", "level1/level2/bottom.txt"} {
+			data, rerr := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
+			if rerr != nil {
+				t.Fatalf("ReadFile %s: %v", rel, rerr)
+			}
+			if demojify.ContainsEmoji(string(data)) {
+				t.Errorf("file %s still contains emoji: %q", rel, data)
+			}
 		}
 	})
 
 	t.Run("does not write outside root", func(t *testing.T) {
 		// Integration check: FixDir only modifies files inside root.
 		// A sibling temp directory with a sentinel file must remain
-		// untouched. (The focused path-traversal and ".." rejection
-		// logic is exercised by TestIsInsideDir in fix_internal_test.go.)
+		// untouched.
 		root := t.TempDir()
 		outside := t.TempDir()
 

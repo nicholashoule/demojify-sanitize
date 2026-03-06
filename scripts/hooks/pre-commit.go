@@ -23,8 +23,11 @@ func main() {
 	}
 }
 
-// checkFmt runs gofmt -s -l . and reports unformatted files.
+// checkFmt runs gofmt -s -l . to find unformatted files, then auto-fixes them
+// with gofmt -s -w . and re-stages the changed files with git add.
+// This mirrors what `make fmt` does, so the commit proceeds with clean formatting.
 func checkFmt() bool {
+	// 1. List files that need formatting.
 	out, err := exec.Command("gofmt", "-s", "-l", ".").Output()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[FAIL] gofmt: %v\n", err)
@@ -35,11 +38,34 @@ func checkFmt() bool {
 		fmt.Fprintln(os.Stderr, "[PASS] gofmt")
 		return true
 	}
-	fmt.Fprintln(os.Stderr, "[FAIL] gofmt: the following files need formatting (run: make fmt):")
-	for _, f := range strings.Split(files, "\n") {
-		fmt.Fprintf(os.Stderr, "  %s\n", f)
+
+	// 2. Auto-fix formatting in place.
+	fix := exec.Command("gofmt", "-s", "-w", ".")
+	fix.Stderr = os.Stderr
+	if fix.Run() != nil {
+		fmt.Fprintln(os.Stderr, "[FAIL] gofmt -w failed")
+		return false
 	}
-	return false
+
+	// 3. Re-stage the files that were reformatted.
+	changed := strings.Split(files, "\n")
+	for _, f := range changed {
+		f = strings.TrimSpace(f)
+		if f == "" {
+			continue
+		}
+		if add := exec.Command("git", "add", f); add.Run() != nil {
+			fmt.Fprintf(os.Stderr, "WARNING: could not re-stage %s\n", f)
+		}
+	}
+
+	fmt.Fprintln(os.Stderr, "[AUTO] gofmt: reformatted and re-staged the following files:")
+	for _, f := range changed {
+		if f = strings.TrimSpace(f); f != "" {
+			fmt.Fprintf(os.Stderr, "  %s\n", f)
+		}
+	}
+	return true
 }
 
 // checkVet runs go vet ./... and reports any issues.
