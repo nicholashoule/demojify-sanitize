@@ -23,8 +23,8 @@ func main() {
 	}
 }
 
-// checkFmt runs gofmt -s -l . to find unformatted files, then auto-fixes them
-// with gofmt -s -w . and re-stages the changed files with git add.
+// checkFmt runs gofmt -s -l . to find unformatted files, then auto-fixes
+// only those files with gofmt -s -w and re-stages them with git add.
 // This mirrors what `make fmt` does, so the commit proceeds with clean formatting.
 func checkFmt() bool {
 	// 1. List files that need formatting.
@@ -39,31 +39,35 @@ func checkFmt() bool {
 		return true
 	}
 
-	// 2. Auto-fix formatting in place.
-	fix := exec.Command("gofmt", "-s", "-w", ".")
+	// 2. Collect the specific files that need formatting.
+	var unformatted []string
+	for _, f := range strings.Split(files, "\n") {
+		f = strings.TrimSpace(f)
+		if f != "" {
+			unformatted = append(unformatted, f)
+		}
+	}
+
+	// 3. Auto-fix formatting only on the files that need it.
+	args := append([]string{"-s", "-w"}, unformatted...)
+	fix := exec.Command("gofmt", args...)
 	fix.Stderr = os.Stderr
-	if fix.Run() != nil {
-		fmt.Fprintln(os.Stderr, "[FAIL] gofmt -w failed")
+	if err := fix.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "[FAIL] gofmt -w: %v\n", err)
 		return false
 	}
 
-	// 3. Re-stage the files that were reformatted.
-	changed := strings.Split(files, "\n")
-	for _, f := range changed {
-		f = strings.TrimSpace(f)
-		if f == "" {
-			continue
-		}
-		if add := exec.Command("git", "add", f); add.Run() != nil {
-			fmt.Fprintf(os.Stderr, "WARNING: could not re-stage %s\n", f)
+	// 4. Re-stage the files that were reformatted.
+	for _, f := range unformatted {
+		add := exec.Command("git", "add", f)
+		if err := add.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "WARNING: could not re-stage %s: %v\n", f, err)
 		}
 	}
 
 	fmt.Fprintln(os.Stderr, "[AUTO] gofmt: reformatted and re-staged the following files:")
-	for _, f := range changed {
-		if f = strings.TrimSpace(f); f != "" {
-			fmt.Fprintf(os.Stderr, "  %s\n", f)
-		}
+	for _, f := range unformatted {
+		fmt.Fprintf(os.Stderr, "  %s\n", f)
 	}
 	return true
 }

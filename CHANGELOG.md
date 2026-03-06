@@ -14,9 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sanitization/replacement pipeline, and writes back every changed file in
   one call. Path-traversal protection validates every resolved write target
   stays within root
-- `fix.go` / `fix_test.go` -- implementation and 9 table-driven subtests
-  (basic fix, clean dir, SkipDirs, Extensions, replacements, idempotency,
-  multiple files, bad root, path traversal rejection)
+- `fix.go` / `fix_test.go` -- implementation and 9 subtests (basic fix,
+  clean dir, SkipDirs, Extensions, replacements, idempotency, multiple
+  files, bad root, path traversal rejection)
 - `cmd/demojify` `-skip` flag -- comma-separated directory names to exclude
   in addition to the defaults (`.git`, `vendor`, `node_modules`); trailing
   slash auto-appended if omitted

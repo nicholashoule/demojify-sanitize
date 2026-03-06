@@ -264,4 +264,47 @@ func TestFixDir(t *testing.T) {
 			t.Errorf("sentinel was modified: %q", data)
 		}
 	})
+
+	t.Run("rejects symlink pointing outside root", func(t *testing.T) {
+		// Verify FixDir's symlink-traversal protection: a symlink
+		// inside root that resolves to a file outside root must not
+		// be written. ScanDir follows the symlink and produces a
+		// finding, but FixDir must reject the write because the real
+		// target is outside the resolved root.
+
+		root := t.TempDir()
+		outside := t.TempDir()
+
+		// Create a dirty file outside root -- the symlink target.
+		target := filepath.Join(outside, "escape.txt")
+		if err := os.WriteFile(target, []byte("\U0001F680 rocket\n"), 0o644); err != nil {
+			t.Fatalf("write target: %v", err)
+		}
+
+		// Create a symlink inside root pointing to the outside file.
+		link := filepath.Join(root, "escape.txt")
+		if err := os.Symlink(target, link); err != nil {
+			t.Skipf("skipping: cannot create symlink (requires privileges on Windows): %v", err)
+		}
+
+		cfg := demojify.DefaultScanConfig()
+		fixed, _, err := demojify.FixDir(root, cfg)
+
+		// FixDir should return an error for the skipped symlink.
+		if err == nil {
+			t.Error("want error for symlink outside root, got nil")
+		}
+		if fixed != 0 {
+			t.Errorf("fixed = %d, want 0 (symlink target outside root)", fixed)
+		}
+
+		// The outside file must be untouched.
+		data, rerr := os.ReadFile(target)
+		if rerr != nil {
+			t.Fatalf("ReadFile target: %v", rerr)
+		}
+		if string(data) != "\U0001F680 rocket\n" {
+			t.Errorf("outside file was modified: %q", data)
+		}
+	})
 }

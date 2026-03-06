@@ -1,6 +1,7 @@
 package demojify
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -32,9 +33,12 @@ import (
 // FixDir returns an error when the directory scan fails (e.g., the root
 // directory does not exist), when root cannot be resolved to an absolute
 // path, or when one or more files are skipped due to path-resolution or
-// write errors. In the partial-failure case the fixed and clean counts are
-// still valid; callers that need per-file detail should use [ScanDir] plus
-// [WriteFinding] directly.
+// write errors. In the partial-failure case each skipped file produces a
+// separate error (joined via [errors.Join]) that includes the file path and
+// the underlying cause; callers can inspect individual errors with
+// [errors.As] or [errors.Is]. The fixed and clean counts are still valid;
+// callers that need finer control should use [ScanDir] plus [WriteFinding]
+// directly.
 func FixDir(root string, cfg ScanConfig) (fixed, clean int, err error) {
 	cfg.Root = root
 
@@ -58,7 +62,7 @@ func FixDir(root string, cfg ScanConfig) (fixed, clean int, err error) {
 		return 0, 0, fmt.Errorf("resolve root symlinks: %w", evalErr)
 	}
 
-	var skipped int
+	var errs []error
 	for _, f := range findings {
 		absPath := filepath.Join(root, filepath.FromSlash(f.Path))
 
@@ -67,22 +71,22 @@ func FixDir(root string, cfg ScanConfig) (fixed, clean int, err error) {
 		// via ".." components and via symlinks that point outside root.
 		resolved, resolveErr := filepath.Abs(absPath)
 		if resolveErr != nil {
-			skipped++
+			errs = append(errs, fmt.Errorf("fixdir: resolve %s: %w", f.Path, resolveErr))
 			continue
 		}
 		real, evalErr := filepath.EvalSymlinks(resolved)
 		if evalErr != nil {
-			skipped++
+			errs = append(errs, fmt.Errorf("fixdir: eval symlinks %s: %w", f.Path, evalErr))
 			continue
 		}
 		if !isInsideDir(real, realRoot) {
-			skipped++
+			errs = append(errs, fmt.Errorf("fixdir: %s resolves outside root", f.Path))
 			continue
 		}
 
 		changed, werr := WriteFinding(real, f)
 		if werr != nil {
-			skipped++
+			errs = append(errs, fmt.Errorf("fixdir: write %s: %w", f.Path, werr))
 			continue
 		}
 		if changed {
@@ -91,8 +95,8 @@ func FixDir(root string, cfg ScanConfig) (fixed, clean int, err error) {
 	}
 
 	clean = scanned - len(findings)
-	if skipped > 0 {
-		return fixed, clean, fmt.Errorf("fixdir: %d file(s) skipped due to path-resolution or write errors", skipped)
+	if len(errs) > 0 {
+		return fixed, clean, errors.Join(errs...)
 	}
 	return fixed, clean, nil
 }
