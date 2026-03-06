@@ -120,6 +120,31 @@ func main() {
 	findings2, _ := demojify.ScanDir(cfg)
 	fmt.Printf("  after fix: %d remaining finding(s)\n", len(findings2))
 
+	// ---- 11. FixDir -- scan and write back in one call ----
+	fmt.Println("\n=== FixDir ===")
+	fixDir, err := os.MkdirTemp("", "demojify-fixdir-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "MkdirTemp: %v\n", err)
+		os.Exit(1)
+	}
+	defer os.RemoveAll(fixDir)
+
+	writeFile(fixDir, "dirty1.md", "\u2705 All tests passed\n")
+	writeFile(fixDir, "dirty2.md", "\U0001F680 deployed to prod\n")
+	writeFile(fixDir, "clean.md", "No emoji here\n")
+
+	fixCfg := demojify.DefaultScanConfig()
+	fixed, _, fixErr := demojify.FixDir(fixDir, fixCfg)
+	if fixErr != nil {
+		fmt.Fprintf(os.Stderr, "FixDir: %v\n", fixErr)
+		os.Exit(1)
+	}
+	fmt.Printf("  fixed %d file(s)\n", fixed)
+
+	// Verify idempotency -- second run should find nothing.
+	fixed2, _, _ := demojify.FixDir(fixDir, fixCfg)
+	fmt.Printf("  idempotent re-run: %d file(s) fixed\n", fixed2)
+
 	fmt.Println("\n[PASS] driver completed successfully")
 }
 
