@@ -47,6 +47,8 @@
 //
 //   - [ScanDir] walks a directory tree and returns a [Finding] for every
 //     file whose content would change after sanitization.
+//   - [FixDir] scans a directory tree and writes back every modified file
+//     in one call, combining [ScanDir] with [WriteFinding].
 //   - [ScanFile] checks a single file and returns a [Finding] if it needs
 //     sanitization, or nil if it is already clean.
 //   - [FindMatchesInFile] returns per-occurrence [Match] detail for a file

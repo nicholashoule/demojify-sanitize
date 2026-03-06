@@ -23,6 +23,7 @@ go build -o demojify ./cmd/demojify
 | `-sub` | false | Substitute emoji with text tokens instead of stripping; implies `-fix` |
 | `-normalize` | false | Collapse redundant whitespace in all scanned files; implies `-fix` |
 | `-quiet` | false | Suppress all output; exit code only (0 = clean, 1 = findings/errors) |
+| `-skip <dirs>` | none | Comma-separated directory names to skip in addition to defaults; trailing slash auto-appended |
 | `-version` | false | Print the module version and exit 0 |
 
 ## Exit Codes
@@ -140,6 +141,15 @@ go run ./cmd/demojify -root . -exts .md,.go
 
 The leading dot is optional -- `-exts go,md` is equivalent to `-exts .go,.md`.
 
+### Skip specific directories
+
+```bash
+go run ./cmd/demojify -root . -skip dist,build
+```
+
+Excludes `dist/` and `build/` (in addition to the defaults: `.git/`, `vendor/`,
+`node_modules/`). A trailing slash is auto-appended if omitted.
+
 ### CI gate -- fail the build if emoji are found
 
 ```bash
@@ -173,3 +183,4 @@ The CLI is a thin wrapper around the library. The equivalent library calls are:
 | `-fix` | `ScanDir(cfg)` + `WriteFinding(path, f)` |
 | `-sub` | `ScanDir(cfg)` with `cfg.Replacements = DefaultReplacements()` + `ReplaceFile(path, repl)` |
 | `-sub -normalize` | `ScanDir(cfg)` with `cfg.Options.NormalizeWhitespace = true` + `WriteFinding(path, f)` |
+| `-skip dist,build` | `cfg.SkipDirs = append(cfg.SkipDirs, "dist/", "build/")` |

@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-05
+
+### Added
+
+- `FixDir(root string, cfg ScanConfig) (fixed, clean int, err error)` --
+  write-side complement to `ScanDir`; walks a directory tree, applies the
+  sanitization/replacement pipeline, and writes back every changed file in
+  one call. Path-traversal protection validates every resolved write target
+  stays within root
+- `fix.go` / `fix_test.go` -- implementation and 9 subtests (basic fix,
+  clean dir, SkipDirs, Extensions, replacements, idempotency, multiple
+  files, bad root, path traversal rejection)
+- `cmd/demojify` `-skip` flag -- comma-separated directory names to exclude
+  in addition to the defaults (`.git`, `vendor`, `node_modules`); trailing
+  slash auto-appended if omitted
+- `cmd/demojify/main_test.go` `TestSkipFlag`, `TestSkipFlagWithTrailingSlash`
+
+### Changed
+
+- `.github/workflows/ci.yml` all actions pinned to immutable commit SHAs
+  (`actions/checkout@34e11487...`, `actions/setup-go@40f1582b...`,
+  `codecov/codecov-action@b9fd7d16...`) to prevent supply-chain tag mutation
+
+### Security
+
+- `fix.go` `isInsideDir` boundary check prevents path-traversal writes via
+  `..` components in `Finding.Path`
+- `SECURITY.md` expanded to document write-back function attack surface
+  (`WriteFinding`, `SanitizeFile`, `ReplaceFile`, `FixDir`) with
+  path-traversal guidance
+
 ## [0.2.4] - 2026-03-01
 
 ### Fixed
@@ -122,6 +153,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `example_test.go` with 17 runnable examples for pkg.go.dev
 - Apache License 2.0
 
+[0.3.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.2.4...v0.3.0
 [0.2.4]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.2.1...v0.2.2

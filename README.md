@@ -26,10 +26,11 @@ clean := demojify.Sanitize(text, demojify.DefaultOptions())
 A ready-to-run CLI example lives in [cmd/demojify/main.go](cmd/demojify/main.go).
 It audits a directory tree for emoji, reports every occurrence with file, line,
 and column, and optionally rewrites affected files (`-fix`) or substitutes emoji
-with text tokens (`-sub`).
+with text tokens (`-sub`). Use `-skip` to exclude specific directories
+(e.g., `dist`, `build`) in addition to the defaults.
 
 ```bash
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify -root . -sub
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify -root . -sub -skip dist,build
 ```
 
 ## Integration patterns
@@ -56,6 +57,14 @@ findings, _ := demojify.ScanDir(cfg)
 for _, f := range findings {
  fmt.Printf("%s: has_emoji=%v\n", f.Path, f.HasEmoji)
 }
+```
+
+### Batch fix -- scan and write back in one call
+
+```go
+cfg := demojify.DefaultScanConfig()
+fixed, _, err := demojify.FixDir(".", cfg)
+fmt.Printf("fixed %d file(s)\n", fixed)
 ```
 
 ### Substitution -- replace emoji with meaningful text
@@ -103,6 +112,7 @@ Full signatures and doc comments are on
 | `ScanFile(path, opts) (*Finding, error)` | Check a single file |
 | `FindMatchesInFile(path, repl) ([]Match, error)` | Per-occurrence match detail (line, column, context) |
 | `WriteFinding(path, f) (bool, error)` | Atomic write-back without re-reading |
+| `FixDir(root, cfg) (fixed, clean int, err error)` | Scan and fix an entire directory tree in one call |
 | `ScanConfig` / `DefaultScanConfig()` | Scanner configuration (root, skip dirs, extensions, etc.) |
 | `Finding` | Path, HasEmoji, Original, Cleaned, Matches |
 | `Match` | Sequence, Replacement, Line, Column, Context |

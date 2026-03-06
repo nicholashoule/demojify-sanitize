@@ -308,3 +308,42 @@ func ExampleWriteFinding() {
 	// changed: true
 	// content: done
 }
+
+// ExampleFixDir shows how to scan and fix an entire directory tree in one
+// call. It writes back every file whose content changed and reports the
+// number of files fixed and the number that were already clean.
+func ExampleFixDir() {
+	dir, err := os.MkdirTemp("", "example-fixdir-*")
+	if err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+	defer os.RemoveAll(dir)
+
+	// Seed two files: one dirty, one clean.
+	if err := os.WriteFile(filepath.Join(dir, "dirty.md"), []byte("launch \U0001F680\n"), 0o644); err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+	if err := os.WriteFile(filepath.Join(dir, "clean.md"), []byte("all good\n"), 0o644); err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+
+	cfg := demojify.DefaultScanConfig()
+	cfg.Extensions = []string{".md"}
+
+	fixed, clean, err := demojify.FixDir(dir, cfg)
+	if err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+	fmt.Printf("fixed=%d clean=%d\n", fixed, clean)
+
+	// Verify the dirty file is now emoji-free.
+	data, _ := os.ReadFile(filepath.Join(dir, "dirty.md"))
+	fmt.Printf("dirty.md: %s", data)
+	// Output:
+	// fixed=1 clean=1
+	// dirty.md: launch
+}

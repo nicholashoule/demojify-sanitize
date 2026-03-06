@@ -39,6 +39,7 @@ documentation files, normalizing whitespace in automated text pipelines.
 ├── replace.go # Replace / ReplaceFile / ReplaceCount / FindAll / FindAllMapped
 ├── replacements.go # DefaultReplacements -- built-in emoji-to-text map
 ├── write.go # WriteFinding -- atomic write-back for scan results
+├── fix.go # FixDir / isInsideDir -- batch scan-and-fix
 ├── doc.go # Package-level documentation
 ├── demojify_test.go # Tests for demojify.go
 ├── normalize_test.go # Tests for normalize.go
@@ -47,6 +48,7 @@ documentation files, normalizing whitespace in automated text pipelines.
 ├── replace_test.go # Tests for replace.go
 ├── replacements_test.go # Tests for replacements.go
 ├── write_test.go # Tests for write.go
+├── fix_test.go # Tests for fix.go
 ├── helpers_test.go # Shared test utilities (writeTempFile, writeTempDir)
 ├── example_test.go # Runnable pkg.go.dev examples
 ├── repo_test.go # Dogfooding tests -- validates repo with own API
@@ -86,6 +88,7 @@ documentation files, normalizing whitespace in automated text pipelines.
 | `Finding` struct | scan.go | File path, emoji flag, original/cleaned content |
 | `Match` struct | scan.go | Per-occurrence match with line, column, context |
 | `WriteFinding(path string, f Finding) (bool, error)` | write.go | Write scan result back without re-reading |
+| `FixDir(root string, cfg ScanConfig) (fixed, clean int, err error)` | fix.go | Scan and fix an entire directory tree in one call |
 
 ## Development Workflow
 
