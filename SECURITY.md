@@ -28,7 +28,9 @@ the same regex/memory considerations as the text-processing tier.
 **Write-back functions** (`WriteFinding`, `SanitizeFile`, `ReplaceFile`,
 `FixDir`): write sanitized content to filesystem paths. `FixDir` validates that
 every resolved write target stays within the root directory, preventing path
-traversal via `..` components in `Finding.Path`. `WriteFinding`, `SanitizeFile`,
+traversal via `..` components or symlinks in `Finding.Path`; both the root and
+each target are resolved through `filepath.EvalSymlinks` before comparison.
+`WriteFinding`, `SanitizeFile`,
 and `ReplaceFile` write to the exact path provided by the caller -- callers
 processing untrusted input should validate paths before passing them to these
 functions. All write-back functions preserve original file permissions and use

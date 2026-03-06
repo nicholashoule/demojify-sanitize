@@ -16,12 +16,15 @@ func TestFixDir(t *testing.T) {
 
 		cfg := demojify.DefaultScanConfig()
 
-		fixed, _, err := demojify.FixDir(dir, cfg)
+		fixed, clean, err := demojify.FixDir(dir, cfg)
 		if err != nil {
 			t.Fatalf("FixDir: %v", err)
 		}
 		if fixed != 1 {
 			t.Errorf("fixed = %d, want 1", fixed)
+		}
+		if clean != 1 {
+			t.Errorf("clean = %d, want 1", clean)
 		}
 
 		// Verify the file on disk no longer contains emoji.
@@ -41,12 +44,15 @@ func TestFixDir(t *testing.T) {
 
 		cfg := demojify.DefaultScanConfig()
 
-		fixed, _, err := demojify.FixDir(dir, cfg)
+		fixed, clean, err := demojify.FixDir(dir, cfg)
 		if err != nil {
 			t.Fatalf("FixDir: %v", err)
 		}
 		if fixed != 0 {
 			t.Errorf("fixed = %d, want 0", fixed)
+		}
+		if clean != 2 {
+			t.Errorf("clean = %d, want 2", clean)
 		}
 	})
 
@@ -59,12 +65,15 @@ func TestFixDir(t *testing.T) {
 		cfg := demojify.DefaultScanConfig()
 		cfg.SkipDirs = append(cfg.SkipDirs, "skipme/")
 
-		fixed, _, err := demojify.FixDir(dir, cfg)
+		fixed, clean, err := demojify.FixDir(dir, cfg)
 		if err != nil {
 			t.Fatalf("FixDir: %v", err)
 		}
 		if fixed != 1 {
 			t.Errorf("fixed = %d, want 1 (only root.txt)", fixed)
+		}
+		if clean != 0 {
+			t.Errorf("clean = %d, want 0 (skipped dir not counted)", clean)
 		}
 
 		// Skipped file should still contain emoji.
@@ -82,12 +91,15 @@ func TestFixDir(t *testing.T) {
 		cfg := demojify.DefaultScanConfig()
 		cfg.Extensions = []string{".md"}
 
-		fixed, _, err := demojify.FixDir(dir, cfg)
+		fixed, clean, err := demojify.FixDir(dir, cfg)
 		if err != nil {
 			t.Fatalf("FixDir: %v", err)
 		}
 		if fixed != 1 {
 			t.Errorf("fixed = %d, want 1 (only .md)", fixed)
+		}
+		if clean != 0 {
+			t.Errorf("clean = %d, want 0 (.txt not scanned)", clean)
 		}
 
 		// .txt should still contain emoji.
@@ -104,12 +116,15 @@ func TestFixDir(t *testing.T) {
 		cfg := demojify.DefaultScanConfig()
 		cfg.Replacements = demojify.DefaultReplacements()
 
-		fixed, _, err := demojify.FixDir(dir, cfg)
+		fixed, clean, err := demojify.FixDir(dir, cfg)
 		if err != nil {
 			t.Fatalf("FixDir: %v", err)
 		}
 		if fixed != 1 {
 			t.Errorf("fixed = %d, want 1", fixed)
+		}
+		if clean != 0 {
+			t.Errorf("clean = %d, want 0", clean)
 		}
 
 		data, _ := os.ReadFile(filepath.Join(dir, "sub.txt"))
@@ -125,21 +140,27 @@ func TestFixDir(t *testing.T) {
 		cfg := demojify.DefaultScanConfig()
 
 		// First fix.
-		fixed1, _, err := demojify.FixDir(dir, cfg)
+		fixed1, clean1, err := demojify.FixDir(dir, cfg)
 		if err != nil {
 			t.Fatalf("FixDir (1): %v", err)
 		}
 		if fixed1 != 1 {
 			t.Errorf("first run: fixed = %d, want 1", fixed1)
 		}
+		if clean1 != 0 {
+			t.Errorf("first run: clean = %d, want 0", clean1)
+		}
 
 		// Second run should find nothing to fix.
-		fixed2, _, err := demojify.FixDir(dir, cfg)
+		fixed2, clean2, err := demojify.FixDir(dir, cfg)
 		if err != nil {
 			t.Fatalf("FixDir (2): %v", err)
 		}
 		if fixed2 != 0 {
 			t.Errorf("second run: fixed = %d, want 0 (idempotent)", fixed2)
+		}
+		if clean2 != 1 {
+			t.Errorf("second run: clean = %d, want 1", clean2)
 		}
 	})
 
@@ -151,12 +172,15 @@ func TestFixDir(t *testing.T) {
 
 		cfg := demojify.DefaultScanConfig()
 
-		fixed, _, err := demojify.FixDir(dir, cfg)
+		fixed, clean, err := demojify.FixDir(dir, cfg)
 		if err != nil {
 			t.Fatalf("FixDir: %v", err)
 		}
 		if fixed != 2 {
 			t.Errorf("fixed = %d, want 2", fixed)
+		}
+		if clean != 1 {
+			t.Errorf("clean = %d, want 1", clean)
 		}
 	})
 
@@ -169,10 +193,11 @@ func TestFixDir(t *testing.T) {
 		}
 	})
 
-	t.Run("path traversal in Finding.Path is rejected", func(t *testing.T) {
-		// FixDir should refuse to write to paths that escape root via "..".
-		// We set up a directory with a dirty file, fix it, then verify that
-		// a sibling directory outside root is never touched.
+	t.Run("does not write outside root", func(t *testing.T) {
+		// Integration check: FixDir only modifies files inside root.
+		// A sibling temp directory with a sentinel file must remain
+		// untouched. (The focused path-traversal and ".." rejection
+		// logic is exercised by TestIsInsideDir in fix_internal_test.go.)
 		root := t.TempDir()
 		outside := t.TempDir()
 
@@ -186,12 +211,15 @@ func TestFixDir(t *testing.T) {
 		writeTempFile(t, root, "legit.txt", "\U0001F680 rocket\n")
 
 		cfg := demojify.DefaultScanConfig()
-		fixed, _, err := demojify.FixDir(root, cfg)
+		fixed, clean, err := demojify.FixDir(root, cfg)
 		if err != nil {
 			t.Fatalf("FixDir: %v", err)
 		}
 		if fixed != 1 {
 			t.Errorf("fixed = %d, want 1", fixed)
+		}
+		if clean != 0 {
+			t.Errorf("clean = %d, want 0", clean)
 		}
 
 		// Sentinel must be untouched.

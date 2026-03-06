@@ -6,10 +6,15 @@ import (
 	"strings"
 )
 
-// FixDir walks the directory tree at root, applies the sanitisation or
+// FixDir walks the directory tree at root, applies the sanitization or
 // replacement pipeline described by cfg, and writes back every file whose
-// content changed. It returns the number of files fixed, the number that
-// were already clean, and any error from the underlying [ScanDir] call.
+// content changed. It returns the number of files fixed (written back), the
+// number of qualifying text files that were already clean (needed no
+// changes), and any error from the underlying scan.
+//
+// The clean count includes every text file that passed all filters
+// (extensions, exempt files/suffixes, size limit, binary detection) and
+// whose sanitised content was identical to its original content.
 //
 // FixDir sets cfg.Root to root before scanning, so callers do not need to
 // set it separately. All other [ScanConfig] fields -- SkipDirs, Extensions,
@@ -17,19 +22,22 @@ import (
 // CollectMatches -- behave identically to [ScanDir].
 //
 // Each resolved write target is validated to remain within root, preventing
-// path-traversal writes if a [Finding.Path] were ever crafted with ".."
-// components. Files that fail validation or write are silently skipped; use
-// [ScanDir] plus [WriteFinding] directly if per-file error handling is
+// path-traversal writes via ".." components or symlinks in [Finding.Path].
+// Both the root and each target are resolved through [filepath.EvalSymlinks]
+// before comparison, so a symlink inside root that points outside it is
+// also rejected. Files that fail validation or write are silently skipped;
+// use [ScanDir] plus [WriteFinding] directly if per-file error handling is
 // required.
 //
 // Original file permissions are preserved (see [WriteFinding]).
 //
-// FixDir returns an error only when [ScanDir] itself fails (e.g., the root
-// directory does not exist).
+// FixDir returns an error when the directory scan fails (e.g., the root
+// directory does not exist) or when root cannot be resolved to an absolute
+// path.
 func FixDir(root string, cfg ScanConfig) (fixed, clean int, err error) {
 	cfg.Root = root
 
-	findings, scanErr := ScanDir(cfg)
+	findings, scanned, scanErr := scanDirCounted(cfg)
 	if scanErr != nil {
 		return 0, 0, scanErr
 	}
@@ -42,21 +50,32 @@ func FixDir(root string, cfg ScanConfig) (fixed, clean int, err error) {
 	if absErr != nil {
 		return 0, 0, fmt.Errorf("resolve root: %w", absErr)
 	}
+	// Resolve symlinks on root so that symlink targets inside root that
+	// point outside it are caught by isInsideDir.
+	realRoot, evalErr := filepath.EvalSymlinks(absRoot)
+	if evalErr != nil {
+		return 0, 0, fmt.Errorf("resolve root symlinks: %w", evalErr)
+	}
 
 	for _, f := range findings {
 		absPath := filepath.Join(root, filepath.FromSlash(f.Path))
 
-		// Resolve to absolute and verify the target stays within root.
-		// This prevents path-traversal via ".." in Finding.Path.
+		// Resolve to absolute, evaluate symlinks, and verify the real
+		// target stays within the real root. This prevents path-traversal
+		// via ".." components and via symlinks that point outside root.
 		resolved, resolveErr := filepath.Abs(absPath)
 		if resolveErr != nil {
 			continue
 		}
-		if !isInsideDir(resolved, absRoot) {
+		real, evalErr := filepath.EvalSymlinks(resolved)
+		if evalErr != nil {
+			continue
+		}
+		if !isInsideDir(real, realRoot) {
 			continue
 		}
 
-		changed, werr := WriteFinding(absPath, f)
+		changed, werr := WriteFinding(real, f)
 		if werr != nil {
 			continue
 		}
@@ -65,17 +84,22 @@ func FixDir(root string, cfg ScanConfig) (fixed, clean int, err error) {
 		}
 	}
 
-	return fixed, 0, nil
+	clean = scanned - len(findings)
+	return fixed, clean, nil
 }
 
 // isInsideDir reports whether target is equal to or a child of dir.
 // Both paths must be absolute and cleaned (as returned by filepath.Abs).
 func isInsideDir(target, dir string) bool {
-	// Ensure dir ends with a separator so that "/tmp/rootExtra" is not
-	// considered inside "/tmp/root".
-	prefix := dir
-	if !strings.HasSuffix(prefix, string(filepath.Separator)) {
-		prefix += string(filepath.Separator)
+	rel, err := filepath.Rel(dir, target)
+	if err != nil {
+		return false
 	}
-	return target == dir || strings.HasPrefix(target, prefix)
+	if rel == "." {
+		return true
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return false
+	}
+	return true
 }

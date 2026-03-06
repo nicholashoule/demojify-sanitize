@@ -188,6 +188,15 @@ type Finding struct {
 // Unlike the pure-string functions in this package, ScanDir performs file I/O
 // and therefore returns an error when the filesystem is inaccessible.
 func ScanDir(cfg ScanConfig) ([]Finding, error) {
+	findings, _, err := scanDirCounted(cfg)
+	return findings, err
+}
+
+// scanDirCounted is the internal implementation of [ScanDir]. It returns
+// the same findings slice plus a count of every qualifying text file that
+// was scanned (whether or not its content changed). Callers that need the
+// total file count -- such as [FixDir] -- use this directly.
+func scanDirCounted(cfg ScanConfig) ([]Finding, int, error) {
 	root := cfg.Root
 	if root == "" {
 		root = "."
@@ -210,6 +219,7 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 	}
 
 	var findings []Finding
+	var scanned int
 
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -310,6 +320,10 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 		}
 		original := string(data)
 
+		// Count this file as scanned -- it passed all filters and is a
+		// qualifying text file.
+		scanned++
+
 		// Clean the file content. Emoji removal (or replacement-based
 		// substitution) runs first. Whitespace normalization, when enabled,
 		// runs unconditionally on the result.
@@ -349,7 +363,7 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 		return nil
 	})
 
-	return findings, err
+	return findings, scanned, err
 }
 
 // buildMatches scans text line by line and returns a Match for every matched

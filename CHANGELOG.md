@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `FixDir(root string, cfg ScanConfig) (fixed, clean int, err error)` --
   write-side complement to `ScanDir`; walks a directory tree, applies the
-  sanitisation/replacement pipeline, and writes back every changed file in
+  sanitization/replacement pipeline, and writes back every changed file in
   one call. Path-traversal protection validates every resolved write target
   stays within root
 - `fix.go` / `fix_test.go` -- implementation and 9 table-driven subtests
