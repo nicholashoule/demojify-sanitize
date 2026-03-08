@@ -17,7 +17,7 @@ go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest \
 demojify_exit=$?
 
 # other pre-commit checks can be added here, with their exit codes combined into the final exit status.
-exec go run "$(git rev-parse --show-toplevel)/scripts/hooks/pre-commit.go"
+exec go run "$root/scripts/hooks/pre-commit.go"
 
 # exit $((repogov_exit | demojify_exit))
 exit $((demojify_exit))

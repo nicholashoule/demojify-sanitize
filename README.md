@@ -77,29 +77,16 @@ clean := demojify.Replace("\u2705 tests passed, \u274c build failed", repl)
 
 ### Git pre-commit hook
 
-Block commits that introduce emoji using a dependency-free hook
-(`go run` + stdlib only):
+Audit-only (exit 1 blocks commit):
 
 ```sh
 #!/bin/sh
 # .git/hooks/pre-commit
 go run github.com/nicholashoule/demojify-sanitize/cmd/demojify \
-  -root "$(git rev-parse --show-toplevel)" \
-  -exts .go,.md \
-  -quiet
+  -root "$(git rev-parse --show-toplevel)" -exts .go,.md -quiet
 ```
 
-Or auto-fix and re-stage instead of blocking:
-
-```sh
-#!/bin/sh
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify \
-  -root "$(git rev-parse --show-toplevel)" -sub -exts .go,.md
-git add -u
-```
-
-For a full Go-based hook with `ScanDir` / `FixDir`, see
-[docs/git-hooks.md](docs/git-hooks.md).
+See [docs/git-hooks.md](docs/git-hooks.md) for auto-fix, substitution, and the Go API variant.
 
 ### Streaming sanitization
 
