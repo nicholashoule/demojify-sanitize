@@ -8,6 +8,9 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -148,6 +151,73 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("  idempotent re-run: %d file(s) fixed\n", fixed2)
+
+	// ---- 12. CountEmoji -- count codepoint occurrences ----
+	fmt.Println("\n=== CountEmoji ===")
+	emojiText := "\u2705 pass \u274c fail \U0001F680 deploy"
+	fmt.Printf("  CountEmoji(%q) = %d\n", emojiText, demojify.CountEmoji(emojiText))
+
+	// ---- 13. BytesSaved -- bytes freed by removal ----
+	fmt.Println("\n=== BytesSaved ===")
+	fmt.Printf("  BytesSaved(%q) = %d\n", emojiText, demojify.BytesSaved(emojiText))
+
+	// ---- 14. TechnicalSymbolRanges -- preserve technical symbols ----
+	fmt.Println("\n=== TechnicalSymbolRanges ===")
+	techText := "\u2713 check \u2699 gear \U0001F600 smile"
+	opts := demojify.DefaultOptions()
+	opts.AllowedRanges = demojify.TechnicalSymbolRanges()
+	techClean := demojify.Sanitize(techText, opts)
+	fmt.Printf("  before: %q\n", techText)
+	fmt.Printf("  after:  %q  (check/gear preserved, smile removed)\n", techClean)
+
+	// ---- 15. SanitizeReport -- structured metrics ----
+	fmt.Println("\n=== SanitizeReport ===")
+	report := demojify.SanitizeReport(emojiText, demojify.DefaultOptions())
+	fmt.Printf("  cleaned: %q\n", report.Cleaned)
+	fmt.Printf("  emoji_removed=%d  bytes_saved=%d\n", report.EmojiRemoved, report.BytesSaved)
+
+	// ---- 16. SanitizeReader -- streaming sanitization ----
+	fmt.Println("\n=== SanitizeReader ===")
+	var buf bytes.Buffer
+	rdr := bytes.NewReader([]byte("\U0001F680 line one\n\u2705 line two\n"))
+	if err := demojify.SanitizeReader(rdr, &buf, demojify.DefaultOptions()); err != nil {
+		fmt.Fprintf(os.Stderr, "SanitizeReader: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("  streamed: %q\n", buf.String())
+
+	// ---- 17. SanitizeJSON -- sanitize JSON string values ----
+	fmt.Println("\n=== SanitizeJSON ===")
+	jsonIn := []byte("{\"msg\":\"\u2705 ok\",\"count\":42,\"nested\":{\"t\":\"\U0001F680 go\"}}")
+	jsonOut, err := demojify.SanitizeJSON(jsonIn, demojify.DefaultOptions())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "SanitizeJSON: %v\n", err)
+		os.Exit(1)
+	}
+	// Pretty-print for readability.
+	var pretty bytes.Buffer
+	if err := json.Indent(&pretty, jsonOut, "  ", "  "); err == nil {
+		fmt.Printf("  %s\n", pretty.String())
+	}
+
+	// ---- 18. ScanDirContext -- context-aware scan ----
+	fmt.Println("\n=== ScanDirContext ===")
+	ctxDir, err := os.MkdirTemp("", "demojify-ctx-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "MkdirTemp: %v\n", err)
+		os.Exit(1)
+	}
+	defer os.RemoveAll(ctxDir)
+	writeFile(ctxDir, "emoji.md", "\U0001F680 rocket\n")
+
+	ctxCfg := demojify.DefaultScanConfig()
+	ctxCfg.Root = ctxDir
+	ctxFindings, err := demojify.ScanDirContext(context.Background(), ctxCfg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ScanDirContext: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("  findings: %d\n", len(ctxFindings))
 
 	fmt.Println("\n[PASS] driver completed successfully")
 }

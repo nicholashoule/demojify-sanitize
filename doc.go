@@ -8,13 +8,26 @@
 //
 //   - [Demojify] strips emoji and Unicode pictographic characters.
 //   - [ContainsEmoji] detects whether text contains emoji.
+//   - [CountEmoji] returns the number of emoji codepoint occurrences in text.
+//   - [BytesSaved] reports how many bytes emoji removal would save.
 //   - [Sanitize] applies a configurable pipeline controlled by [Options].
+//   - [SanitizeReport] applies [Sanitize] and returns a [SanitizeResult] with
+//     metrics (emoji removed, bytes saved) for observability in agent pipelines.
+//   - [SanitizeReader] applies the sanitization pipeline to an [io.Reader]
+//     line by line, writing results to an [io.Writer] for streaming scenarios
+//     such as LLM token streams and MCP transports.
+//   - [SanitizeJSON] sanitizes only string values within a JSON document,
+//     leaving keys, numbers, booleans, and null unchanged.
 //   - [SanitizeFile] applies [Sanitize] to a file atomically; no write
 //     occurs when the file is already clean.
 //   - [WriteFinding] writes a [Finding.Cleaned] result back to disk
 //     atomically, avoiding the re-read that [SanitizeFile] or [ReplaceFile]
 //     would perform after a [ScanDir] pass.
 //   - [Normalize] collapses redundant whitespace and blank lines.
+//   - [TechnicalSymbolRanges] returns Unicode range tables for technical
+//     symbols (check marks, warning signs, gears, card suits) that fall
+//     within the emoji regex but are not clutter; pass to
+//     [Options.AllowedRanges] to preserve them.
 //
 // For the most common use-case, pass [DefaultOptions] to [Sanitize]:
 //
@@ -47,6 +60,8 @@
 //
 //   - [ScanDir] walks a directory tree and returns a [Finding] for every
 //     file whose content would change after sanitization.
+//   - [ScanDirContext] is like [ScanDir] but accepts a [context.Context]
+//     for cancellation support in agent orchestrators and MCP servers.
 //   - [FixDir] scans a directory tree and writes back every modified file
 //     in one call, combining [ScanDir] with [WriteFinding].
 //   - [ScanFile] checks a single file and returns a [Finding] if it needs

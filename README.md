@@ -75,6 +75,51 @@ clean := demojify.Replace("\u2705 tests passed, \u274c build failed", repl)
 // "[PASS] tests passed, [FAIL] build failed"
 ```
 
+### Git pre-commit hook
+
+Block commits that introduce emoji using a dependency-free hook
+(`go run` + stdlib only):
+
+```sh
+#!/bin/sh
+# .git/hooks/pre-commit
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify \
+  -root "$(git rev-parse --show-toplevel)" \
+  -exts .go,.md \
+  -quiet
+```
+
+Or auto-fix and re-stage instead of blocking:
+
+```sh
+#!/bin/sh
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify \
+  -root "$(git rev-parse --show-toplevel)" -sub -exts .go,.md
+git add -u
+```
+
+For a full Go-based hook with `ScanDir` / `FixDir`, see
+[docs/git-hooks.md](docs/git-hooks.md).
+
+### Streaming sanitization
+
+Process LLM token streams or HTTP chunked responses line by line without
+buffering the full input:
+
+```go
+var out bytes.Buffer
+err := demojify.SanitizeReader(llmStream, &out, demojify.DefaultOptions())
+```
+
+### JSON value sanitization
+
+Clean string values inside a JSON document while leaving keys, numbers,
+booleans, and null untouched:
+
+```go
+clean, err := demojify.SanitizeJSON(jsonBytes, demojify.DefaultOptions())
+```
+
 See [example_test.go](example_test.go) for additional runnable patterns
 (HTTP handler, pre-commit/CI, file write-back, per-occurrence matching).
 
@@ -91,7 +136,19 @@ Full signatures and doc comments are on
 | `SanitizeFile(path, opts) (bool, error)` | Sanitize a file atomically; no write when clean |
 | `Demojify(text) string` | Strip all emoji / pictographic codepoints |
 | `ContainsEmoji(text) bool` | Detect emoji presence |
+| `CountEmoji(text) int` | Count emoji codepoint occurrences |
+| `BytesSaved(text) int` | Bytes freed by emoji removal |
 | `Normalize(text) string` | Collapse redundant whitespace (preserves leading indentation) |
+| `TechnicalSymbolRanges() []*unicode.RangeTable` | Pre-built ranges for check marks, gears, etc. -- pass to `AllowedRanges` |
+
+### Reporting and streaming
+
+| Function / Type | Purpose |
+|-----------------|--------|
+| `SanitizeReport(text, opts) SanitizeResult` | Sanitize with structured metrics (emoji count, bytes saved) |
+| `SanitizeResult` | Cleaned text plus `EmojiRemoved` and `BytesSaved` fields |
+| `SanitizeReader(r, w, opts) error` | Line-by-line streaming sanitization (LLM streams, MCP payloads) |
+| `SanitizeJSON(data, opts) ([]byte, error)` | Sanitize JSON string values only; preserves structure and numeric precision |
 
 ### Substitution
 
@@ -109,6 +166,7 @@ Full signatures and doc comments are on
 | Function / Type | Purpose |
 |-----------------|---------|
 | `ScanDir(cfg) ([]Finding, error)` | Walk directory tree, return findings |
+| `ScanDirContext(ctx, cfg) ([]Finding, error)` | Context-aware scan with cancellation support |
 | `ScanFile(path, opts) (*Finding, error)` | Check a single file |
 | `FindMatchesInFile(path, repl) ([]Match, error)` | Per-occurrence match detail (line, column, context) |
 | `WriteFinding(path, f) (bool, error)` | Atomic write-back without re-reading |
@@ -158,6 +216,7 @@ Full range table: [docs/unicode-coverage.md](docs/unicode-coverage.md).
 | [docs/replacements.md](docs/replacements.md) | Full `DefaultReplacements()` reference: all ~137 entries organized by category |
 | [docs/unicode-coverage.md](docs/unicode-coverage.md) | `emojiRE` ranges, intentional exclusions (copyright, trademark, math arrows), substitution vs. stripping |
 | [docs/cli.md](docs/cli.md) | `cmd/demojify` CLI reference: flags, exit codes, output format, examples |
+| [docs/git-hooks.md](docs/git-hooks.md) | Pre-commit hook integration: shell and Go examples, auto-fix, substitution |
 
 ## License
 

@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `CountEmoji(text string) int` -- count emoji codepoint occurrences; concurrency-safe
+- `BytesSaved(text string) int` -- bytes freed by emoji removal without a separate allocation
+- `TechnicalSymbolRanges() []*unicode.RangeTable` -- pre-built range table for check marks,
+  warning signs, gears, card suits, stars, and music notation; pass to `Options.AllowedRanges`
+- `SanitizeResult` struct -- `Cleaned`, `EmojiRemoved`, and `BytesSaved` for observability pipelines
+- `SanitizeReport(text string, opts Options) SanitizeResult` -- `Sanitize` pipeline with metrics
+- `SanitizeReader(r io.Reader, w io.Writer, opts Options) error` -- streaming line-by-line sanitization
+- `SanitizeJSON(data []byte, opts Options) ([]byte, error)` -- sanitize JSON string values only;
+  preserves keys, numbers, booleans, and null; uses `json.Number` for numeric precision
+- `ScanDirContext(ctx context.Context, cfg ScanConfig) ([]Finding, error)` -- context-aware
+  directory scanner; stops on cancellation and returns collected findings
+- `helpers.go` -- shared internal utilities (`isBinary`, `sortByLenDesc`, `sortedKeys`,
+  `statAndWrite`, `collapseInlineSpaces`) extracted from production source files
+- `docs/git-hooks.md` -- guide for dependency-free Git pre-commit hook integration
+- README Git pre-commit hook pattern, `SanitizeReader` and `SanitizeJSON` examples
+- `docs/design.md` streaming sanitization and batch scan-and-fix sections
+- Concurrency tests for `Demojify`, `Sanitize`, `Replace`, and `ScanDir` (50-goroutine)
+- Keycap emoji test, very long single-line test (1 MB), empty-file edge cases,
+  `MaxFileBytes` boundary test, whitespace-only `SanitizeFile` change test,
+  `TestScanDirContext`, and `example_test.go` examples for all new APIs
+
+### Changed
+
+- `scanDirCounted` accepts a `context.Context`; `ScanDir` passes `context.Background()`
+  internally (no behavioral change for existing callers)
+- `fix.go` updated to pass `context.Background()` to `scanDirCounted`
+- `doc.go` expanded with godoc for all new APIs
+
+### Fixed
+
+- `SanitizeFile` now skips binary files (NUL byte in first 512 bytes), matching
+  `ScanFile`, `ScanDir`, and `ReplaceFile`; previously it could corrupt binary content
+- `docs/design.md` "Scope boundaries" removed false claim about missing `io.Reader`/`io.Writer`
+- `TestRepoAllDocsEmojiClean` and `TestRepoProductionFilesIdempotent` now include `docs/`
+
 ## [0.3.0] - 2026-03-05
 
 ### Added

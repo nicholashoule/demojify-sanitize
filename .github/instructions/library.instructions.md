@@ -13,13 +13,15 @@ It applies to all Go source files.
 
 | File | Purpose |
 |------|---------|
-| [demojify.go](../../demojify.go) | `Demojify`, `ContainsEmoji` -- emoji detection/removal |
+| [demojify.go](../../demojify.go) | `Demojify`, `ContainsEmoji`, `CountEmoji`, `BytesSaved`, `TechnicalSymbolRanges` -- emoji detection/removal |
 | [normalize.go](../../normalize.go) | `Normalize` -- whitespace normalization |
-| [sanitize.go](../../sanitize.go) | `Sanitize`, `SanitizeFile`, `Options`, `DefaultOptions` -- pipeline |
-| [scan.go](../../scan.go) | `ScanConfig`, `DefaultScanConfig`, `ScanDir`, `ScanFile`, `FindMatchesInFile`, `Finding`, `Match` -- scanner |
+| [sanitize.go](../../sanitize.go) | `Sanitize`, `SanitizeFile`, `SanitizeReport`, `SanitizeReader`, `SanitizeJSON`, `Options`, `DefaultOptions`, `SanitizeResult` -- pipeline |
+| [scan.go](../../scan.go) | `ScanConfig`, `DefaultScanConfig`, `ScanDir`, `ScanDirContext`, `ScanFile`, `FindMatchesInFile`, `Finding`, `Match` -- scanner |
 | [replace.go](../../replace.go) | `Replace`, `ReplaceFile`, `ReplaceCount`, `FindAll`, `FindAllMapped` -- substitution |
 | [replacements.go](../../replacements.go) | `DefaultReplacements` -- built-in emoji-to-text map |
 | [write.go](../../write.go) | `WriteFinding` -- atomic write-back for scan results |
+| [fix.go](../../fix.go) | `FixDir`, `isInsideDir` -- batch scan-and-fix |
+| [helpers.go](../../helpers.go) | `isBinary`, `sortByLenDesc`, `sortedKeys`, `statAndWrite`, `collapseInlineSpaces` -- shared internals |
 | [doc.go](../../doc.go) | Package-level godoc comment |
 
 ## Design Principles

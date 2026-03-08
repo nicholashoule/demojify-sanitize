@@ -55,7 +55,7 @@ func FindAll(text string) []string {
 // map plus any residual emoji codepoints stripped by [Demojify]).
 //
 // Binary files (detected by a NUL byte in the first 512 bytes) are silently
-// skipped and return (0, nil), matching the behaviour of [ScanDir] and
+// skipped and return (0, nil), matching the behavior of [ScanDir] and
 // [ScanFile].
 //
 // ReplaceFile returns an error for any filesystem failure. When count is zero
@@ -90,7 +90,7 @@ func ReplaceFile(path string, replacements map[string]string) (count int, err er
 		count = len(emojiRE.FindAllString(original, -1))
 	}
 
-	if err = statAndWrite(path, cleaned); err != nil {
+	if err := statAndWrite(path, cleaned); err != nil {
 		return 0, err
 	}
 	return count, nil
@@ -102,7 +102,7 @@ func ReplaceFile(path string, replacements map[string]string) (count int, err er
 // ignored. Use [FindAll] to find all emoji regardless of any map.
 //
 // Longer keys take priority over shorter sub-sequences at the same position,
-// matching the greedy behaviour of [Replace] (e.g., U+26A0 U+FE0F wins over
+// matching the greedy behavior of [Replace] (e.g., U+26A0 U+FE0F wins over
 // bare U+26A0 when both are in the map and the text contains the full sequence).
 //
 // FindAllMapped is safe for concurrent use provided the replacements map is
@@ -165,7 +165,7 @@ func ReplaceCount(text string, replacements map[string]string) (string, int) {
 // countWithKeys performs a single left-to-right scan over text and returns the
 // number of emoji positions: mapped-key matches (longest first, greedy) plus
 // unmapped emoji codepoints found by [emojiRE]. This mirrors the matching
-// behaviour of [Replace] without building intermediate strings for each key.
+// behavior of [Replace] without building intermediate strings for each key.
 func countWithKeys(text string, keys []string) int {
 	count := 0
 	for i := 0; i < len(text); {
@@ -181,7 +181,7 @@ func countWithKeys(text string, keys []string) int {
 		if matched {
 			continue
 		}
-		if loc := emojiRE.FindStringIndex(text[i:]); loc != nil && loc[0] == 0 {
+		if loc := emojiRE.FindStringIndex(text[i:]); len(loc) > 0 && loc[0] == 0 {
 			count++
 			i += loc[1]
 		} else {

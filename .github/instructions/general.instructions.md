@@ -32,14 +32,15 @@ documentation files, normalizing whitespace in automated text pipelines.
 
 ```
 .
-├── demojify.go # Demojify / ContainsEmoji -- emoji removal
+├── demojify.go # Demojify / ContainsEmoji / CountEmoji / BytesSaved / TechnicalSymbolRanges -- emoji removal
 ├── normalize.go # Normalize -- whitespace normalization
-├── sanitize.go # Sanitize / SanitizeFile / Options / DefaultOptions -- pipeline
-├── scan.go # ScanConfig / ScanDir / ScanFile / FindMatchesInFile / Finding / Match -- scanner
+├── sanitize.go # Sanitize / SanitizeFile / SanitizeReport / SanitizeReader / SanitizeJSON / Options / DefaultOptions -- pipeline
+├── scan.go # ScanConfig / ScanDir / ScanDirContext / ScanFile / FindMatchesInFile / Finding / Match -- scanner
 ├── replace.go # Replace / ReplaceFile / ReplaceCount / FindAll / FindAllMapped
 ├── replacements.go # DefaultReplacements -- built-in emoji-to-text map
 ├── write.go # WriteFinding -- atomic write-back for scan results
 ├── fix.go # FixDir / isInsideDir -- batch scan-and-fix
+├── helpers.go # isBinary / sortByLenDesc / sortedKeys / statAndWrite / collapseInlineSpaces -- shared internals
 ├── doc.go # Package-level documentation
 ├── demojify_test.go # Tests for demojify.go
 ├── normalize_test.go # Tests for normalize.go
@@ -69,9 +70,16 @@ documentation files, normalizing whitespace in automated text pipelines.
 |--------|------|---------|
 | `Demojify(text string) string` | demojify.go | Remove all emoji codepoints |
 | `ContainsEmoji(text string) bool` | demojify.go | Detect emoji presence |
+| `CountEmoji(text string) int` | demojify.go | Count emoji codepoint occurrences |
+| `BytesSaved(text string) int` | demojify.go | Bytes freed by emoji removal |
+| `TechnicalSymbolRanges() []*unicode.RangeTable` | demojify.go | Pre-built ranges for LLM technical symbols |
 | `Normalize(text string) string` | normalize.go | Collapse redundant whitespace |
 | `Sanitize(text string, opts Options) string` | sanitize.go | Full configurable pipeline |
 | `SanitizeFile(path string, opts Options) (bool, error)` | sanitize.go | Sanitize a file atomically |
+| `SanitizeReport(text string, opts Options) SanitizeResult` | sanitize.go | Sanitize with structured metrics |
+| `SanitizeResult` struct | sanitize.go | Cleaned text, EmojiRemoved, BytesSaved |
+| `SanitizeReader(r io.Reader, w io.Writer, opts Options) error` | sanitize.go | Streaming line-by-line sanitization |
+| `SanitizeJSON(data []byte, opts Options) ([]byte, error)` | sanitize.go | Sanitize JSON string values only |
 | `Options` struct | sanitize.go | Pipeline configuration |
 | `DefaultOptions() Options` | sanitize.go | All steps enabled |
 | `Replace(text string, repl map[string]string) string` | replace.go | Substitute emoji with text equivalents |
@@ -84,6 +92,7 @@ documentation files, normalizing whitespace in automated text pipelines.
 | `ScanConfig` struct | scan.go | Scanner configuration |
 | `DefaultScanConfig() ScanConfig` | scan.go | Sensible defaults, scans all file types |
 | `ScanDir(cfg ScanConfig) ([]Finding, error)` | scan.go | Walk directory tree, return findings |
+| `ScanDirContext(ctx context.Context, cfg ScanConfig) ([]Finding, error)` | scan.go | Context-aware scan with cancellation |
 | `ScanFile(path string, opts Options) (*Finding, error)` | scan.go | Check a single file |
 | `Finding` struct | scan.go | File path, emoji flag, original/cleaned content |
 | `Match` struct | scan.go | Per-occurrence match with line, column, context |
@@ -199,6 +208,6 @@ Format: `<type>(<scope>): <subject>`
 - [testing.instructions.md](testing.instructions.md)
 - [README.md](../../README.md)
 - [docs/design.md](../../docs/design.md)
-- [emoji-prevention.md](../emoji-prevention.md)
+- [emoji-prevention.instructions.md](emoji-prevention.instructions.md)
 - [CONTRIBUTING.md](../../CONTRIBUTING.md)
 - [CHANGELOG.md](../../CHANGELOG.md)

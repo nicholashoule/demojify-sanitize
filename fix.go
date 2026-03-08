@@ -1,6 +1,7 @@
 package demojify
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -39,10 +40,10 @@ import (
 // [errors.As] or [errors.Is]. The fixed and clean counts are still valid;
 // callers that need finer control should use [ScanDir] plus [WriteFinding]
 // directly.
-func FixDir(root string, cfg ScanConfig) (fixed, clean int, err error) {
+func FixDir(root string, cfg ScanConfig) (fixed, clean int, err error) { //nolint:gocritic // hugeParam: ScanConfig is passed by value per public API contract
 	cfg.Root = root
 
-	findings, scanned, scanErr := scanDirCounted(cfg)
+	findings, scanned, scanErr := scanDirCounted(context.Background(), cfg)
 	if scanErr != nil {
 		return 0, 0, scanErr
 	}

@@ -12,16 +12,18 @@ applyTo: "**/*_test.go"
 
 | File | Tests |
 |------|-------|
-| `demojify_test.go` | `TestDemojify`, `TestContainsEmoji` |
+| `demojify_test.go` | `TestDemojify`, `TestContainsEmoji`, `TestCountEmoji`, `TestBytesSaved`, `TestTechnicalSymbolRanges`, `TestDemojifyKeycapSequences`, `TestDemojifyVeryLongSingleLine`, `TestDemojifyConcurrent` |
 | `normalize_test.go` | `TestNormalize` |
-| `sanitize_test.go` | `TestDefaultOptions`, `TestSanitize`, `TestSanitizeFile`, `TestSanitizeAgentOutputRemediation` |
-| `scan_test.go` | `TestDefaultScanConfig`, `TestScanDir`, `TestScanDirFindingFields`, `TestScanFile`, `TestScanFileNotFound`, `TestScanDirErrorOnBadRoot`, `TestFindMatchesInFile` |
-| `replace_test.go` | `TestFindAll`, `TestReplace`, `TestReplaceFile`, `TestFindAllMapped`, `TestReplaceCount` |
+| `sanitize_test.go` | `TestDefaultOptions`, `TestSanitize`, `TestSanitizeFile`, `TestSanitizeAgentOutputRemediation`, `TestSanitizeReport`, `TestSanitizeReader`, `TestSanitizeJSON`, `TestSanitizeFileWhitespaceOnlyChanges`, `TestSanitizeConcurrent` |
+| `scan_test.go` | `TestDefaultScanConfig`, `TestScanDir`, `TestScanDirFindingFields`, `TestScanFile`, `TestScanFileNotFound`, `TestScanDirErrorOnBadRoot`, `TestFindMatchesInFile`, `TestScanDirContext`, `TestScanFileEmptyFile`, `TestScanDirEmptyFile`, `TestScanDirMaxFileBytesExactBoundary`, `TestScanDirConcurrent` |
+| `replace_test.go` | `TestFindAll`, `TestReplace`, `TestReplaceFile`, `TestFindAllMapped`, `TestReplaceCount`, `TestReplaceConcurrent` |
 | `replacements_test.go` | `TestDefaultReplacements`, `TestDefaultReplacementsEntries`, `TestReplaceWithDefaultReplacements` |
 | `write_test.go` | `TestWriteFinding` |
+| `fix_test.go` | `TestFixDir` (9 subtests) |
 | `helpers_test.go` | `writeTempFile`, `writeTempDir` -- shared test utilities |
-| `repo_test.go` | `TestRepoProductionSourceFilesEmojiClean`, `TestRepoAllDocsEmojiClean`, `TestRepoProductionFilesIdempotent`, `TestRepoTestFilesContainEmoji` |
+| `repo_test.go` | `TestRepoProductionSourceFilesEmojiClean`, `TestRepoAllDocsEmojiClean`, `TestRepoProductionFilesIdempotent`, `TestRepoTestFilesContainEmoji`, `TestRepoLicenseApache20Canonical`, `TestRepoLicenseApache20SectionOrder`, `TestRepoLicenseFilename`, `TestRepoLicenseNotEmpty`, `TestRepoLicenseApache20ExactPhrases` |
 | `example_test.go` | `Example*` functions (rendered on pkg.go.dev) |
+| `benchmark_test.go` | `Benchmark*` functions (10 KB, 100 KB, 1 MB throughput) |
 
 All tests are in package `demojify_test` (external test package) to verify the public API only.
 
