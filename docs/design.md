@@ -139,13 +139,31 @@ theoretically leave the destination absent. In practice this is safe for
 single-file replace-in-place on the same volume (the temp file is always
 created in the same directory). Cross-volume renames are not attempted.
 
+## Streaming sanitization
+
+`SanitizeReader(r io.Reader, w io.Writer, opts Options) error` applies the
+same pipeline as `Sanitize` line by line against an `io.Reader`, writing
+results to an `io.Writer`. It is designed for streaming scenarios -- LLM token
+streams, MCP transport payloads, HTTP chunked responses -- where buffering the
+complete input is undesirable. All options (emoji removal, whitespace
+normalization, allowed ranges/emojis) are honoured per line.
+
+## Batch scan-and-fix
+
+`FixDir(root string, cfg ScanConfig) (fixed, clean int, err error)` is the
+write-side complement to `ScanDir`. It walks the directory tree at `root`,
+applies the sanitization or replacement pipeline from `cfg`, and atomically
+writes back every file whose content changed. It returns counts of fixed and
+already-clean files. Path-traversal protection (via `filepath.EvalSymlinks`
+and `isInsideDir`) ensures no write target can escape `root` through `..`
+components or symlinks.
+
 ## Scope boundaries
 
 The library intentionally does not:
 - Parse or transform Markdown syntax
 - Detect or remove profanity or sensitive content
 - Perform language detection
-- Provide streaming or `io.Reader`/`io.Writer` interfaces
 
 **Why:** Each of these would require either external dependencies or significant
 scope expansion that would dilute the library's focused purpose. Projects

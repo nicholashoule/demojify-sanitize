@@ -79,9 +79,61 @@ func Demojify(text string) string {
 }
 
 // ContainsEmoji reports whether text contains at least one emoji or
-// Unicode pictographic character recognised by [Demojify].
+// Unicode pictographic character recognized by [Demojify].
 func ContainsEmoji(text string) bool {
 	return emojiRE.MatchString(text)
+}
+
+// CountEmoji returns the number of emoji codepoint occurrences found in
+// text. Each matched codepoint (including ZWJ, variation selectors, and
+// other combining characters) counts as one occurrence.
+// CountEmoji is safe for concurrent use.
+func CountEmoji(text string) int {
+	return len(emojiRE.FindAllString(text, -1))
+}
+
+// BytesSaved returns the number of bytes that would be saved by removing
+// all emoji codepoints from text via [Demojify]. It is equivalent to
+// len(text) - len([Demojify](text)).
+// BytesSaved is safe for concurrent use.
+func BytesSaved(text string) int {
+	return len(text) - len(Demojify(text))
+}
+
+// technicalSymbols is a Unicode range table covering technical symbols that
+// overlap with the emojiRE character class but are not emoji clutter. These
+// include check marks, ballot boxes, warning signs, gear symbols, card suits,
+// stars, and music notation characters that LLMs commonly produce in
+// structured output.
+var technicalSymbols = &unicode.RangeTable{
+	R16: []unicode.Range16{
+		{Lo: 0x2605, Hi: 0x2606, Stride: 1}, // Black/White Star
+		{Lo: 0x2610, Hi: 0x2612, Stride: 1}, // Ballot Box variants
+		{Lo: 0x2660, Hi: 0x2667, Stride: 1}, // Card suits
+		{Lo: 0x266D, Hi: 0x266F, Stride: 1}, // Music notation
+		{Lo: 0x2696, Hi: 0x2696, Stride: 1}, // Scales (balance)
+		{Lo: 0x2699, Hi: 0x2699, Stride: 1}, // Gear
+		{Lo: 0x269B, Hi: 0x269B, Stride: 1}, // Atom Symbol
+		{Lo: 0x26A0, Hi: 0x26A0, Stride: 1}, // Warning Sign
+		{Lo: 0x2713, Hi: 0x2714, Stride: 1}, // Check Marks
+		{Lo: 0x2715, Hi: 0x2718, Stride: 1}, // Multiplication/Ballot X
+		{Lo: 0x271A, Hi: 0x271A, Stride: 1}, // Heavy Greek Cross
+	},
+}
+
+// TechnicalSymbolRanges returns Unicode range tables covering technical
+// symbols commonly produced by LLMs that fall within the emoji regex range
+// but are not emoji clutter. Pass the result to [Options.AllowedRanges] to
+// preserve these symbols during sanitization:
+//
+//	opts := demojify.DefaultOptions()
+//	opts.AllowedRanges = demojify.TechnicalSymbolRanges()
+//	clean := demojify.Sanitize(text, opts)
+//
+// Covered symbols include check marks, ballot boxes, warning signs, gears,
+// card suits, stars, and music notation characters.
+func TechnicalSymbolRanges() []*unicode.RangeTable {
+	return []*unicode.RangeTable{technicalSymbols}
 }
 
 // demojifyAllowed removes emoji codepoints from text while preserving any rune

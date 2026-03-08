@@ -3,6 +3,7 @@ package demojify_test
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	demojify "github.com/nicholashoule/demojify-sanitize"
@@ -448,4 +449,32 @@ func TestReplaceCount(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestReplaceConcurrent verifies that Replace and ReplaceCount are safe for
+// concurrent use from multiple goroutines sharing the same replacements map
+// (read-only). The race detector (go test -race) will catch any data races.
+func TestReplaceConcurrent(t *testing.T) {
+	const goroutines = 50
+	repl := demojify.DefaultReplacements()
+	inputs := []string{
+		"\u2705 build passed \u274c deploy failed",
+		"\U0001F680 rocket launch \U0001F4CA chart",
+		"no emoji at all",
+		"\u26a0\ufe0f warning sign",
+		"",
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			input := inputs[idx%len(inputs)]
+			_ = demojify.Replace(input, repl)
+			_, _ = demojify.ReplaceCount(input, repl)
+			_ = demojify.FindAllMapped(input, repl)
+		}(i)
+	}
+	wg.Wait()
 }

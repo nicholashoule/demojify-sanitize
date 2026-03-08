@@ -7,7 +7,7 @@ See modular instruction files in [instructions/](instructions/) for scoped rules
 
 Long-form project context lives in [README.md](../README.md) and [docs/](../docs/).
 
-Emoji prevention policy: [emoji-prevention.md](emoji-prevention.md).
+Emoji prevention policy: [emoji-prevention](instructions/emoji-prevention.instructions.md).
 ## File Constraints
 
 **`.github` File Limit**: All files in `.github/` directory must not exceed **500 lines**. Keep instructions concise and focused. Use external documentation in `docs/` for detailed explanations.
