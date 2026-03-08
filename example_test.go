@@ -1,12 +1,15 @@
 package demojify_test
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	demojify "github.com/nicholashoule/demojify-sanitize"
 )
@@ -346,4 +349,85 @@ func ExampleFixDir() {
 	// Output:
 	// fixed=1 clean=1
 	// dirty.md: launch
+}
+
+func ExampleCountEmoji() {
+	fmt.Println(demojify.CountEmoji("build \u2705 done, launch \U0001F680 complete"))
+	// Output:
+	// 2
+}
+
+func ExampleBytesSaved() {
+	fmt.Println(demojify.BytesSaved("Hello \U0001F680 World"))
+	// Output:
+	// 4
+}
+
+func ExampleTechnicalSymbolRanges() {
+	opts := demojify.Options{
+		RemoveEmojis:  true,
+		AllowedRanges: demojify.TechnicalSymbolRanges(),
+	}
+	fmt.Println(demojify.Sanitize("warning \u26A0 rocket \U0001F680", opts))
+	// Output:
+	// warning ⚠ rocket
+}
+
+func ExampleSanitizeReport() {
+	result := demojify.SanitizeReport("Hello \U0001F600 World \U0001F680", demojify.DefaultOptions())
+	fmt.Printf("cleaned=%q emoji=%d saved=%d\n", result.Cleaned, result.EmojiRemoved, result.BytesSaved)
+	// Output:
+	// cleaned="Hello World" emoji=2 saved=10
+}
+
+func ExampleSanitizeReader() {
+	input := strings.NewReader("Hello \U0001F680 World\nLine 2 \u2705")
+	var buf bytes.Buffer
+	if err := demojify.SanitizeReader(input, &buf, demojify.Options{RemoveEmojis: true}); err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+	fmt.Println(buf.String())
+	// Output:
+	// Hello  World
+	// Line 2
+}
+
+func ExampleSanitizeJSON() {
+	data := []byte(`{"status":"done \u2705","count":42}`)
+	clean, err := demojify.SanitizeJSON(data, demojify.Options{RemoveEmojis: true})
+	if err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+	fmt.Println(string(clean))
+	// Output:
+	// {"count":42,"status":"done "}
+}
+
+func ExampleScanDirContext() {
+	dir, err := os.MkdirTemp("", "example-scandirctx-*")
+	if err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+	defer os.RemoveAll(dir)
+
+	if err := os.WriteFile(filepath.Join(dir, "status.md"), []byte("\u2705 done\n"), 0o644); err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+
+	cfg := demojify.DefaultScanConfig()
+	cfg.Root = dir
+	cfg.Extensions = []string{".md"}
+
+	findings, err := demojify.ScanDirContext(context.Background(), cfg)
+	if err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+	fmt.Printf("found %d file(s) with emoji\n", len(findings))
+	// Output:
+	// found 1 file(s) with emoji
 }

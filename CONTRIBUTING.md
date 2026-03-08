@@ -52,7 +52,7 @@ No additional tooling is required. Optional:
 - **No emoji in production source, comments, or output.** Use `[PASS]`, `[FAIL]`,
  `WARNING:` etc. The sole exception is `*_test.go` files, where literal emoji
  is permitted (and required) as test-input data. See
- [`.github/emoji-prevention.md`](.github/emoji-prevention.md) for the full policy.
+ [`.github/instructions/emoji-prevention.instructions.md`](.github/instructions/emoji-prevention.instructions.md) for the full policy.
 
 ## Commit Message Format
 

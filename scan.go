@@ -1,6 +1,7 @@
 package demojify
 
 import (
+	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -67,7 +68,7 @@ type ScanConfig struct {
 	// NOTE: When Replacements is non-empty, [Options.RemoveEmojis],
 	// [Options.AllowedRanges], and [Options.AllowedEmojis] are ignored
 	// because [Replace] always strips residual emoji via [Demojify]. Only
-	// [Options.NormalizeWhitespace] is honoured after substitution; when
+	// [Options.NormalizeWhitespace] is honored after substitution; when
 	// enabled it runs unconditionally on every scanned file. To
 	// preserve specific Unicode ranges during replacement-based scans, add
 	// those codepoints to the Replacements map with identity values
@@ -90,6 +91,15 @@ type ScanConfig struct {
 // types by default (Extensions is nil). Files larger than 1 MiB are skipped
 // to avoid reading large files into memory, and binary files (detected by a
 // NUL byte in the first 512 bytes) are always skipped regardless of size.
+//
+// NOTE for downstream consumers: the default config exempts *_test.go files
+// via ExemptSuffixes. This is appropriate for scanning this module's own repo
+// (where test files intentionally contain literal emoji as input data), but
+// downstream projects that want to scan their own test files should clear or
+// override ExemptSuffixes:
+//
+//	cfg := demojify.DefaultScanConfig()
+//	cfg.ExemptSuffixes = nil // scan test files too
 //
 // To restrict scanning to specific extensions, set Extensions explicitly:
 //
@@ -187,8 +197,18 @@ type Finding struct {
 //
 // Unlike the pure-string functions in this package, ScanDir performs file I/O
 // and therefore returns an error when the filesystem is inaccessible.
-func ScanDir(cfg ScanConfig) ([]Finding, error) {
-	findings, _, err := scanDirCounted(cfg)
+func ScanDir(cfg ScanConfig) ([]Finding, error) { //nolint:gocritic // hugeParam: ScanConfig is passed by value per public API contract
+	findings, _, err := scanDirCounted(context.Background(), cfg)
+	return findings, err
+}
+
+// ScanDirContext is like [ScanDir] but accepts a [context.Context] for
+// cancellation support. When the context is canceled the directory walk
+// stops and ScanDirContext returns the context error along with any
+// findings collected before cancellation. Agent orchestrators and MCP
+// servers can use this to enforce timeouts on large repository scans.
+func ScanDirContext(ctx context.Context, cfg ScanConfig) ([]Finding, error) { //nolint:gocritic // hugeParam: ScanConfig is passed by value per public API contract
+	findings, _, err := scanDirCounted(ctx, cfg)
 	return findings, err
 }
 
@@ -196,7 +216,7 @@ func ScanDir(cfg ScanConfig) ([]Finding, error) {
 // the same findings slice plus a count of every qualifying text file that
 // was scanned (whether or not its content changed). Callers that need the
 // total file count -- such as [FixDir] -- use this directly.
-func scanDirCounted(cfg ScanConfig) ([]Finding, int, error) {
+func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error) { //nolint:gocritic // hugeParam: mirrors public API callers
 	root := cfg.Root
 	if root == "" {
 		root = "."
@@ -222,6 +242,13 @@ func scanDirCounted(cfg ScanConfig) ([]Finding, int, error) {
 	var scanned int
 
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		// Check for context cancellation.
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		if err != nil {
 			return err
 		}
@@ -328,6 +355,7 @@ func scanDirCounted(cfg ScanConfig) ([]Finding, int, error) {
 		// substitution) runs first. Whitespace normalization, when enabled,
 		// runs unconditionally on the result.
 		var cleaned string
+		//nolint:gocritic // ifElseChain: switch would require nesting a second switch for AllowedEmojis/AllowedRanges
 		if replacer != nil {
 			cleaned = Demojify(replacer.Replace(original))
 		} else if cfg.Options.RemoveEmojis {
@@ -406,7 +434,7 @@ func buildMatches(text string, replacements map[string]string, keys []string) []
 				continue
 			}
 			// No replacement key matched; fall back to emojiRE for unmapped emoji.
-			if loc := emojiRE.FindStringIndex(line[i:]); loc != nil && loc[0] == 0 {
+			if loc := emojiRE.FindStringIndex(line[i:]); len(loc) > 0 && loc[0] == 0 {
 				seq := line[i : i+loc[1]]
 				matches = append(matches, Match{
 					Sequence: seq,
@@ -428,7 +456,7 @@ func buildMatches(text string, replacements map[string]string, keys []string) []
 // ScanFile checks a single file against opts and returns a [Finding] if the
 // file's content would change after sanitization, or nil if the file is
 // already clean. Binary files (detected by a NUL byte in the first 512 bytes)
-// are silently skipped and return (nil, nil), matching the behaviour of
+// are silently skipped and return (nil, nil), matching the behavior of
 // [ScanDir]. [Finding.Path] is set to path with forward slashes; it is not
 // made relative to any root. Pass a root-relative path to obtain a [Finding]
 // whose Path is comparable to those returned by [ScanDir].
@@ -469,7 +497,7 @@ func ScanFile(path string, opts Options) (*Finding, error) {
 // no error when the file contains no matched sequences.
 //
 // Binary files (detected by a NUL byte in the first 512 bytes) are silently
-// skipped and return (nil, nil), matching the behaviour of [ScanDir] and
+// skipped and return (nil, nil), matching the behavior of [ScanDir] and
 // [ScanFile].
 //
 // Unlike [ScanDir] with CollectMatches, this function does not filter or

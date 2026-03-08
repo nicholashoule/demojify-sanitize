@@ -16,7 +16,7 @@ package demojify
 //
 // When used with [ScanFile] results the returned [Finding.Path] can
 // typically be passed directly, since it matches the original argument.
-func WriteFinding(path string, f Finding) (changed bool, err error) {
+func WriteFinding(path string, f Finding) (changed bool, err error) { //nolint:gocritic // hugeParam: Finding is passed by value per public API contract
 	if f.Cleaned == f.Original {
 		return false, nil
 	}

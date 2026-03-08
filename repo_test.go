@@ -53,15 +53,18 @@ func TestRepoProductionSourceFilesEmojiClean(t *testing.T) {
 }
 
 // TestRepoAllDocsEmojiClean uses [ScanDir] to assert that every Markdown file
-// (excluding docs/) contains no literal emoji. Covers README.md, CHANGELOG.md,
-// CONTRIBUTING.md, SECURITY.md, .github/ files, and any nested Markdown.
+// (including docs/) contains no literal emoji. Covers README.md, CHANGELOG.md,
+// CONTRIBUTING.md, SECURITY.md, .github/ files, and all docs/ Markdown.
 //
 // If this test fails, apply demojify.SanitizeFile to the reported file.
+// To include illustrative emoji in a doc, use Unicode escape sequences
+// (e.g. \U0001F680) so ContainsEmoji reports false on the source file.
 func TestRepoAllDocsEmojiClean(t *testing.T) {
 	cfg := demojify.DefaultScanConfig()
 	cfg.Root = "."
 	cfg.Extensions = []string{".md"}
-	cfg.SkipDirs = append(cfg.SkipDirs, "docs/")
+	// docs/ is intentionally included: all production docs must be emoji-free.
+	// Use Unicode escape sequences (\U0001F680) when writing about emoji in docs.
 
 	findings, err := demojify.ScanDir(cfg)
 	if err != nil {
@@ -85,7 +88,7 @@ func TestRepoProductionFilesIdempotent(t *testing.T) {
 	cfg := demojify.DefaultScanConfig()
 	cfg.Root = "."
 	cfg.Extensions = []string{".go", ".md"}
-	cfg.SkipDirs = append(cfg.SkipDirs, "docs/")
+	// docs/ is included: production docs must be clean and idempotent.
 	// RemoveEmojis only; NormalizeWhitespace stays false (default).
 
 	findings, err := demojify.ScanDir(cfg)
@@ -280,7 +283,7 @@ func TestRepoLicenseFilename(t *testing.T) {
 	}
 	if !found {
 		t.Error(`LICENSE file not found in module root.\n` +
-			`pkg.go.dev looks for: LICENSE, LICENSE.md, LICENSE.txt, LICENCE, etc.\n` +
+			`pkg.go.dev looks for: LICENSE, LICENSE.md, LICENSE.txt, LICENCE, etc.\n` + //nolint:misspell // LICENCE is an accepted alternate spelling on pkg.go.dev
 			`The canonical Go module filename is "LICENSE" (no extension).`)
 	}
 }

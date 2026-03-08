@@ -14,6 +14,7 @@
 //	-normalize       collapse redundant whitespace in all scanned files;
 //	                 implies -fix
 //	-quiet           suppress all output; exit code only (0 = clean, 1 = findings/errors)
+//	-json            output findings as JSON to stdout (overrides -quiet)
 //	-exts <.go,.md>  comma-separated extensions to scan (default: all files);
 //	                 a leading dot is added automatically if omitted
 //	-skip <dirs>     comma-separated directory names to skip in addition to the
@@ -23,6 +24,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -42,6 +44,7 @@ func main() {
 	quiet := flag.Bool("quiet", false, "suppress all output; exit code only (0 = clean, 1 = findings/errors)")
 	exts := flag.String("exts", "", "comma-separated extensions to scan, e.g. .go,.md (default: all)")
 	skip := flag.String("skip", "", "comma-separated directory names to skip in addition to defaults, e.g. dist,build")
+	jsonOut := flag.Bool("json", false, "output findings as JSON (overrides -quiet)")
 	version := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 
@@ -78,7 +81,7 @@ func main() {
 			}
 			// Auto-append trailing slash if missing, matching SkipDirs convention.
 			if !strings.HasSuffix(d, "/") {
-				d = d + "/"
+				d += "/"
 			}
 			cfg.SkipDirs = append(cfg.SkipDirs, d)
 		}
@@ -109,15 +112,34 @@ func main() {
 	}
 
 	if len(findings) == 0 {
-		if !*quiet {
+		if *jsonOut {
+			writeJSON(jsonResult{Findings: []jsonFinding{}})
+		} else if !*quiet {
 			fmt.Println("[PASS] no emoji found")
 		}
 		return
 	}
 
 	exitCode := 0
+	var jFindings []jsonFinding
+
 	for _, f := range findings {
-		if !*quiet {
+		var jf jsonFinding
+		if *jsonOut {
+			jf = jsonFinding{
+				Path:     f.Path,
+				HasEmoji: f.HasEmoji,
+			}
+			for _, m := range f.Matches {
+				jf.Matches = append(jf.Matches, jsonMatch{
+					Sequence:    m.Sequence,
+					Replacement: m.Replacement,
+					Line:        m.Line,
+					Column:      m.Column,
+					Context:     m.Context,
+				})
+			}
+		} else if !*quiet {
 			fmt.Printf("\n[WARN] %s\n", f.Path)
 			if len(f.Matches) == 0 && !f.HasEmoji {
 				// File changed due to whitespace normalization only.
@@ -152,18 +174,34 @@ func main() {
 				}
 			}
 			if werr != nil {
-				fmt.Fprintf(os.Stderr, "  [FAIL] write %s: %v\n", f.Path, werr)
-				exitCode = 1
-			} else if !*quiet {
-				if n == 0 && !f.HasEmoji {
-					fmt.Printf("  [PASS] fixed 1 file (whitespace only)\n")
+				if *jsonOut {
+					jf.Fixed = &jsonFix{Error: werr.Error()}
 				} else {
-					fmt.Printf("  [PASS] fixed %d occurrence(s)\n", n)
+					fmt.Fprintf(os.Stderr, "  [FAIL] write %s: %v\n", f.Path, werr)
+				}
+				exitCode = 1
+			} else {
+				if *jsonOut {
+					jf.Fixed = &jsonFix{Success: true, Count: n}
+				} else if !*quiet {
+					if n == 0 && !f.HasEmoji {
+						fmt.Printf("  [PASS] fixed 1 file (whitespace only)\n")
+					} else {
+						fmt.Printf("  [PASS] fixed %d occurrence(s)\n", n)
+					}
 				}
 			}
 		} else {
 			exitCode = 1
 		}
+
+		if *jsonOut {
+			jFindings = append(jFindings, jf)
+		}
+	}
+
+	if *jsonOut {
+		writeJSON(jsonResult{Findings: jFindings})
 	}
 
 	os.Exit(exitCode)
@@ -186,4 +224,45 @@ func cliVersion() string {
 		v = "(devel)"
 	}
 	return "demojify " + v
+}
+
+// jsonResult is the top-level JSON envelope written when -json is set.
+type jsonResult struct {
+	Findings []jsonFinding `json:"findings"`
+}
+
+// jsonFinding describes a single file with findings in JSON output.
+type jsonFinding struct {
+	Path     string      `json:"path"`
+	HasEmoji bool        `json:"hasEmoji"`
+	Matches  []jsonMatch `json:"matches,omitempty"`
+	Fixed    *jsonFix    `json:"fixed,omitempty"`
+}
+
+// jsonMatch describes a single matched codepoint sequence in JSON output.
+type jsonMatch struct {
+	Sequence    string `json:"sequence"`
+	Replacement string `json:"replacement"`
+	Line        int    `json:"line"`
+	Column      int    `json:"column"`
+	Context     string `json:"context"`
+}
+
+// jsonFix describes the result of a fix operation on a single file.
+type jsonFix struct {
+	Success bool   `json:"success"`
+	Count   int    `json:"count"`
+	Error   string `json:"error,omitempty"`
+}
+
+// writeJSON encodes v as indented JSON to stdout. If the write fails (e.g.
+// broken pipe), a diagnostic is printed to stderr and the process exits with
+// code 1.
+func writeJSON(v any) {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(v); err != nil {
+		fmt.Fprintln(os.Stderr, "error writing JSON output:", err)
+		os.Exit(1)
+	}
 }

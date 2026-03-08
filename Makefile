@@ -1,4 +1,4 @@
-.PHONY: all build test race coverage fmt fmt-check vet lint hooks clean
+.PHONY: all build test race coverage fmt fmt-check vet lint hooks driver clean
 
 # Default: format, vet, then test
 all: fmt vet test
@@ -48,6 +48,11 @@ hooks:
 	cp scripts/hooks/pre-commit .git/hooks/pre-commit
 	chmod +x .git/hooks/pre-commit 2>/dev/null || true
 	@echo "[PASS] pre-commit hook installed"
+
+# Build and run the driver example program.
+# The driver exercises every major public API as a downstream consumer would.
+driver:
+	go run ./docs/examples/driver/
 
 # Remove build artifacts
 clean:

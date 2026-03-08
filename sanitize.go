@@ -1,9 +1,19 @@
 package demojify
 
 import (
+	"bufio"
+	"bytes"
+	"encoding/json"
+	"errors"
+	"io"
 	"os"
+	"strings"
 	"unicode"
 )
+
+// ErrMultipleJSONValues is returned by [SanitizeJSON] when the input contains
+// more than one top-level JSON value (e.g., `{"a":1}{"b":2}`).
+var ErrMultipleJSONValues = errors.New("demojify: input contains multiple JSON values")
 
 // Options configures the sanitization pipeline used by [Sanitize].
 // Zero value disables all steps; use [DefaultOptions] for sensible defaults.
@@ -66,6 +76,10 @@ func Sanitize(text string, opts Options) string {
 // permissions are preserved and a temp-file-plus-rename strategy is used
 // for safe writes (see [ReplaceFile] for platform details).
 //
+// Binary files (detected by a NUL byte in the first 512 bytes) are silently
+// skipped and return (false, nil), matching the behavior of [ScanDir] and
+// [ScanFile].
+//
 // SanitizeFile returns true when the file was modified and false when it
 // was already clean. It returns an error for any filesystem failure.
 func SanitizeFile(path string, opts Options) (changed bool, err error) {
@@ -73,10 +87,191 @@ func SanitizeFile(path string, opts Options) (changed bool, err error) {
 	if err != nil {
 		return false, err
 	}
+	if isBinary(data) {
+		return false, nil
+	}
 	original := string(data)
 	cleaned := Sanitize(original, opts)
 	if cleaned == original {
 		return false, nil
 	}
 	return true, statAndWrite(path, cleaned)
+}
+
+// SanitizeResult holds the cleaned output and metrics from a sanitization
+// pass. It is returned by [SanitizeReport] for agent pipelines that need
+// observability: audit trails, cost-impact logging, or conditional routing
+// based on change volume.
+type SanitizeResult struct {
+	// Cleaned is the sanitized text.
+	Cleaned string
+
+	// EmojiRemoved is the number of emoji codepoint occurrences that were
+	// removed or replaced during sanitization. Zero when
+	// [Options.RemoveEmojis] is false.
+	EmojiRemoved int
+
+	// BytesSaved is the number of bytes saved by the full sanitization
+	// pipeline (emoji removal plus whitespace normalization if enabled).
+	BytesSaved int
+}
+
+// SanitizeReport applies the same pipeline as [Sanitize] and returns
+// structured metrics alongside the cleaned text. The
+// [SanitizeResult.EmojiRemoved] field is zero when opts.RemoveEmojis
+// is false.
+func SanitizeReport(text string, opts Options) SanitizeResult {
+	cleaned := Sanitize(text, opts)
+	emojiCount := 0
+	if opts.RemoveEmojis {
+		emojiCount = CountEmoji(text) - CountEmoji(cleaned)
+	}
+	return SanitizeResult{
+		Cleaned:      cleaned,
+		EmojiRemoved: emojiCount,
+		BytesSaved:   len(text) - len(cleaned),
+	}
+}
+
+// sanitizeReaderMaxTokenSize is the maximum line length (in bytes) that
+// [SanitizeReader] will process. Lines longer than this limit cause
+// [bufio.ErrTooLong] to be returned. 1 MiB accommodates minified JSON,
+// base64-encoded payloads, and long LLM output lines.
+const sanitizeReaderMaxTokenSize = 1024 * 1024 // 1 MiB per line
+
+// SanitizeReader reads text from r, applies the sanitization pipeline
+// defined by opts, and writes the cleaned result to w line by line. It is
+// designed for streaming scenarios (e.g., processing LLM token streams or
+// MCP transport payloads) where buffering the complete input is
+// undesirable.
+//
+// When opts.NormalizeWhitespace is true, each line is normalized
+// individually: trailing whitespace is trimmed, inline space runs are
+// collapsed, and runs of consecutive blank lines are limited to one.
+// Leading and trailing blank lines are omitted, closely matching
+// [Normalize]. Unlike [Normalize], bare CR (\r) mid-line is not converted
+// because [bufio.Scanner] only splits on \n (bare CR is rare in practice).
+//
+// Lines up to [sanitizeReaderMaxTokenSize] bytes are supported. Longer
+// lines cause [bufio.ErrTooLong] to be returned.
+//
+// SanitizeReader returns an error for any I/O failure or scanner error.
+func SanitizeReader(r io.Reader, w io.Writer, opts Options) error {
+	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, 64*1024), sanitizeReaderMaxTokenSize)
+	wroteAny := false
+	pendingBlanks := 0
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// Normalize CRLF: strip a single trailing CR so that Windows
+		// line endings (CR+LF) are treated identically to Unix (LF).
+		line = strings.TrimRight(line, "\r")
+
+		// Step 1: emoji removal.
+		if opts.RemoveEmojis {
+			switch {
+			case len(opts.AllowedEmojis) > 0:
+				line = demojifyPreserving(line, opts.AllowedEmojis, opts.AllowedRanges)
+			case len(opts.AllowedRanges) > 0:
+				line = demojifyAllowed(line, opts.AllowedRanges)
+			default:
+				line = Demojify(line)
+			}
+		}
+
+		// Step 2: per-line whitespace normalization.
+		if opts.NormalizeWhitespace {
+			line = collapseInlineSpaces(line)
+			line = strings.TrimRight(line, " \t")
+
+			if line == "" {
+				if wroteAny {
+					pendingBlanks++
+				}
+				continue
+			}
+
+			// Flush at most one pending blank line before this
+			// non-blank line.
+			if pendingBlanks > 0 {
+				if _, err := io.WriteString(w, "\n\n"); err != nil {
+					return err
+				}
+				pendingBlanks = 0
+			} else if wroteAny {
+				if _, err := io.WriteString(w, "\n"); err != nil {
+					return err
+				}
+			}
+		} else if wroteAny {
+			// No normalization: separate lines with newlines.
+			if _, err := io.WriteString(w, "\n"); err != nil {
+				return err
+			}
+		}
+
+		if _, err := io.WriteString(w, line); err != nil {
+			return err
+		}
+		wroteAny = true
+	}
+
+	return scanner.Err()
+}
+
+// SanitizeJSON sanitizes only the string values within a JSON document,
+// leaving keys, numbers, booleans, and null values unchanged. This
+// prevents the corruption of JSON structure that would occur if [Sanitize]
+// were applied to raw JSON bytes.
+//
+// SanitizeJSON preserves numeric precision by decoding numbers as
+// json.Number tokens. The returned bytes are compact JSON (no
+// indentation).
+//
+// SanitizeJSON returns an error if data is not valid JSON or if it
+// contains trailing non-whitespace content after the first value (e.g.,
+// `{"a":1} trailing`).
+func SanitizeJSON(data []byte, opts Options) ([]byte, error) {
+	var v interface{}
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	if err := dec.Decode(&v); err != nil {
+		return nil, err
+	}
+	// Ensure the entire input is a single valid JSON value by requiring EOF
+	// after the first successful decode. This rejects inputs with trailing
+	// non-whitespace data such as `{"a":1} trailing`.
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			// A second value decoded successfully: input has multiple values.
+			return nil, ErrMultipleJSONValues
+		}
+		return nil, err
+	}
+	v = sanitizeJSONValue(v, opts)
+	return json.Marshal(v)
+}
+
+// sanitizeJSONValue recursively sanitizes string values in a decoded JSON
+// structure, returning the sanitized value. Non-string leaf values
+// (numbers, booleans, null) are returned unchanged.
+func sanitizeJSONValue(v interface{}, opts Options) interface{} {
+	switch val := v.(type) {
+	case string:
+		return Sanitize(val, opts)
+	case map[string]interface{}:
+		for k, child := range val {
+			val[k] = sanitizeJSONValue(child, opts)
+		}
+		return val
+	case []interface{}:
+		for i, child := range val {
+			val[i] = sanitizeJSONValue(child, opts)
+		}
+		return val
+	default:
+		return v
+	}
 }

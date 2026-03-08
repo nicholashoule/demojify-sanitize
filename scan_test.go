@@ -1,6 +1,8 @@
 package demojify_test
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -41,7 +43,7 @@ func TestScanDirMaxFileBytes(t *testing.T) {
 	writeTempFile(t, root, "small.go", "\U0001F680\n")
 	// large file (10 bytes) with emoji -- should be skipped
 	large := make([]byte, 10)
-	copy(large, []byte("\U0001F680\n"))
+	copy(large, "\U0001F680\n")
 	writeTempFile(t, root, "large.go", string(large))
 
 	cfg := demojify.ScanConfig{
@@ -125,7 +127,7 @@ func TestScanDirBinaryNulAfterSniffSizeNotSkipped(t *testing.T) {
 	for i := range buf {
 		buf[i] = ' ' // fill with spaces (valid text)
 	}
-	copy(buf, []byte("package p // \U0001F680"))
+	copy(buf, "package p // \U0001F680")
 	buf[600] = 0x00
 	writeTempFile(t, root, "edge.go", string(buf))
 
@@ -1109,4 +1111,149 @@ func TestScanDirSymlink(t *testing.T) {
 // isWindows reports whether the current platform is Windows.
 func isWindows() bool {
 	return runtime.GOOS == "windows"
+}
+
+func TestScanDirContext(t *testing.T) {
+	root := t.TempDir()
+	writeTempFile(t, root, "emoji.md", "Hello \U0001F680 World\n")
+	writeTempFile(t, root, "clean.md", "Hello World\n")
+
+	t.Run("normal context returns findings", func(t *testing.T) {
+		cfg := demojify.DefaultScanConfig()
+		cfg.Root = root
+		cfg.Extensions = []string{".md"}
+
+		findings, err := demojify.ScanDirContext(context.Background(), cfg)
+		if err != nil {
+			t.Fatalf("ScanDirContext: %v", err)
+		}
+		if len(findings) != 1 {
+			t.Errorf("expected 1 finding, got %d", len(findings))
+		}
+	})
+
+	t.Run("canceled context returns error", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // cancel immediately
+
+		cfg := demojify.DefaultScanConfig()
+		cfg.Root = root
+		cfg.Extensions = []string{".md"}
+
+		_, err := demojify.ScanDirContext(ctx, cfg)
+		if err == nil {
+			t.Fatal("expected error from canceled context, got nil")
+		}
+		if !strings.Contains(err.Error(), "context canceled") {
+			t.Errorf("expected context canceled error, got: %v", err)
+		}
+	})
+}
+
+// TestScanFileEmptyFile verifies that ScanFile handles a zero-byte file
+// gracefully, returning nil (no finding) rather than panicking or erroring.
+func TestScanFileEmptyFile(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTempFile(t, dir, "empty.txt", "")
+
+	f, err := demojify.ScanFile(path, demojify.DefaultOptions())
+	if err != nil {
+		t.Fatalf("ScanFile on empty file: %v", err)
+	}
+	if f != nil {
+		t.Errorf("expected nil finding for empty file, got %+v", f)
+	}
+}
+
+// TestScanDirEmptyFile verifies that ScanDir handles empty (0-byte) files
+// without error and does not report them as findings.
+func TestScanDirEmptyFile(t *testing.T) {
+	root := t.TempDir()
+	writeTempFile(t, root, "empty.go", "")
+	writeTempFile(t, root, "notempty.go", "package main\n")
+
+	cfg := demojify.DefaultScanConfig()
+	cfg.Root = root
+
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 0 {
+		paths := make([]string, len(findings))
+		for i, f := range findings {
+			paths[i] = f.Path
+		}
+		t.Errorf("got %d findings %v, want 0 (neither file has emoji)", len(findings), paths)
+	}
+}
+
+// TestScanDirMaxFileBytesExactBoundary verifies the edge case where a file
+// is exactly at the MaxFileBytes limit. A file at the boundary should be
+// scanned (not skipped).
+func TestScanDirMaxFileBytesExactBoundary(t *testing.T) {
+	root := t.TempDir()
+
+	// Create a file with emoji whose total size matches the limit exactly.
+	content := "emoji \U0001F680 here\n" // 16 bytes
+	writeTempFile(t, root, "exact.txt", content)
+
+	cfg := demojify.ScanConfig{
+		Root:         root,
+		MaxFileBytes: int64(len(content)), // exactly at the limit
+		Options:      demojify.Options{RemoveEmojis: true},
+	}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Errorf("got %d findings, want 1 (file at exact boundary should be scanned)", len(findings))
+	}
+
+	// File one byte over the limit should be skipped.
+	cfg.MaxFileBytes = int64(len(content)) - 1
+	findings, err = demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 0 {
+		t.Errorf("got %d findings, want 0 (file exceeds limit by 1 byte)", len(findings))
+	}
+}
+
+// TestScanDirConcurrent verifies that ScanDir is safe for concurrent use
+// when called from multiple goroutines on separate directory trees.
+func TestScanDirConcurrent(t *testing.T) {
+	const goroutines = 10
+	roots := make([]string, goroutines)
+	for i := 0; i < goroutines; i++ {
+		roots[i] = t.TempDir()
+		writeTempFile(t, roots[i], "file.md", "Hello \U0001F680 World\n")
+		writeTempFile(t, roots[i], "clean.md", "Hello World\n")
+	}
+
+	errCh := make(chan error, goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func(idx int) {
+			cfg := demojify.DefaultScanConfig()
+			cfg.Root = roots[idx]
+			cfg.Extensions = []string{".md"}
+			findings, err := demojify.ScanDir(cfg)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			if len(findings) != 1 {
+				errCh <- fmt.Errorf("expected 1 finding, got %d", len(findings))
+				return
+			}
+			errCh <- nil
+		}(i)
+	}
+	for i := 0; i < goroutines; i++ {
+		if err := <-errCh; err != nil {
+			t.Errorf("goroutine %d: ScanDir error: %v", i, err)
+		}
+	}
 }

@@ -23,6 +23,7 @@ go build -o demojify ./cmd/demojify
 | `-sub` | false | Substitute emoji with text tokens instead of stripping; implies `-fix` |
 | `-normalize` | false | Collapse redundant whitespace in all scanned files; implies `-fix` |
 | `-quiet` | false | Suppress all output; exit code only (0 = clean, 1 = findings/errors) |
+| `-json` | false | Output findings as JSON to stdout (overrides `-quiet`) |
 | `-skip <dirs>` | none | Comma-separated directory names to skip in addition to defaults; trailing slash auto-appended |
 | `-version` | false | Print the module version and exit 0 |
 
@@ -58,6 +59,37 @@ Write errors go to stderr:
 ```
   [FAIL] write path/to/file.go: <error>
 ```
+
+### JSON Output (`-json`)
+
+When `-json` is set, all output is a single JSON object written to stdout.
+The text format (`[WARN]`, `[PASS]`) is suppressed entirely.
+
+The envelope contains one key, `findings`, whose value is an array of objects
+with the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `path` | string | Forward-slash relative file path |
+| `hasEmoji` | bool | Whether the file contains emoji |
+| `matches` | array | Per-occurrence detail (omitted when empty) |
+| `matches[].sequence` | string | Matched codepoint sequence (raw UTF-8) |
+| `matches[].replacement` | string | Mapped substitute or empty string |
+| `matches[].line` | int | 1-based line number |
+| `matches[].column` | int | 0-based byte offset within the line |
+| `matches[].context` | string | Full source line containing the match |
+| `fixed` | object | Present only when `-fix` or `-sub` is set |
+| `fixed.success` | bool | Whether the write-back succeeded |
+| `fixed.count` | int | Number of occurrences fixed |
+| `fixed.error` | string | Error message (omitted on success) |
+
+When no findings exist: `{"findings":[]}` with exit code 0.
+
+The `-json` flag overrides `-quiet`; JSON output is always produced.
+
+**Stability:** The JSON output format is a stable, machine-readable API.
+Downstream consumers should prefer `-json` over parsing the human-readable
+text format.
 
 ## Default Scan Behavior
 
@@ -172,6 +204,23 @@ go run ./cmd/demojify -root . -sub && \
 go run ./cmd/demojify -root . -exts .go,.md
 ```
 
+### JSON output for downstream tools
+
+```bash
+go run ./cmd/demojify -root . -json
+```
+
+Machine-readable JSON output. Exit code is 0 (clean) or 1 (findings).
+
+### JSON with fix
+
+```bash
+go run ./cmd/demojify -root . -sub -json
+```
+
+Substitutes emoji and reports results in JSON, including a `fixed` object
+per file.
+
 ## Relationship to the Library API
 
 The CLI is a thin wrapper around the library. The equivalent library calls are:
@@ -184,3 +233,4 @@ The CLI is a thin wrapper around the library. The equivalent library calls are:
 | `-sub` | `ScanDir(cfg)` with `cfg.Replacements = DefaultReplacements()` + `ReplaceFile(path, repl)` |
 | `-sub -normalize` | `ScanDir(cfg)` with `cfg.Options.NormalizeWhitespace = true` + `WriteFinding(path, f)` |
 | `-skip dist,build` | `cfg.SkipDirs = append(cfg.SkipDirs, "dist/", "build/")` |
+| `-json` | Same as audit; output wrapped in JSON envelope with `Finding`/`Match` fields |

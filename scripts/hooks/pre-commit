@@ -1,6 +1,31 @@
 #!/bin/sh
-# pre-commit hook -- delegates to the cross-platform Go implementation.
+# pre-commit hook -- runs repogov checks via the CLI.
 # Works on Linux, macOS, and Windows (via Git for Windows' bundled sh.exe).
 #
 # Install once with: make hooks
-exec go run "$(git rev-parse --show-toplevel)/scripts/hooks/pre-commit.go"
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+# Not published yet, but when it is we can re-enable this as the primary pre-commit check.
+# Run repogov checks as the primary pre-commit gate. If this fails, the commit will be blocked and the user can fix the issues before trying again.
+# go run ./cmd/repogov all
+# repogov_exit=$?
+
+# Run demojify-sanitize in audit-only mode to prevent emoji-related issues in
+# instruction files.  Using -sub here would rewrite the working tree without
+# re-staging the changes, so the index would still contain emoji and the commit
+# would proceed in a broken state.  Instead, block the commit and tell the user
+# how to fix and re-stage.
+go run ./cmd/demojify -root "$root" -quiet
+demojify_exit=$?
+if [ "$demojify_exit" -ne 0 ]; then
+  echo "ERROR: emoji found -- fix and re-stage before committing:"
+  echo "  go run ./cmd/demojify -root . -sub && git add -u"
+fi
+
+# other pre-commit checks can be added here, with their exit codes combined into the final exit status.
+go run "$root/scripts/hooks/pre-commit.go"
+precommit_exit=$?
+
+# exit $((repogov_exit | demojify_exit))
+exit $((demojify_exit | precommit_exit))
