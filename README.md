@@ -30,7 +30,9 @@ with text tokens (`-sub`). Use `-skip` to exclude specific directories
 (e.g., `dist`, `build`) in addition to the defaults.
 
 ```bash
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify -root . -sub -skip dist,build
+# Build once, then run the binary:
+go build -o demojify ./cmd/demojify
+./demojify -root . -sub -skip dist,build
 ```
 
 ## Integration patterns
@@ -77,13 +79,19 @@ clean := demojify.Replace("\u2705 tests passed, \u274c build failed", repl)
 
 ### Git pre-commit hook
 
-Audit-only (exit 1 blocks commit):
+Build a local binary first (no remote code execution):
+
+```sh
+go build -o .git/hooks/demojify ./cmd/demojify
+```
+
+Audit-only hook (exit 1 blocks commit):
 
 ```sh
 #!/bin/sh
 # .git/hooks/pre-commit
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify \
-  -root "$(git rev-parse --show-toplevel)" -exts .go,.md -quiet
+root="$(git rev-parse --show-toplevel)"
+"$root/.git/hooks/demojify" -root "$root" -exts .go,.md -quiet
 ```
 
 See [docs/git-hooks.md](docs/git-hooks.md) for auto-fix, substitution, and the Go API variant.

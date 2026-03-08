@@ -5,30 +5,54 @@ code is committed. No third-party frameworks required.
 
 ## CLI hook (recommended)
 
-The simplest approach -- no Go code needed:
+The simplest approach -- no Go code needed. First build a local binary from
+this repository so the hook never fetches remote code:
+
+```sh
+go build -o .git/hooks/demojify ./cmd/demojify
+```
+
+Or install a pinned release (replace `vX.Y.Z` with a specific tag):
+
+```sh
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@vX.Y.Z
+# then copy or symlink the installed binary into .git/hooks/
+```
+
+Audit-only hook (blocks the commit if emoji are found):
 
 ```sh
 #!/bin/sh
 # .git/hooks/pre-commit
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify \
-  -root "$(git rev-parse --show-toplevel)" \
+root="$(git rev-parse --show-toplevel)"
+"$root/.git/hooks/demojify" \
+  -root "$root" \
   -exts .go,.md \
   -quiet
 ```
 
 Exit 1 blocks the commit; exit 0 allows it.
 
-Auto-fix instead of blocking (`-fix` strips, `-sub` substitutes with text tokens):
+Auto-fix instead of blocking (rewrite working tree, then re-stage):
 
 ```sh
 #!/bin/sh
 # .git/hooks/pre-commit
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify \
-  -root "$(git rev-parse --show-toplevel)" \
+root="$(git rev-parse --show-toplevel)"
+"$root/.git/hooks/demojify" \
+  -root "$root" \
   -exts .go,.md \
-  -sub
-git add -u
+  -quiet || {
+    echo "ERROR: emoji found -- fixing and re-staging:"
+    "$root/.git/hooks/demojify" -root "$root" -exts .go,.md -sub
+    git add -u
+    exit 1
+  }
 ```
+
+NOTE: The hook exits 1 after fixing so the developer can review the rewrite
+before the commit is retried. Remove `exit 1` to allow the commit to proceed
+automatically after sanitization.
 
 Make it executable after saving:
 

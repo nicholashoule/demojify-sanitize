@@ -76,11 +76,15 @@ These rules apply to all files tracked by git:
 Use the `demojify-sanitize` tool to detect emoji:
 
 ```sh
-go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest
+# Build a local binary from this repository (preferred -- no remote code execution):
+go build -o demojify ./cmd/demojify
+
+# Or install a pinned release (replace vX.Y.Z with the desired tag):
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@vX.Y.Z
 ```
 
 - **Pre-commit hook**: install `demojify` as a pre-commit hook to prevent new emoji from being committed.
-- **Manual audit**: `go run github.com/nicholashoule/demojify-sanitize/cmd/demojify -root .`
+- **Manual audit**: `go run ./cmd/demojify -root .`
 - **Auto-fix with removal**: `demojify -root . -fix`
 
 ### Detection and sanitization
@@ -88,19 +92,19 @@ go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest
 Run as a command (audit only -- exit 1 if emoji found):
 
 ```sh
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify -root . -exts .go,.md
+go run ./cmd/demojify -root . -exts .go,.md
 ```
 
 Strip emoji in place (`-fix`) or substitute with text tokens (`-sub`):
 
 ```sh
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify -root . -exts .go,.md -fix
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify -root . -exts .go,.md -sub
+go run ./cmd/demojify -root . -exts .go,.md -fix
+go run ./cmd/demojify -root . -exts .go,.md -sub
 ```
 
 Pre-commit hook (`.git/hooks/pre-commit`):
 
 ```sh
 #!/bin/sh
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify -root . -exts .go,.md -quiet || { echo "ERROR: emoji found -- run: demojify -root . -exts .go,.md -fix"; exit 1; }
+go run ./cmd/demojify -root . -exts .go,.md -quiet || { echo "ERROR: emoji found -- run: demojify -root . -exts .go,.md -fix"; exit 1; }
 ```

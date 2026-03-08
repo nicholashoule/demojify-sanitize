@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `CountEmoji(text string) int` -- count emoji codepoint occurrences; concurrency-safe
-- `BytesSaved(text string) int` -- bytes freed by emoji removal without a separate allocation
+- `BytesSaved(text string) int` -- report the net byte reduction from removing emoji from the input
 - `TechnicalSymbolRanges() []*unicode.RangeTable` -- pre-built range table for check marks,
   warning signs, gears, card suits, stars, and music notation; pass to `Options.AllowedRanges`
 - `SanitizeResult` struct -- `Cleaned`, `EmojiRemoved`, and `BytesSaved` for observability pipelines

@@ -4,11 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"strings"
 	"unicode"
 )
+
+// ErrMultipleJSONValues is returned by [SanitizeJSON] when the input contains
+// more than one top-level JSON value (e.g., `{"a":1}{"b":2}`).
+var ErrMultipleJSONValues = errors.New("demojify: input contains multiple JSON values")
 
 // Options configures the sanitization pipeline used by [Sanitize].
 // Zero value disables all steps; use [DefaultOptions] for sensible defaults.
@@ -160,6 +165,10 @@ func SanitizeReader(r io.Reader, w io.Writer, opts Options) error {
 	for scanner.Scan() {
 		line := scanner.Text()
 
+		// Normalize CRLF: strip a single trailing CR so that Windows
+		// line endings (CR+LF) are treated identically to Unix (LF).
+		line = strings.TrimRight(line, "\r")
+
 		// Step 1: emoji removal.
 		if opts.RemoveEmojis {
 			switch {
@@ -237,7 +246,7 @@ func SanitizeJSON(data []byte, opts Options) ([]byte, error) {
 	if err := dec.Decode(&struct{}{}); err != io.EOF {
 		if err == nil {
 			// A second value decoded successfully: input has multiple values.
-			return nil, io.ErrUnexpectedEOF
+			return nil, ErrMultipleJSONValues
 		}
 		return nil, err
 	}
