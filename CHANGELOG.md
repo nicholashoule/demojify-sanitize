@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-03-08
+
 ### Added
 
 - `CountEmoji(text string) int` -- count emoji codepoint occurrences; concurrency-safe
@@ -39,6 +41,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `SanitizeReport`: `EmojiRemoved` now reflects emoji actually removed
+  (`CountEmoji(input) - CountEmoji(cleaned)`) rather than the raw input count;
+  codepoints preserved by `AllowedEmojis` or `AllowedRanges` are no longer
+  incorrectly counted as removed
+- `SanitizeReader`: per-line scan buffer increased from the default 64 KiB to
+  1 MiB (`sanitizeReaderMaxTokenSize`); lines exceeding 1 MiB return
+  `bufio.ErrTooLong` (accommodates minified JSON, base64 payloads, long LLM
+  output lines)
+- `SanitizeJSON`: trailing non-whitespace bytes after the first JSON value now
+  return an error instead of being silently ignored; inputs such as
+  `{"a":1} trailing` or two concatenated JSON objects are rejected
+- `cmd/demojify`: `writeJSON` now propagates encoder errors -- prints a
+  diagnostic to stderr and exits 1 instead of discarding with `_ = enc.Encode`
+- `scripts/hooks/pre-commit`: replaced `go run ...@latest` with local
+  `./cmd/demojify` to eliminate network dependency and non-reproducibility;
+  removed `exec` so both checks contribute to the final exit code; fixed
+  typo "publshed" -> "published"
 - `SanitizeFile` now skips binary files (NUL byte in first 512 bytes), matching
   `ScanFile`, `ScanDir`, and `ReplaceFile`; previously it could corrupt binary content
 - `docs/design.md` "Scope boundaries" removed false claim about missing `io.Reader`/`io.Writer`
@@ -192,6 +211,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `example_test.go` with 17 runnable examples for pkg.go.dev
 - Apache License 2.0
 
+[0.4.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.2.4...v0.3.0
 [0.2.4]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.2.2...v0.2.3

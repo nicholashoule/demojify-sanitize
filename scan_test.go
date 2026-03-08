@@ -2,6 +2,7 @@ package demojify_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -1244,7 +1245,7 @@ func TestScanDirConcurrent(t *testing.T) {
 				return
 			}
 			if len(findings) != 1 {
-				errCh <- nil // wrong count but not a panic
+				errCh <- fmt.Errorf("expected 1 finding, got %d", len(findings))
 				return
 			}
 			errCh <- nil

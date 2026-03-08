@@ -119,7 +119,7 @@ func SanitizeReport(text string, opts Options) SanitizeResult {
 	cleaned := Sanitize(text, opts)
 	emojiCount := 0
 	if opts.RemoveEmojis {
-		emojiCount = CountEmoji(text)
+		emojiCount = CountEmoji(text) - CountEmoji(cleaned)
 	}
 	return SanitizeResult{
 		Cleaned:      cleaned,
@@ -127,6 +127,12 @@ func SanitizeReport(text string, opts Options) SanitizeResult {
 		BytesSaved:   len(text) - len(cleaned),
 	}
 }
+
+// sanitizeReaderMaxTokenSize is the maximum line length (in bytes) that
+// [SanitizeReader] will process. Lines longer than this limit cause
+// [bufio.ErrTooLong] to be returned. 1 MiB accommodates minified JSON,
+// base64-encoded payloads, and long LLM output lines.
+const sanitizeReaderMaxTokenSize = 1024 * 1024 // 1 MiB per line
 
 // SanitizeReader reads text from r, applies the sanitization pipeline
 // defined by opts, and writes the cleaned result to w line by line. It is
@@ -141,9 +147,13 @@ func SanitizeReport(text string, opts Options) SanitizeResult {
 // [Normalize]. Unlike [Normalize], bare CR (\r) mid-line is not converted
 // because [bufio.Scanner] only splits on \n (bare CR is rare in practice).
 //
+// Lines up to [sanitizeReaderMaxTokenSize] bytes are supported. Longer
+// lines cause [bufio.ErrTooLong] to be returned.
+//
 // SanitizeReader returns an error for any I/O failure or scanner error.
 func SanitizeReader(r io.Reader, w io.Writer, opts Options) error {
 	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, 64*1024), sanitizeReaderMaxTokenSize)
 	wroteAny := false
 	pendingBlanks := 0
 
@@ -211,12 +221,24 @@ func SanitizeReader(r io.Reader, w io.Writer, opts Options) error {
 // json.Number tokens. The returned bytes are compact JSON (no
 // indentation).
 //
-// SanitizeJSON returns an error if data is not valid JSON.
+// SanitizeJSON returns an error if data is not valid JSON or if it
+// contains trailing non-whitespace content after the first value (e.g.,
+// `{"a":1} trailing`).
 func SanitizeJSON(data []byte, opts Options) ([]byte, error) {
 	var v interface{}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.UseNumber()
 	if err := dec.Decode(&v); err != nil {
+		return nil, err
+	}
+	// Ensure the entire input is a single valid JSON value by requiring EOF
+	// after the first successful decode. This rejects inputs with trailing
+	// non-whitespace data such as `{"a":1} trailing`.
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			// A second value decoded successfully: input has multiple values.
+			return nil, io.ErrUnexpectedEOF
+		}
 		return nil, err
 	}
 	v = sanitizeJSONValue(v, opts)

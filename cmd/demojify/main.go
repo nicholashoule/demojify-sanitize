@@ -255,9 +255,14 @@ type jsonFix struct {
 	Error   string `json:"error,omitempty"`
 }
 
-// writeJSON encodes v as indented JSON to stdout.
+// writeJSON encodes v as indented JSON to stdout. If the write fails (e.g.
+// broken pipe), a diagnostic is printed to stderr and the process exits with
+// code 1.
 func writeJSON(v any) {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	_ = enc.Encode(v)
+	if err := enc.Encode(v); err != nil {
+		fmt.Fprintln(os.Stderr, "error writing JSON output:", err)
+		os.Exit(1)
+	}
 }

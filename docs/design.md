@@ -148,6 +148,21 @@ streams, MCP transport payloads, HTTP chunked responses -- where buffering the
 complete input is undesirable. All options (emoji removal, whitespace
 normalization, allowed ranges/emojis) are honoured per line.
 
+The internal `bufio.Scanner` is configured with a 1 MiB per-line buffer
+(`sanitizeReaderMaxTokenSize`). This accommodates minified JSON, base64-encoded
+payloads, and long LLM output lines that would exceed the default 64 KiB scanner
+limit. Lines longer than 1 MiB cause `bufio.ErrTooLong` to be returned.
+
+## JSON sanitization
+
+`SanitizeJSON(data []byte, opts Options) ([]byte, error)` sanitizes only the
+string values within a JSON document, leaving keys, numbers, booleans, and null
+untouched. It uses `json.Decoder` with `UseNumber` to preserve numeric precision,
+and after decoding the first value it performs a second `Decode` to verify EOF is
+reached. Inputs with trailing non-whitespace data (e.g., `{"a":1} trailing` or
+two concatenated JSON objects) are rejected with an error, ensuring the caller
+always receives a single, complete, structurally valid JSON document.
+
 ## Batch scan-and-fix
 
 `FixDir(root string, cfg ScanConfig) (fixed, clean int, err error)` is the

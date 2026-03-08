@@ -98,6 +98,8 @@ var out bytes.Buffer
 err := demojify.SanitizeReader(llmStream, &out, demojify.DefaultOptions())
 ```
 
+Lines up to 1 MiB are supported. Longer lines return `bufio.ErrTooLong`.
+
 ### JSON value sanitization
 
 Clean string values inside a JSON document while leaving keys, numbers,
@@ -106,6 +108,9 @@ booleans, and null untouched:
 ```go
 clean, err := demojify.SanitizeJSON(jsonBytes, demojify.DefaultOptions())
 ```
+
+Returns an error for invalid JSON and for input with trailing non-whitespace
+content after the first value (e.g., `{"a":1} trailing`).
 
 See [example_test.go](example_test.go) for additional runnable patterns
 (HTTP handler, pre-commit/CI, file write-back, per-occurrence matching).

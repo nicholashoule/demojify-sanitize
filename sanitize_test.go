@@ -1,8 +1,10 @@
 package demojify_test
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -369,6 +371,20 @@ func TestSanitizeReport(t *testing.T) {
 			wantSaved:   0,
 			wantCleaned: "",
 		},
+		{
+			// AllowedEmojis preserves one codepoint; only the other is removed.
+			// EmojiRemoved must reflect actual removal, not input count.
+			name:  "allowed emoji preserved -- only removed ones counted",
+			input: "Hello \U0001F600 and \U0001F680",
+			opts: demojify.Options{
+				RemoveEmojis:        true,
+				NormalizeWhitespace: true,
+				AllowedEmojis:       []string{"\U0001F680"},
+			},
+			wantEmoji:   1,
+			wantCleaned: "Hello and \U0001F680",
+			wantSaved:   len("Hello \U0001F600 and \U0001F680") - len("Hello and \U0001F680"),
+		},
 	}
 
 	for _, tt := range tests {
@@ -469,6 +485,28 @@ func TestSanitizeReader(t *testing.T) {
 			}
 		})
 	}
+
+	// Lines longer than the old 64 KiB default must now succeed (up to 1 MiB).
+	t.Run("line longer than 64KiB succeeds", func(t *testing.T) {
+		longLine := strings.Repeat("a", 128*1024) // 128 KiB -- exceeds old limit
+		var buf bytes.Buffer
+		if err := demojify.SanitizeReader(strings.NewReader(longLine), &buf, demojify.Options{}); err != nil {
+			t.Fatalf("unexpected error for 128 KiB line: %v", err)
+		}
+		if buf.String() != longLine {
+			t.Error("128 KiB line was not passed through unchanged")
+		}
+	})
+
+	// Lines exceeding sanitizeReaderMaxTokenSize (1 MiB) must return bufio.ErrTooLong.
+	t.Run("line exceeding 1MiB returns ErrTooLong", func(t *testing.T) {
+		tooBig := strings.Repeat("b", 1024*1024+1) // 1 MiB + 1 byte
+		var buf bytes.Buffer
+		err := demojify.SanitizeReader(strings.NewReader(tooBig), &buf, demojify.Options{})
+		if !errors.Is(err, bufio.ErrTooLong) {
+			t.Fatalf("expected bufio.ErrTooLong, got %v", err)
+		}
+	})
 }
 
 func TestSanitizeJSON(t *testing.T) {
@@ -532,6 +570,27 @@ func TestSanitizeJSON(t *testing.T) {
 			input: `{"msg":"hello   world\n\n\ntoo many lines"}`,
 			opts:  demojify.DefaultOptions(),
 			want:  `{"msg":"hello world\n\ntoo many lines"}`,
+		},
+		{
+			// Trailing non-whitespace after a valid value must be rejected.
+			name:    "trailing data rejected",
+			input:   `{"a":1} trailing`,
+			opts:    demojify.DefaultOptions(),
+			wantErr: true,
+		},
+		{
+			// Two concatenated JSON values must be rejected.
+			name:    "multiple values rejected",
+			input:   `{"a":1}{"b":2}`,
+			opts:    demojify.DefaultOptions(),
+			wantErr: true,
+		},
+		{
+			// Trailing whitespace only is accepted (the decoder skips it).
+			name:  "trailing whitespace accepted",
+			input: `{"a":1}   `,
+			opts:  demojify.DefaultOptions(),
+			want:  `{"a":1}`,
 		},
 	}
 
