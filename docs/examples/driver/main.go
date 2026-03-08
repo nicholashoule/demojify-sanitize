@@ -200,7 +200,27 @@ func main() {
 		fmt.Printf("  %s\n", pretty.String())
 	}
 
-	// ---- 18. ScanDirContext -- context-aware scan ----
+	// ---- 18. SanitizeFile -- atomic single-file sanitization ----
+	fmt.Println("\n=== SanitizeFile ===")
+	sfDir, err := os.MkdirTemp("", "demojify-sf-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "MkdirTemp: %v\n", err)
+		os.Exit(1)
+	}
+	defer os.RemoveAll(sfDir)
+	sfPath := filepath.Join(sfDir, "report.md")
+	writeFile(sfDir, "report.md", "status \u2705 all good\n")
+	sfChanged, sfErr := demojify.SanitizeFile(sfPath, demojify.DefaultOptions())
+	if sfErr != nil {
+		fmt.Fprintf(os.Stderr, "SanitizeFile: %v\n", sfErr)
+		os.Exit(1)
+	}
+	fmt.Printf("  SanitizeFile: changed=%v\n", sfChanged)
+	// Idempotency: second call should report no change.
+	sfChanged2, _ := demojify.SanitizeFile(sfPath, demojify.DefaultOptions())
+	fmt.Printf("  idempotent re-run: changed=%v\n", sfChanged2)
+
+	// ---- 19. ScanDirContext -- context-aware scan ----
 	fmt.Println("\n=== ScanDirContext ===")
 	ctxDir, err := os.MkdirTemp("", "demojify-ctx-*")
 	if err != nil {

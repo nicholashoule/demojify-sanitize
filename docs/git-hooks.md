@@ -19,6 +19,11 @@ go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@vX.Y.Z
 # then copy or symlink the installed binary into .git/hooks/
 ```
 
+To also enforce line-length and layout governance, pair with
+[repogov](https://github.com/nicholashoule/repogov) (see the cross-platform
+examples at the bottom of this file). The hook skips repogov gracefully when
+the sibling directory is absent, so it is safe to add unconditionally.
+
 Audit-only hook (blocks the commit if emoji are found):
 
 ```sh
@@ -75,4 +80,75 @@ exec go run "$(git rev-parse --show-toplevel)/scripts/hooks/pre-commit.go"
 See [scripts/hooks/pre-commit.go](../scripts/hooks/pre-commit.go) for this
 repository's working example and [docs/examples/driver/main.go](examples/driver/main.go)
 for full API usage patterns.
+
+---
+
+## Cross-platform lightweight examples
+
+These minimal hooks mirror the pattern used in `scripts/hooks/pre-commit` and
+work with repogov (`../repogov`) and demojify side by side.
+
+### macOS and Linux (`sh`)
+
+```sh
+#!/bin/sh
+# .git/hooks/pre-commit
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+repogov_dir="$(dirname "$root")/repogov"
+if [ -d "$repogov_dir" ]; then
+  (cd "$repogov_dir" && go run ./cmd/repogov -root "$root" all)
+  repogov_exit=$?
+else
+  repogov_exit=0
+fi
+
+go run ./cmd/demojify -root "$root" -quiet
+demojify_exit=$?
+
+exit $((repogov_exit | demojify_exit))
+```
+
+### Windows (PowerShell -- save as `pre-commit.ps1`, invoked by the shim below)
+
+```powershell
+# scripts/hooks/pre-commit.ps1
+$root = git rev-parse --show-toplevel
+Set-Location $root
+
+$repogov_dir = Join-Path (Split-Path $root) "repogov"
+$repogov_exit = 0
+if (Test-Path $repogov_dir) {
+    Push-Location $repogov_dir
+    go run ./cmd/repogov -root $root all
+    $repogov_exit = $LASTEXITCODE
+    Pop-Location
+}
+
+go run ./cmd/demojify -root $root -quiet
+$demojify_exit = $LASTEXITCODE
+
+exit ($repogov_exit -bor $demojify_exit)
+```
+
+Git on Windows requires the hook file itself to be a POSIX-style `sh` script.
+Use this one-line shim as `.git/hooks/pre-commit` to delegate to the
+PowerShell script:
+
+```sh
+#!/bin/sh
+powershell -NoProfile -ExecutionPolicy Bypass -File \
+  "$(git rev-parse --show-toplevel)/scripts/hooks/pre-commit.ps1"
+```
+
+### Windows (Git for Windows `sh.exe` -- no shim needed)
+
+Git for Windows ships `sh.exe`; the macOS/Linux hook above works unchanged.
+Install it the same way:
+
+```sh
+cp scripts/hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
 

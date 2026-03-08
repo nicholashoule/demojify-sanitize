@@ -6,10 +6,17 @@
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
-# Not published yet, but when it is we can re-enable this as the primary pre-commit check.
-# Run repogov checks as the primary pre-commit gate. If this fails, the commit will be blocked and the user can fix the issues before trying again.
-# go run ./cmd/repogov all
-# repogov_exit=$?
+# Run repogov governance checks (line limits + layout) using the local sibling
+# module. The module is unreleased so it is run directly from source via go run.
+# If the sibling directory does not exist the check is skipped with a warning.
+repogov_dir="$(dirname "$root")/repogov"
+if [ -d "$repogov_dir" ]; then
+  (cd "$repogov_dir" && go run ./cmd/repogov -root "$root" all)
+  repogov_exit=$?
+else
+  echo "WARNING: repogov not found at $repogov_dir -- skipping governance checks"
+  repogov_exit=0
+fi
 
 # Run demojify-sanitize in audit-only mode to prevent emoji-related issues in
 # instruction files.  Using -sub here would rewrite the working tree without
@@ -23,9 +30,8 @@ if [ "$demojify_exit" -ne 0 ]; then
   echo "  go run ./cmd/demojify -root . -sub && git add -u"
 fi
 
-# other pre-commit checks can be added here, with their exit codes combined into the final exit status.
+# precommit_exit covers gofmt and go vet.
 go run "$root/scripts/hooks/pre-commit.go"
 precommit_exit=$?
 
-# exit $((repogov_exit | demojify_exit))
-exit $((demojify_exit | precommit_exit))
+exit $((repogov_exit | demojify_exit | precommit_exit))
