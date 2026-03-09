@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- `repo_test.go` six license-hygiene tests deleted (no longer needed now that
+  the Apache-2.0 `LICENSE` file is stable and pkg.go.dev detects it correctly):
+  `TestRepoLicenseStartsOnLineOne`, `TestRepoLicenseApache20Canonical`,
+  `TestRepoLicenseApache20SectionOrder`, `TestRepoLicenseFilename`,
+  `TestRepoLicenseNotEmpty`, `TestRepoLicenseApache20ExactPhrases`
+
 ## [0.5.0] - 2026-03-08
 
 ### Added
