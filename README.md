@@ -8,13 +8,33 @@
 
 A dependency-free Go module for auditing, detecting, removing, and substituting emoji clutter and redundant whitespace in text content before it reaches production. Use it as a post-processing step after AI agent output, as a content gate in your request pipeline, or as a CI quality gate -- one call to `Sanitize` strips and normalizes in a single pass, `Replace` maps emoji to meaningful text equivalents, `ScanDir` audits entire directory trees (it calls `ContainsEmoji` internally per file), and `ContainsEmoji` is available directly for ad-hoc single-string detection.
 
-## Install
+## Features
+
+- **Emoji removal** -- strips all emoji and pictographic codepoints using compiled Unicode range tables; ZWJ sequences, variation selectors, and tag characters handled correctly
+- **Whitespace normalization** -- collapses redundant inline spaces and blank lines while preserving leading indentation
+- **Configurable pipeline** -- `Sanitize` runs removal and normalization in one call; `AllowedRanges` and `AllowedEmojis` let callers preserve specific codepoints
+- **Substitution** -- `Replace` maps ~137 built-in emoji to readable text equivalents (e.g., `[PASS]`, `[FAIL]`); custom maps supported
+- **Metrics** -- `SanitizeReport` returns emoji count removed and bytes saved alongside the cleaned text
+- **Streaming** -- `SanitizeReader` processes `io.Reader` line by line; supports lines up to 1 MiB
+- **JSON-aware** -- `SanitizeJSON` cleans string values only; preserves keys, numbers, booleans, null, and numeric precision
+- **Directory scanner** -- `ScanDir` / `ScanDirContext` walk an entire tree and return per-file findings; cancellation supported
+- **Atomic writes** -- `SanitizeFile`, `ReplaceFile`, `WriteFinding`, and `FixDir` write through a temp file and rename; partial writes cannot corrupt the original
+- **CLI** -- `cmd/demojify` supports audit, strip (`-fix`), substitute (`-sub`), normalize, quiet mode, extension filter, and directory skip
+- **Zero external dependencies** -- pure stdlib; no `go.sum` required
+
+## Installation
 
 ```bash
 go get github.com/nicholashoule/demojify-sanitize
 ```
 
-## Quick start
+### CLI
+
+```bash
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest
+```
+
+### Quick start
 
 ```go
 import demojify "github.com/nicholashoule/demojify-sanitize"
@@ -104,7 +124,7 @@ Both tools run from their published module versions -- no local clone required.
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
-go run github.com/nicholashoule/repogov/cmd/repogov@v0.2.0 -root "$root" -agent copilot
+go run github.com/nicholashoule/repogov/cmd/repogov@v0.3.0 -root "$root" -agent copilot
 repogov_exit=$?
 
 go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.4.0 -root "$root"
