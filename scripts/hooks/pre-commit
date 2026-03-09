@@ -6,28 +6,25 @@
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
-# Run repogov governance checks (line limits + layout) using the local sibling
-# module. The module is unreleased so it is run directly from source via go run.
-# If the sibling directory does not exist the check is skipped with a warning.
-repogov_dir="$(dirname "$root")/repogov"
-if [ -d "$repogov_dir" ]; then
-  (cd "$repogov_dir" && go run ./cmd/repogov -root "$root" all)
-  repogov_exit=$?
-else
-  echo "WARNING: repogov not found at $repogov_dir -- skipping governance checks"
-  repogov_exit=0
+# Run repogov governance checks (line limits + layout) using the tagged release.
+# If the module cannot be fetched the check will fail with a descriptive error.
+go run github.com/nicholashoule/repogov/cmd/repogov@v0.1.0 -root "$root" -agent copilot
+repogov_exit=$?
+if [ "$repogov_exit" -ne 0 ]; then
+  echo "ERROR: repogov checks failed. To fix, run:"
+  echo "  go run github.com/nicholashoule/repogov/cmd/repogov@v0.1.0 -root \"$root\" -agent copilot"
 fi
 
-# Run demojify-sanitize in audit-only mode to prevent emoji-related issues in
-# instruction files.  Using -sub here would rewrite the working tree without
-# re-staging the changes, so the index would still contain emoji and the commit
-# would proceed in a broken state.  Instead, block the commit and tell the user
-# how to fix and re-stage.
-go run ./cmd/demojify -root "$root" -quiet
+# Run demojify-sanitize. If emoji are found, substitute them automatically,
+# re-stage the modified files, and abort the commit so the user can review
+# the substitutions before re-committing.
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.4.0 -root "$root"
 demojify_exit=$?
 if [ "$demojify_exit" -ne 0 ]; then
-  echo "ERROR: emoji found -- fix and re-stage before committing:"
-  echo "  go run ./cmd/demojify -root . -sub && git add -u"
+  echo "INFO: emoji found -- running -sub to substitute and re-staging changes..."
+  go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.4.0 -root "$root" -sub
+  git add -u
+  echo "ERROR: emoji were substituted and re-staged. Review the changes and re-commit."
 fi
 
 # precommit_exit covers gofmt, go vet, and golangci-lint (via checkLint in pre-commit.go).
