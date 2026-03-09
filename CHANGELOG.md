@@ -7,16 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- `scripts/hooks/pre-commit`, `README.md`, `docs/git-hooks.md`: bump repogov
-  from `v0.2.0` to `v0.3.0`
+## [0.6.0] - 2026-03-09
 
 ### Added
 
 - `scripts/hooks/pre-commit.go`: add `checkTest` -- runs `go test ./...` as the
   final gate after `checkFmt`, `checkVet`, and `checkLint`; a failing test suite
   now blocks the commit with `[FAIL] go test (run: make test)`
+- `README.md`: fill in `## Features` section with 11 bullet points covering the
+  full public API surface; fix truncated `go get` command and wrong CLI install
+  path (`repogov/cmd/demojify-sanitize` -> `demojify-sanitize/cmd/demojify`)
+
+### Changed
+
+- `scripts/hooks/pre-commit`, `README.md`, `docs/git-hooks.md`: bump repogov
+  from `v0.2.0` to `v0.3.0`
 
 ### Removed
 
@@ -267,7 +272,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `example_test.go` with 17 runnable examples for pkg.go.dev
 - Apache License 2.0
 
-[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.2.4...v0.3.0
