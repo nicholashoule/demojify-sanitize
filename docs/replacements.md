@@ -10,7 +10,6 @@ shown below. Any emoji **not** present in the map is subsequently stripped by
 `Demojify`.
 
 ---
-
 ## Warning and Alerts
 
 | Codepoint | Sequence | Replacement |
@@ -171,8 +170,6 @@ Colored circles widely used in CI dashboards, status pages, and documentation.
 
 ## Arrows
 
-Common in documentation and changelogs.
-
 | Codepoint | Sequence | Replacement |
 |-----------|----------|-------------|
 | U+2192 | Rightwards arrow | `->` |
@@ -251,7 +248,6 @@ Used as decorative bullet points in AI-generated and rich-text content.
 | U+2219 | Bullet operator | `*` |
 
 ---
-
 ## Adding Custom Replacements
 
 `DefaultReplacements()` returns a fresh copy of the map on every call. To add
@@ -270,7 +266,6 @@ Any emoji that has no entry in the map is stripped by `Demojify` after
 substitution, so unmapped codepoints never reach output.
 
 ---
-
 ## Unicode Ranges Removed by Demojify
 
 `Demojify` removes codepoints regardless of the replacements map. The regex

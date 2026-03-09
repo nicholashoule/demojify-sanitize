@@ -79,13 +79,11 @@ clean := demojify.Replace("\u2705 tests passed, \u274c build failed", repl)
 
 ### Git pre-commit hook
 
-Build a local binary first (no remote code execution):
+**Option A -- pre-built binary (CI, minimal setup):**
 
 ```sh
 go build -o .git/hooks/demojify ./cmd/demojify
 ```
-
-Audit-only hook (exit 1 blocks commit):
 
 ```sh
 #!/bin/sh
@@ -94,7 +92,28 @@ root="$(git rev-parse --show-toplevel)"
 "$root/.git/hooks/demojify" -root "$root" -exts .go,.md -quiet
 ```
 
-See [docs/git-hooks.md](docs/git-hooks.md) for auto-fix, substitution, and the Go API variant.
+**Option B -- `go run` with repogov governance (recommended for in-repo hooks):**
+
+This is the pattern used in `scripts/hooks/pre-commit` in this repository.
+Repogov enforces line limits and layout rules; demojify blocks emoji.
+Both tools run from their published module versions -- no local clone required.
+
+```sh
+#!/bin/sh
+# .git/hooks/pre-commit
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+go run github.com/nicholashoule/repogov/cmd/repogov@v0.2.0 -root "$root" -agent copilot
+repogov_exit=$?
+
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.4.0 -root "$root"
+demojify_exit=$?
+
+exit $((repogov_exit | demojify_exit))
+```
+
+See [docs/git-hooks.md](docs/git-hooks.md) for auto-fix, substitution, the full Go API variant, and cross-platform (macOS/Linux/Windows) examples.
 
 ### Streaming sanitization
 

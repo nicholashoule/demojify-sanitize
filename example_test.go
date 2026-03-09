@@ -84,9 +84,11 @@ func ExampleSanitize_httpHandler() {
 	_ = handler
 }
 
-// ExampleSanitize_markdownFiles shows how to sanitize a set of Markdown
-// files in place -- suitable for a pre-commit hook or CI step.
-// This example is compiled but not executed (no Output comment).
+// ExampleSanitize_markdownFiles shows how to sanitize a known set of files
+// using the Sanitize API directly -- useful when callers manage the file list
+// themselves (e.g., only staged files from git diff --name-only).
+// For whole-directory sanitization in one call, prefer ExampleFixDir.
+// This example is executed but not output-verified (no Output comment).
 func ExampleSanitize_markdownFiles() {
 	paths := []string{"README.md", "CHANGELOG.md", "CONTRIBUTING.md"}
 	opts := demojify.DefaultOptions()
