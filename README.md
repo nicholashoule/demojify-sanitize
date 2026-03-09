@@ -106,10 +106,11 @@ root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
 repogov_dir="$(dirname "$root")/repogov"
+repogov_exit=0
 if [ -d "$repogov_dir" ]; then
   (cd "$repogov_dir" && go run ./cmd/repogov -root "$root" all)
+  repogov_exit=$?
 fi
-repogov_exit=$?
 
 go run ./cmd/demojify -root "$root" -quiet
 demojify_exit=$?

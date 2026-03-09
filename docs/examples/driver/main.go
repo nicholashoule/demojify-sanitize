@@ -217,7 +217,11 @@ func main() {
 	}
 	fmt.Printf("  SanitizeFile: changed=%v\n", sfChanged)
 	// Idempotency: second call should report no change.
-	sfChanged2, _ := demojify.SanitizeFile(sfPath, demojify.DefaultOptions())
+	sfChanged2, sfErr2 := demojify.SanitizeFile(sfPath, demojify.DefaultOptions())
+	if sfErr2 != nil {
+		fmt.Fprintf(os.Stderr, "SanitizeFile idempotent re-run: %v\n", sfErr2)
+		os.Exit(1)
+	}
 	fmt.Printf("  idempotent re-run: changed=%v\n", sfChanged2)
 
 	// ---- 19. ScanDirContext -- context-aware scan ----

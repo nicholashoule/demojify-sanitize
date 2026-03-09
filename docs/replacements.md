@@ -1,8 +1,13 @@
 # Supported Emoji and Replacements
 
-This file documents every entry in `DefaultReplacements()` (`replacements.go`). All entries are keyed by Unicode codepoint sequence; FE0F (variation selector-16) variants are listed alongside their bare equivalents.
+This file documents every entry in `DefaultReplacements()` (`replacements.go`).
+All entries are keyed by Unicode codepoint sequence; FE0F (variation selector-16)
+variants are listed alongside their bare equivalents.
 
-When the map is passed to `Replace`, `ReplaceFile`, or `ScanDir` (via `ScanConfig.Replacements`), each sequence is substituted with the text value shown below. Any emoji **not** present in the map is subsequently stripped by `Demojify`.
+When the map is passed to `Replace`, `ReplaceFile`, or `ScanDir` (via
+`ScanConfig.Replacements`), each sequence is substituted with the text value
+shown below. Any emoji **not** present in the map is subsequently stripped by
+`Demojify`.
 
 ---
 

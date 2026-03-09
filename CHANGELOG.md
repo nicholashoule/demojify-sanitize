@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exit codes (`repogov_exit`, `demojify_exit`, `precommit_exit`) ORed into the
   final status; removed stale commented-out block from v0.4.0
 - `scripts/hooks/pre-commit.go`: remove `checkRepogov` (moved to shell script);
-  restore to `checkFmt` + `checkVet` only; drop unused `path/filepath` import
+  keep `checkFmt`, `checkVet`, and `checkLint` in the Go hook; drop unused `path/filepath` import
 - `README.md` pre-commit hook section: restructured into **Option A**
   (pre-built binary, CI-friendly) and **Option B** (`go run` with repogov
   governance, recommended for in-repo hooks); updated `docs/git-hooks.md`

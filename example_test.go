@@ -88,7 +88,7 @@ func ExampleSanitize_httpHandler() {
 // using the Sanitize API directly -- useful when callers manage the file list
 // themselves (e.g., only staged files from git diff --name-only).
 // For whole-directory sanitization in one call, prefer ExampleFixDir.
-// This example is compiled but not executed (no Output comment).
+// This example is executed but not output-verified (no Output comment).
 func ExampleSanitize_markdownFiles() {
 	paths := []string{"README.md", "CHANGELOG.md", "CONTRIBUTING.md"}
 	opts := demojify.DefaultOptions()

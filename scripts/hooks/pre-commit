@@ -30,7 +30,7 @@ if [ "$demojify_exit" -ne 0 ]; then
   echo "  go run ./cmd/demojify -root . -sub && git add -u"
 fi
 
-# precommit_exit covers gofmt and go vet.
+# precommit_exit covers gofmt, go vet, and golangci-lint (via checkLint in pre-commit.go).
 go run "$root/scripts/hooks/pre-commit.go"
 precommit_exit=$?
 
