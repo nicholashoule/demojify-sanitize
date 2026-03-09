@@ -86,7 +86,7 @@ for full API usage patterns.
 ## Cross-platform lightweight examples
 
 These minimal hooks mirror the pattern used in `scripts/hooks/pre-commit` and
-work with repogov (`../repogov`) and demojify side by side.
+run both tools from their published module versions -- no local clone required.
 
 ### macOS and Linux (`sh`)
 
@@ -96,15 +96,10 @@ work with repogov (`../repogov`) and demojify side by side.
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
-repogov_dir="$(dirname "$root")/repogov"
-if [ -d "$repogov_dir" ]; then
-  (cd "$repogov_dir" && go run ./cmd/repogov -root "$root" all)
-  repogov_exit=$?
-else
-  repogov_exit=0
-fi
+go run github.com/nicholashoule/repogov/cmd/repogov@v0.2.0 -root "$root" -agent copilot
+repogov_exit=$?
 
-go run ./cmd/demojify -root "$root" -quiet
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.4.0 -root "$root"
 demojify_exit=$?
 
 exit $((repogov_exit | demojify_exit))
@@ -117,16 +112,10 @@ exit $((repogov_exit | demojify_exit))
 $root = git rev-parse --show-toplevel
 Set-Location $root
 
-$repogov_dir = Join-Path (Split-Path $root) "repogov"
-$repogov_exit = 0
-if (Test-Path $repogov_dir) {
-    Push-Location $repogov_dir
-    go run ./cmd/repogov -root $root all
-    $repogov_exit = $LASTEXITCODE
-    Pop-Location
-}
+go run github.com/nicholashoule/repogov/cmd/repogov@v0.2.0 -root $root -agent copilot
+$repogov_exit = $LASTEXITCODE
 
-go run ./cmd/demojify -root $root -quiet
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.4.0 -root $root
 $demojify_exit = $LASTEXITCODE
 
 exit ($repogov_exit -bor $demojify_exit)

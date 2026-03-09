@@ -96,8 +96,7 @@ root="$(git rev-parse --show-toplevel)"
 
 This is the pattern used in `scripts/hooks/pre-commit` in this repository.
 Repogov enforces line limits and layout rules; demojify blocks emoji.
-Repogov is optional -- the hook skips gracefully if the sibling directory
-is absent.
+Both tools run from their published module versions -- no local clone required.
 
 ```sh
 #!/bin/sh
@@ -105,14 +104,10 @@ is absent.
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
-repogov_dir="$(dirname "$root")/repogov"
-repogov_exit=0
-if [ -d "$repogov_dir" ]; then
-  (cd "$repogov_dir" && go run ./cmd/repogov -root "$root" all)
-  repogov_exit=$?
-fi
+go run github.com/nicholashoule/repogov/cmd/repogov@v0.2.0 -root "$root" -agent copilot
+repogov_exit=$?
 
-go run ./cmd/demojify -root "$root" -quiet
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.4.0 -root "$root"
 demojify_exit=$?
 
 exit $((repogov_exit | demojify_exit))
