@@ -124,7 +124,7 @@ Both tools run from their published module versions -- no local clone required.
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
-go run github.com/nicholashoule/repogov/cmd/repogov@v0.2.0 -root "$root" -agent copilot
+go run github.com/nicholashoule/repogov/cmd/repogov@v0.3.0 -root "$root" -agent copilot
 repogov_exit=$?
 
 go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.4.0 -root "$root"

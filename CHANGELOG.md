@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `scripts/hooks/pre-commit`, `README.md`, `docs/git-hooks.md`: bump repogov
+  from `v0.2.0` to `v0.3.0`
+
 ### Added
 
 - `scripts/hooks/pre-commit.go`: add `checkTest` -- runs `go test ./...` as the
