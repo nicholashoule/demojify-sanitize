@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `scripts/hooks/pre-commit.go`: add `checkLint` -- runs `golangci-lint run ./...`
+  using the project's `.golangci.yml`; skips gracefully with a `WARNING:` when
+  `golangci-lint` is not installed so the hook stays portable; wired into
+  `main()` after `checkVet`
 - `scripts/hooks/pre-commit`: integrate
   [repogov](https://github.com/nicholashoule/repogov) governance checks (line
   limits + layout) as a first-class gate; repogov runs via `go run` from the

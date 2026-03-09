@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	if !checkFmt() || !checkVet() {
+	if !checkFmt() || !checkVet() || !checkLint() {
 		os.Exit(1)
 	}
 }
@@ -82,5 +82,24 @@ func checkVet() bool {
 		return false
 	}
 	fmt.Fprintln(os.Stderr, "[PASS] go vet")
+	return true
+}
+
+// checkLint runs golangci-lint run ./... using the project's .golangci.yml
+// configuration. If the binary is not installed the check is skipped with a
+// warning so the hook stays portable for contributors who have not installed it.
+func checkLint() bool {
+	if _, err := exec.LookPath("golangci-lint"); err != nil {
+		fmt.Fprintln(os.Stderr, "WARNING: golangci-lint not found -- skipping lint (install: https://golangci-lint.run/usage/install/)")
+		return true
+	}
+	cmd := exec.Command("golangci-lint", "run", "./...")
+	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintln(os.Stderr, "[FAIL] golangci-lint (run: make lint)")
+		return false
+	}
+	fmt.Fprintln(os.Stderr, "[PASS] golangci-lint")
 	return true
 }
