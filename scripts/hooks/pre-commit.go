@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	if !checkFmt() || !checkVet() || !checkLint() {
+	if !checkFmt() || !checkVet() || !checkLint() || !checkTest() {
 		os.Exit(1)
 	}
 }
@@ -107,5 +107,18 @@ func checkLint() bool {
 		return false
 	}
 	fmt.Fprintln(os.Stderr, "[PASS] golangci-lint")
+	return true
+}
+
+// checkTest runs go test ./... and reports any failures.
+func checkTest() bool {
+	cmd := exec.Command("go", "test", "./...")
+	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintln(os.Stderr, "[FAIL] go test (run: make test)")
+		return false
+	}
+	fmt.Fprintln(os.Stderr, "[PASS] go test")
 	return true
 }

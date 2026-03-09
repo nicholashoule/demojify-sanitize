@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/hooks/pre-commit.go`: add `checkTest` -- runs `go test ./...` as the
+  final gate after `checkFmt`, `checkVet`, and `checkLint`; a failing test suite
+  now blocks the commit with `[FAIL] go test (run: make test)`
+
 ### Removed
 
 - `repo_test.go` six license-hygiene tests deleted (no longer needed now that
