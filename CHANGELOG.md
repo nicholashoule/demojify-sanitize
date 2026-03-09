@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `docs/git-hooks.md` cross-platform lightweight pre-commit examples for
+  macOS/Linux (`sh`), Windows PowerShell (`pre-commit.ps1` + `sh` shim), and
+  Windows Git for Windows (`sh.exe` -- same hook, no shim needed)
+- `docs/examples/driver/main.go` step 18: `SanitizeFile` -- atomic
+  single-file sanitization with idempotency verification; `ScanDirContext`
+  renumbered to step 19 (no behavioral change)
+
+### Changed
+
+- `scripts/hooks/pre-commit`: integrate
+  [repogov](https://github.com/nicholashoule/repogov) governance checks (line
+  limits + layout) as a first-class gate; repogov runs via `go run` from the
+  sibling `../repogov` directory and skips gracefully when absent; all three
+  exit codes (`repogov_exit`, `demojify_exit`, `precommit_exit`) ORed into the
+  final status; removed stale commented-out block from v0.4.0
+- `scripts/hooks/pre-commit.go`: remove `checkRepogov` (moved to shell script);
+  restore to `checkFmt` + `checkVet` only; drop unused `path/filepath` import
+- `README.md` pre-commit hook section: restructured into **Option A**
+  (pre-built binary, CI-friendly) and **Option B** (`go run` with repogov
+  governance, recommended for in-repo hooks); updated `docs/git-hooks.md`
+  reference to mention cross-platform examples
+- `docs/git-hooks.md` CLI hook intro: note repogov pairing and graceful-skip
+  behaviour so consumers understand the two tools are complementary
+- `example_test.go` `ExampleSanitize_markdownFiles`: clarified doc comment --
+  distinguishes per-file loop pattern from whole-directory `FixDir`; points
+  consumers to `ExampleFixDir` for lower-friction one-call use
+- `docs/replacements.md`: condensed intro paragraph and removed redundant
+  section description to stay within the 300-line repogov limit (305 -> 298)
+
 ## [0.4.0] - 2026-03-08
 
 ### Added
