@@ -1,6 +1,6 @@
 package demojify
 
-import "path/filepath"
+import "strings"
 
 // LimitConfig specifies per-file line limits used when scanning files in a
 // repository. A zero Default field falls back to DefaultLineLimit.
@@ -37,7 +37,7 @@ func DefaultLimitConfig() LimitConfig {
 // A file-specific entry in cfg.Files takes precedence over cfg.Default.
 // When cfg.Default is zero the fallback [DefaultLineLimit] is returned.
 func ResolveLimit(cfg LimitConfig, path string) int {
-	if v, ok := cfg.Files[filepath.ToSlash(path)]; ok {
+	if v, ok := cfg.Files[strings.ReplaceAll(path, `\`, `/`)]; ok {
 		return v
 	}
 	if cfg.Default == 0 {
