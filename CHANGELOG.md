@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-03-12
+
+### Added
+
+- `config.go`: `LimitConfig` struct, `DefaultConfig() LimitConfig`, and
+  `DefaultLineLimit` constant -- per-file line limit configuration with a
+  file-specific override map; `DefaultConfig` sets a 500-line default and
+  caps `.claude/CLAUDE.md` at 50 lines
+- `config_test.go`: tests for `DefaultConfig`, `resolveLimit` with zero default,
+  file override, and explicit default (`TestDefaultConfig`,
+  `TestResolveLimit_ZeroDefault`, `TestResolveLimit_FileOverride`,
+  `TestResolveLimit_DefaultUsed`)
+- `replace.go`: `distinctValues()` -- deduplicated, length-sorted slice of
+  non-empty replacement values; `collapseRepeatedTokens()` -- collapses runs
+  of the same token (space-separated or directly concatenated) to one occurrence
+- `cmd/demojify/main_test.go`: `TestFixCollapseSpacesAfterEmojiRemoval` (8
+  sub-tests), `TestSubCollapseSpacesAfterSubstitution` (8 sub-tests), and
+  `TestFixSubIdempotentAfterSpaceCleanup` -- end-to-end CLI coverage of the
+  space-collapse and repeated-token-collapse behaviour for `-fix` and `-sub`
+- `docs/design.md`: "Per-file line limit configuration" section explaining the
+  rationale for `LimitConfig` and its sentinel-zero behavior
+- `README.md`: "Line limit configuration" API subsection documenting
+  `LimitConfig`, `DefaultConfig`, and `DefaultLineLimit`
+- `.github/rules/`: 9 scoped Copilot instruction files (`backend.md`,
+  `codereview.md`, `emoji-prevention.md`, `frontend.md`, `general.md`,
+  `governance.md`, `library.md`, `repo.md`, `testing.md`) replacing
+  `.github/instructions/`
+
+### Changed
+
+- `replace.go` (`applyReplacer`): consecutive identical substitution tokens
+  produced by adjacent repeated emoji are now collapsed to a single token
+  (e.g. two adjacent warning-sign emoji → `"WARNING"` instead of `"WARNINGWARNING"`); both
+  space-separated runs and direct concatenations are handled
+- `scan.go` (`scanDirCounted`): when `NormalizeWhitespace` is not requested,
+  inline double-spaces and trailing spaces left as artifacts of emoji removal
+  or substitution are now automatically collapsed via `collapseInlineSpaces`
+  and `trailingSpaceRE`; callers no longer need `-normalize` for a
+  whitespace-clean result
+- `scan_test.go`: `TestScanDirReplacementsUnmappedEmojiStripped` expected
+  output updated from `"[PASS] done  launch\n"` to `"[PASS] done launch\n"`
+  to match the new space-collapse behaviour
+- `cmd/demojify/main.go`: simplified write path -- `WriteFinding` is now always
+  used to write cleaned content regardless of the `-sub`/`-normalize`
+  combination; removed the separate `ReplaceFile` branch for `-sub` without
+  `-normalize`
+- `.github/copilot-instructions.md`, `AGENTS.md`: updated to reference
+  `.github/rules/` for scoped instructions
+
+### Removed
+
+- `.github/ISSUE_TEMPLATE/bug_report.md`, `documentation.md`,
+  `feature_request.md` -- replaced by the repository's default issue templates
+- `.github/instructions/codereview.instructions.md`,
+  `emoji-prevention.instructions.md`, `general.instructions.md`,
+  `library.instructions.md`, `testing.instructions.md` -- migrated to
+  `.github/rules/` with updated `applyTo` frontmatter
+
 ## [0.6.0] - 2026-03-09
 
 ### Added
@@ -272,7 +330,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `example_test.go` with 17 runnable examples for pkg.go.dev
 - Apache License 2.0
 
-[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.3.0...v0.4.0

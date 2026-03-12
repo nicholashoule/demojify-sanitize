@@ -22,14 +22,57 @@ func Replace(text string, replacements map[string]string) string {
 
 // applyReplacer substitutes emoji codepoints using keys (pre-sorted by
 // descending length) and the replacements map, then strips residual emoji
-// via [Demojify]. Called by [Replace], [ReplaceCount], and [ReplaceFile]
+// via [Demojify]. Consecutive identical tokens produced by adjacent repeated
+// emoji (e.g. two warning signs yielding "WARNINGWARNING") are collapsed to a
+// single token. Called by [Replace], [ReplaceCount], and [ReplaceFile]
 // to avoid re-sorting keys in composed operations.
 func applyReplacer(text string, replacements map[string]string, keys []string) string {
 	args := make([]string, 0, len(keys)*2)
 	for _, k := range keys {
 		args = append(args, k, replacements[k])
 	}
-	return Demojify(strings.NewReplacer(args...).Replace(text))
+	result := Demojify(strings.NewReplacer(args...).Replace(text))
+	return collapseRepeatedTokens(result, distinctValues(replacements))
+}
+
+// distinctValues returns a deduplicated slice of the non-empty values in m,
+// sorted by descending length so that longer tokens are collapsed before any
+// shorter sub-string tokens they might contain.
+func distinctValues(m map[string]string) []string {
+	seen := make(map[string]struct{}, len(m))
+	vals := make([]string, 0, len(m))
+	for _, v := range m {
+		if v == "" {
+			continue
+		}
+		if _, ok := seen[v]; !ok {
+			seen[v] = struct{}{}
+			vals = append(vals, v)
+		}
+	}
+	sortByLenDesc(vals)
+	return vals
+}
+
+// collapseRepeatedTokens reduces runs of the same replacement token in text
+// to a single occurrence. Both direct concatenation ("TOKENTOK") and
+// space-separated repetition ("TOKEN TOKEN") are collapsed, handling runs of
+// three or more via repeated passes. Tokens in vals must be non-empty.
+func collapseRepeatedTokens(text string, vals []string) string {
+	for _, v := range vals {
+		// Collapse space-separated repeats first so the concat pass can later
+		// catch any newly adjacent duplicates.
+		doubled := v + " " + v
+		for strings.Contains(text, doubled) {
+			text = strings.ReplaceAll(text, doubled, v)
+		}
+		// Collapse direct concatenation ("TOKTOKEN" -> "TOK").
+		concat := v + v
+		for strings.Contains(text, concat) {
+			text = strings.ReplaceAll(text, concat, v)
+		}
+	}
+	return text
 }
 
 // FindAll returns the distinct emoji codepoint sequences found in text.

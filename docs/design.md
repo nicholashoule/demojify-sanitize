@@ -183,3 +183,28 @@ The library intentionally does not:
 **Why:** Each of these would require either external dependencies or significant
 scope expansion that would dilute the library's focused purpose. Projects
 needing those capabilities should compose this library with purpose-built tools.
+
+## Per-file line limit configuration
+
+`LimitConfig` and `DefaultConfig()` provide a lightweight mechanism for
+capping how many lines are considered when scanning individual files.
+
+**Why a separate config type instead of a field on `ScanConfig`:**
+`ScanConfig` controls what to scan (root, skip dirs, extensions) and how to
+process it (options, replacements). Line limits are a governance concern --
+they express policy about file size -- and belong in a dedicated type. This
+keeps `ScanConfig` focused and lets callers compose their own governance
+policies without coupling them to the scan pipeline.
+
+**Why the zero-value of `Default` falls back to `DefaultLineLimit`:**
+A zero `Default` is indistinguishable from "not set by the caller" when the
+struct is value-initialized. Treating zero as a sentinel avoids a separate
+`bool` sentinel field and lets callers use `LimitConfig{}` to mean
+"apply the standard 500-line default" without explicitly knowing the constant.
+
+**Why `.claude/CLAUDE.md` has a built-in 50-line override:**
+AI context files (CLAUDE.md, AGENTS.md, and similar) are designed to be
+short, focused instruction sets. A 50-line override in `DefaultConfig()`
+expresses this constraint out of the box for the most common AI-agent workspace
+layout, giving projects a governance nudge without requiring manual
+configuration.

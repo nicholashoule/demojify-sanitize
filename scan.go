@@ -233,9 +233,11 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 	// callback does not re-sort and re-allocate for every file.
 	var replKeys []string
 	var replacer *strings.Replacer
+	var replVals []string
 	if len(cfg.Replacements) > 0 {
 		replKeys = sortedKeys(cfg.Replacements)
 		replacer = buildReplacer(replKeys, cfg.Replacements)
+		replVals = distinctValues(cfg.Replacements)
 	}
 
 	var findings []Finding
@@ -358,6 +360,7 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 		//nolint:gocritic // ifElseChain: switch would require nesting a second switch for AllowedEmojis/AllowedRanges
 		if replacer != nil {
 			cleaned = Demojify(replacer.Replace(original))
+			cleaned = collapseRepeatedTokens(cleaned, replVals)
 		} else if cfg.Options.RemoveEmojis {
 			switch {
 			case len(cfg.Options.AllowedEmojis) > 0:
@@ -373,6 +376,16 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 
 		if cfg.Options.NormalizeWhitespace {
 			cleaned = Normalize(cleaned)
+		} else if cleaned != original {
+			// When full normalization is not requested, still collapse any
+			// runs of inline spaces and tabs that were left behind as
+			// artifacts of emoji removal or substitution (e.g. two spaces
+			// where an emoji used to sit). Trailing whitespace on each line
+			// and at the very end of the file is also trimmed so callers do
+			// not need -normalize just to get a clean result.
+			cleaned = collapseInlineSpaces(cleaned)
+			cleaned = trailingSpaceRE.ReplaceAllString(cleaned, "\n")
+			cleaned = strings.TrimRight(cleaned, " \t")
 		}
 
 		if cleaned != original {
