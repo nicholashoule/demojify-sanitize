@@ -219,8 +219,9 @@ Full signatures and doc comments are on
 | Symbol | Purpose |
 |--------|---------|
 | `LimitConfig` | Per-file line limit struct: `Default` int + `Files` map override |
-| `DefaultConfig() LimitConfig` | Returns a pre-populated config (500-line default; `.claude/CLAUDE.md` capped at 50) |
+| `DefaultLimitConfig() LimitConfig` | Returns a pre-populated config (500-line default; `.claude/CLAUDE.md` capped at 50) |
 | `DefaultLineLimit` | Fallback constant (500) when `LimitConfig.Default` is zero |
+| `ResolveLimit(cfg LimitConfig, path string) int` | Returns the effective line limit for path (file override → Default → DefaultLineLimit) |
 
 ### Options
 

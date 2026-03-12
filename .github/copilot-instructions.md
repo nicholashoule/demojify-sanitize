@@ -20,8 +20,8 @@ Long-form project context lives in [README.md](../README.md) and [docs/](../docs
 3. **Link, Don't Repeat** - Reference external docs instead of duplicating
 4. **Split Only When Necessary** - Only when content is a distinct concern; use cohesive files, descriptive names, and cross-references
 
-Run checks: `go run ./cmd/repogov -agent copilot`
-Re-scaffold missing files: `go run ./cmd/repogov -agent copilot init`
+Run checks: `go run github.com/nicholashoule/repogov/cmd/repogov@latest -agent copilot`
+Re-scaffold missing files: `go run github.com/nicholashoule/repogov/cmd/repogov@latest -agent copilot init`
 
 ## File Naming Conventions
 

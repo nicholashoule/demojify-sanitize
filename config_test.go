@@ -1,41 +1,85 @@
-package demojify
+package demojify_test
 
-import "testing"
+import (
+	"testing"
 
-func TestDefaultConfig(t *testing.T) {
-	cfg := DefaultConfig()
+	demojify "github.com/nicholashoule/demojify-sanitize"
+)
+
+func TestDefaultLimitConfig(t *testing.T) {
+	cfg := demojify.DefaultLimitConfig()
 	if cfg.Default != 500 {
-		t.Errorf("DefaultConfig().Default = %d, want 500", cfg.Default)
+		t.Errorf("DefaultLimitConfig().Default = %d, want 500", cfg.Default)
 	}
 	if v, ok := cfg.Files[".claude/CLAUDE.md"]; !ok || v != 50 {
-		t.Errorf("DefaultConfig().Files[\".claude/CLAUDE.md\"] = %d (ok=%v), want 50 (ok=true)", v, ok)
+		t.Errorf("DefaultLimitConfig().Files[\".claude/CLAUDE.md\"] = %d (ok=%v), want 50 (ok=true)", v, ok)
 	}
 }
 
-func TestResolveLimit_ZeroDefault(t *testing.T) {
-	cfg := LimitConfig{Default: 0}
-	got := resolveLimit(cfg, "any/file.go")
-	if got != DefaultLineLimit {
-		t.Errorf("resolveLimit(cfg with zero default) = %d, want %d (DefaultLineLimit)", got, DefaultLineLimit)
+func TestDefaultLineLimit(t *testing.T) {
+	if demojify.DefaultLineLimit != 500 {
+		t.Errorf("DefaultLineLimit = %d, want 500", demojify.DefaultLineLimit)
 	}
 }
 
-func TestResolveLimit_FileOverride(t *testing.T) {
-	cfg := LimitConfig{
+func TestLimitConfig_ZeroDefaultFallback(t *testing.T) {
+	// A zero Default should fall back to DefaultLineLimit via DefaultLimitConfig.
+	cfg := demojify.DefaultLimitConfig()
+	if cfg.Default != demojify.DefaultLineLimit {
+		t.Errorf("DefaultLimitConfig().Default = %d, want DefaultLineLimit (%d)", cfg.Default, demojify.DefaultLineLimit)
+	}
+}
+
+func TestLimitConfig_FileOverride(t *testing.T) {
+	cfg := demojify.LimitConfig{
 		Default: 200,
 		Files:   map[string]int{".claude/CLAUDE.md": 50},
 	}
-	if got := resolveLimit(cfg, ".claude/CLAUDE.md"); got != 50 {
-		t.Errorf("resolveLimit for .claude/CLAUDE.md = %d, want 50", got)
+	if got := cfg.Files[".claude/CLAUDE.md"]; got != 50 {
+		t.Errorf("Files[\".claude/CLAUDE.md\"] = %d, want 50", got)
 	}
-	if got := resolveLimit(cfg, "other.go"); got != 200 {
-		t.Errorf("resolveLimit for other.go = %d, want 200", got)
+	if cfg.Default != 200 {
+		t.Errorf("Default = %d, want 200", cfg.Default)
 	}
 }
 
-func TestResolveLimit_DefaultUsed(t *testing.T) {
-	cfg := LimitConfig{Default: 300}
-	if got := resolveLimit(cfg, "any/file.md"); got != 300 {
-		t.Errorf("resolveLimit = %d, want 300", got)
+func TestResolveLimit(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  demojify.LimitConfig
+		path string
+		want int
+	}{
+		{
+			name: "file override takes precedence",
+			cfg:  demojify.LimitConfig{Default: 200, Files: map[string]int{".claude/CLAUDE.md": 50}},
+			path: ".claude/CLAUDE.md",
+			want: 50,
+		},
+		{
+			name: "default used when no file override",
+			cfg:  demojify.LimitConfig{Default: 300},
+			path: "any/file.md",
+			want: 300,
+		},
+		{
+			name: "zero default falls back to DefaultLineLimit",
+			cfg:  demojify.LimitConfig{Default: 0},
+			path: "any/file.go",
+			want: demojify.DefaultLineLimit,
+		},
+		{
+			name: "backslash path normalised to forward slash",
+			cfg:  demojify.LimitConfig{Default: 100, Files: map[string]int{"a/b.go": 42}},
+			path: `a\b.go`,
+			want: 42,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := demojify.ResolveLimit(tt.cfg, tt.path); got != tt.want {
+				t.Errorf("ResolveLimit(%q) = %d, want %d", tt.path, got, tt.want)
+			}
+		})
 	}
 }

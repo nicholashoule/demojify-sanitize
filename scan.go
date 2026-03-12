@@ -383,6 +383,9 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 			// where an emoji used to sit). Trailing whitespace on each line
 			// and at the very end of the file is also trimmed so callers do
 			// not need -normalize just to get a clean result.
+			// Normalize CRLF/CR to LF so regex-based whitespace cleanup is
+			// consistent across platforms.
+			cleaned = crlfReplacer.Replace(cleaned)
 			cleaned = collapseInlineSpaces(cleaned)
 			cleaned = trailingSpaceRE.ReplaceAllString(cleaned, "\n")
 			cleaned = strings.TrimRight(cleaned, " \t")

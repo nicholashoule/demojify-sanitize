@@ -162,7 +162,8 @@ func main() {
 			var werr error
 			// Always write the fully-cleaned content from the Finding.
 			// f.Cleaned has emoji stripped/substituted with inline spaces
-			// already collapsed; len(f.Matches) equals the substitution count.
+			// already collapsed; len(f.Matches) equals the total number of
+			// emoji occurrences (substitutions plus removals).
 			var changed bool
 			changed, werr = demojify.WriteFinding(absPath, f)
 			if changed {

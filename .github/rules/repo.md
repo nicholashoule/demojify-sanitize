@@ -6,18 +6,21 @@ applyTo: "**"
 
 ## .github Layout
 
-- `.github/ISSUE_TEMPLATE/`
-- `.github/PULL_REQUEST_TEMPLATE/`
-- `.github/workflows/`
-- `.github/ISSUE_TEMPLATE.md`
-- `.github/pull_request_template.md`
-- `.github/CONTRIBUTING.md`
-- `.github/CODE_OF_CONDUCT.md`
-- `.github/SECURITY.md`
-- `.github/SUPPORT.md`
-- `.github/FUNDING.yml`
+Files present in this repository:
+
+- `.github/copilot-instructions.md` — repo-wide Copilot context
+- `.github/repogov-config.json` — repogov line-limit configuration
+- `.github/rules/` — scoped Copilot instruction files (`*.md`)
+- `.github/workflows/ci.yml` — CI pipeline
+
+Optional GitHub-standard files (add as needed):
+
+- `.github/ISSUE_TEMPLATE/` or `.github/ISSUE_TEMPLATE.md`
+- `.github/PULL_REQUEST_TEMPLATE/` or `.github/pull_request_template.md`
 - `.github/CODEOWNERS`
 - `.github/dependabot.yml`
+- `.github/FUNDING.yml`
+- `.github/SUPPORT.md`
 
 Standard `.gitlab/` files: `issue_templates/`, `merge_request_templates/`, `CODEOWNERS`, `.gitlab-ci.yml`.
 

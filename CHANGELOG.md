@@ -11,14 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `config.go`: `LimitConfig` struct, `DefaultConfig() LimitConfig`, and
+- `config.go`: `LimitConfig` struct, `DefaultLimitConfig() LimitConfig`,
+  `ResolveLimit(cfg LimitConfig, path string) int`, and
   `DefaultLineLimit` constant -- per-file line limit configuration with a
-  file-specific override map; `DefaultConfig` sets a 500-line default and
+  file-specific override map; `DefaultLimitConfig` sets a 500-line default and
   caps `.claude/CLAUDE.md` at 50 lines
-- `config_test.go`: tests for `DefaultConfig`, `resolveLimit` with zero default,
-  file override, and explicit default (`TestDefaultConfig`,
-  `TestResolveLimit_ZeroDefault`, `TestResolveLimit_FileOverride`,
-  `TestResolveLimit_DefaultUsed`)
+- `config_test.go`: black-box tests in `package demojify_test` covering exported API
+  (`TestDefaultLimitConfig`, `TestDefaultLineLimit`, `TestLimitConfig_ZeroDefaultFallback`,
+  `TestLimitConfig_FileOverride`, `TestResolveLimit`)
 - `replace.go`: `distinctValues()` -- deduplicated, length-sorted slice of
   non-empty replacement values; `collapseRepeatedTokens()` -- collapses runs
   of the same token (space-separated or directly concatenated) to one occurrence
@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/design.md`: "Per-file line limit configuration" section explaining the
   rationale for `LimitConfig` and its sentinel-zero behavior
 - `README.md`: "Line limit configuration" API subsection documenting
-  `LimitConfig`, `DefaultConfig`, and `DefaultLineLimit`
+  `LimitConfig`, `DefaultLimitConfig`, and `DefaultLineLimit`
 - `.github/rules/`: 9 scoped Copilot instruction files (`backend.md`,
   `codereview.md`, `emoji-prevention.md`, `frontend.md`, `general.md`,
   `governance.md`, `library.md`, `repo.md`, `testing.md`) replacing

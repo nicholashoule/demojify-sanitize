@@ -49,10 +49,14 @@ Use plain-text equivalents that convey the same meaning:
 
 ## Enforcement
 
-Install once:
+Install (pin to a tagged release for reproducibility, or build locally):
 
 ```sh
-go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest
+# Tagged release (recommended for CI/stable environments)
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.7.0
+
+# Local build from the repository
+go build -o demojify ./cmd/demojify
 ```
 
 Audit (exits `1` if emoji found):
@@ -64,6 +68,6 @@ demojify
 Fix in place:
 
 ```sh
-demojify -fix # Rewrite stripped affected files in place after reporting
+demojify -fix # Rewrite affected files in place after stripping emoji and trimming whitespace
 demojify -sub # Substitute emoji with text tokens instead of stripping; implies -fix
 ```

@@ -186,15 +186,22 @@ needing those capabilities should compose this library with purpose-built tools.
 
 ## Per-file line limit configuration
 
-`LimitConfig` and `DefaultConfig()` provide a lightweight mechanism for
-capping how many lines are considered when scanning individual files.
+`LimitConfig`, `DefaultLimitConfig()`, and `ResolveLimit()` provide a lightweight mechanism for
+expressing per-file line limit policies that external governance tooling can
+apply when deciding how many lines of a file to inspect.
+
+**Important:** The core scanner APIs (`ScanDir`, `ScanDirContext`, `ScanFile`)
+do not currently consume `LimitConfig` directly. Callers that need hard
+per-file line limits should enforce those limits in their own orchestration
+layer (for example, by truncating content or skipping files) based on
+`LimitConfig` before or around calls into the scanner.
 
 **Why a separate config type instead of a field on `ScanConfig`:**
 `ScanConfig` controls what to scan (root, skip dirs, extensions) and how to
 process it (options, replacements). Line limits are a governance concern --
 they express policy about file size -- and belong in a dedicated type. This
 keeps `ScanConfig` focused and lets callers compose their own governance
-policies without coupling them to the scan pipeline.
+policies without coupling them to the scan pipeline's implementation details.
 
 **Why the zero-value of `Default` falls back to `DefaultLineLimit`:**
 A zero `Default` is indistinguishable from "not set by the caller" when the
@@ -204,7 +211,7 @@ struct is value-initialized. Treating zero as a sentinel avoids a separate
 
 **Why `.claude/CLAUDE.md` has a built-in 50-line override:**
 AI context files (CLAUDE.md, AGENTS.md, and similar) are designed to be
-short, focused instruction sets. A 50-line override in `DefaultConfig()`
+short, focused instruction sets. A 50-line override in `DefaultLimitConfig()`
 expresses this constraint out of the box for the most common AI-agent workspace
 layout, giving projects a governance nudge without requiring manual
 configuration.
