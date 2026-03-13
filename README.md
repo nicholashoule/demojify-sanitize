@@ -214,6 +214,15 @@ Full signatures and doc comments are on
 | `Finding` | Path, HasEmoji, Original, Cleaned, Matches |
 | `Match` | Sequence, Replacement, Line, Column, Context |
 
+### Line limit configuration
+
+| Symbol | Purpose |
+|--------|---------|
+| `LimitConfig` | Per-file line limit struct: `Default` int + `Files` map override |
+| `DefaultLimitConfig() LimitConfig` | Returns a pre-populated config (500-line default; `.claude/CLAUDE.md` capped at 50) |
+| `DefaultLineLimit` | Fallback constant (500) when `LimitConfig.Default` is zero |
+| `ResolveLimit(cfg LimitConfig, path string) int` | Returns the effective line limit for path (file override → Default → DefaultLineLimit) |
+
 ### Options
 
 ```go

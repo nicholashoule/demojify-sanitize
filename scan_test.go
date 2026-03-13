@@ -684,7 +684,7 @@ func TestScanDirReplacementsUnmappedEmojiStripped(t *testing.T) {
 	if len(findings) != 1 {
 		t.Fatalf("got %d findings, want 1", len(findings))
 	}
-	want := "[PASS] done  launch\n"
+	want := "[PASS] done launch\n"
 	if findings[0].Cleaned != want {
 		t.Errorf("Cleaned = %q, want %q", findings[0].Cleaned, want)
 	}

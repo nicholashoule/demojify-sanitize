@@ -146,6 +146,30 @@ func TestReplace(t *testing.T) {
 			replacements: map[string]string{"": "INSERTED", "\u2705": "[PASS]"},
 			want:         "hello world",
 		},
+		{
+			name:         "adjacent emoji produce single token (space-separated)",
+			input:        "\u26a0 \u26a0 important",
+			replacements: map[string]string{"\u26a0": "WARNING"},
+			want:         "WARNING important",
+		},
+		{
+			name:         "adjacent emoji produce single token (concatenated)",
+			input:        "\u26a0\u26a0 important",
+			replacements: map[string]string{"\u26a0": "WARNING"},
+			want:         "WARNING important",
+		},
+		{
+			name:         "three adjacent emoji collapsed to one token",
+			input:        "\u26a0 \u26a0 \u26a0 triple",
+			replacements: map[string]string{"\u26a0": "WARNING"},
+			want:         "WARNING triple",
+		},
+		{
+			name:         "non-repeated tokens are not affected",
+			input:        "\u2705 test \u274c fail",
+			replacements: map[string]string{"\u2705": "PASS", "\u274c": "FAIL"},
+			want:         "PASS test FAIL fail",
+		},
 	}
 
 	for _, tt := range tests {

@@ -7,7 +7,7 @@ See [agents.md](https://agents.md) for the open format specification.
 
 - Project overview: [README.md](README.md)
 - Extended documentation: [docs/](docs/)
-- Scoped instruction files: [.github/instructions/](.github/instructions/) (`applyTo` frontmatter)
+- Copilot rule files: [.github/rules/](.github/rules/)
 - Copilot repo-wide context: [.github/copilot-instructions.md](.github/copilot-instructions.md)
 
 ## Nested Instructions

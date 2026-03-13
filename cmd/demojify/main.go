@@ -160,18 +160,14 @@ func main() {
 			absPath := filepath.Join(*root, filepath.FromSlash(f.Path))
 			var n int
 			var werr error
-			if *sub && !*normalize {
-				// Replacement only: re-apply via ReplaceFile so the count
-				// reflects actual substitutions made.
-				n, werr = demojify.ReplaceFile(absPath, repl)
-			} else {
-				// Normalize (with or without sub) or plain fix: write the
-				// fully-cleaned content from the Finding in one shot.
-				var changed bool
-				changed, werr = demojify.WriteFinding(absPath, f)
-				if changed {
-					n = len(f.Matches)
-				}
+			// Always write the fully-cleaned content from the Finding.
+			// f.Cleaned has emoji stripped/substituted with inline spaces
+			// already collapsed; len(f.Matches) equals the total number of
+			// emoji occurrences (substitutions plus removals).
+			var changed bool
+			changed, werr = demojify.WriteFinding(absPath, f)
+			if changed {
+				n = len(f.Matches)
 			}
 			if werr != nil {
 				if *jsonOut {
