@@ -428,11 +428,6 @@ func TestScanDirErrorOnBadRoot(t *testing.T) {
 	}
 }
 
-// TestScanDirNormalizeUnconditional verifies that NormalizeWhitespace
-// runs unconditionally when enabled, producing findings for any file
-// whose whitespace can be collapsed -- regardless of whether the
-// emoji/replacement step also changed the content.
-
 func TestScanDirUnreadableFile(t *testing.T) {
 	if isWindows() {
 		t.Skip("os.Chmod cannot remove read permission on Windows")
@@ -499,8 +494,6 @@ func TestScanDirSymlink(t *testing.T) {
 	}
 }
 
-// isWindows reports whether the current platform is Windows.
-
 func TestScanDirContext(t *testing.T) {
 	root := t.TempDir()
 	writeTempFile(t, root, "emoji.md", "Hello \U0001F680 World\n")
@@ -538,9 +531,8 @@ func TestScanDirContext(t *testing.T) {
 	})
 }
 
-// TestScanFileEmptyFile verifies that ScanFile handles a zero-byte file
-// gracefully, returning nil (no finding) rather than panicking or erroring.
-
+// TestScanDirEmptyFile verifies that ScanDir handles a directory containing
+// an empty file and a non-empty, emoji-free file without reporting findings.
 func TestScanDirEmptyFile(t *testing.T) {
 	root := t.TempDir()
 	writeTempFile(t, root, "empty.go", "")

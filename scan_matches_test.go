@@ -9,6 +9,10 @@ import (
 	demojify "github.com/nicholashoule/demojify-sanitize"
 )
 
+// TestScanDirNormalizeUnconditional verifies that NormalizeWhitespace
+// runs unconditionally when enabled, producing findings for any file
+// whose whitespace can be collapsed -- regardless of whether the
+// emoji/replacement step also changed the content.
 func TestScanDirNormalizeUnconditional(t *testing.T) {
 	t.Run("whitespace-only file is a finding when emoji removal and normalization are active", func(t *testing.T) {
 		root := t.TempDir()
