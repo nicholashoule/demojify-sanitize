@@ -71,7 +71,7 @@ func buildLargeMarkdown(targetBytes int) string {
 	section := 0
 	for b.Len() < targetBytes {
 		section++
-		b.WriteString(fmt.Sprintf(subheader, section))
+		fmt.Fprintf(&b, subheader, section)
 		b.WriteString(prose)
 		b.WriteString(proseEmoji)
 		b.WriteString(codeBlock)

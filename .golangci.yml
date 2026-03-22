@@ -14,7 +14,6 @@ linters:
     - errcheck       # unhandled errors
     - ineffassign    # assignments whose values are never used
     - unused         # unused code
-    - gofmt          # formatting (catches gofmt -s differences)
     - revive         # idiomatic Go checks (superset of golint)
     - gocritic       # opinionated Go style checks
     - godot          # require period at end of exported godoc comments
@@ -48,29 +47,40 @@ linters:
     misspell:
       locale: US
 
+    errcheck:
+      exclude-functions:
+        # Cleanup defers where the error cannot be usefully handled.
+        - os.RemoveAll
+
+  exclusions:
+    rules:
+      # Test files: allow lowercase, unexported names in test helper functions,
+      # and accept that test data intentionally contains emoji literals.
+      - path: _test\.go
+        linters:
+          - godot
+          - revive
+
+      # The pre-commit hook script uses go:build ignore; linters see it as a
+      # standalone program, not a package member -- skip it entirely.
+      - path: scripts/hooks/pre-commit\.go
+        linters:
+          - revive
+          - gocritic
+          - godot
+
+      # The driver example is a standalone main; relax doc requirements.
+      - path: docs/examples/driver/main\.go
+        linters:
+          - godot
+          - revive
+          - gocritic
+
+formatters:
+  enable:
+    - gofmt          # formatting (catches gofmt -s differences)
+
 issues:
   # Show all issues, not just the first few per linter.
   max-issues-per-linter: 0
   max-same-issues: 0
-
-  exclude-rules:
-    # Test files: allow lowercase, unexported names in test helper functions,
-    # and accept that test data intentionally contains emoji literals.
-    - path: _test\.go
-      linters:
-        - godot
-        - revive
-
-    # The pre-commit hook script uses go:build ignore; linters see it as a
-    # standalone program, not a package member -- skip it entirely.
-    - path: scripts/hooks/pre-commit\.go
-      linters:
-        - revive
-        - gocritic
-        - godot
-
-    # The driver example is a standalone main; relax doc requirements.
-    - path: docs/examples/driver/main\.go
-      linters:
-        - godot
-        - revive

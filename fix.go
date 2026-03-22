@@ -75,17 +75,17 @@ func FixDir(root string, cfg ScanConfig) (fixed, clean int, err error) { //nolin
 			errs = append(errs, fmt.Errorf("fixdir: resolve %s: %w", f.Path, resolveErr))
 			continue
 		}
-		real, evalErr := filepath.EvalSymlinks(resolved)
+		realPath, evalErr := filepath.EvalSymlinks(resolved)
 		if evalErr != nil {
 			errs = append(errs, fmt.Errorf("fixdir: eval symlinks %s: %w", f.Path, evalErr))
 			continue
 		}
-		if !isInsideDir(real, realRoot) {
+		if !isInsideDir(realPath, realRoot) {
 			errs = append(errs, fmt.Errorf("fixdir: %s resolves outside root", f.Path))
 			continue
 		}
 
-		changed, werr := WriteFinding(real, f)
+		changed, werr := WriteFinding(realPath, f)
 		if werr != nil {
 			errs = append(errs, fmt.Errorf("fixdir: write %s: %w", f.Path, werr))
 			continue

@@ -314,7 +314,7 @@ func TestDemojifyVeryLongSingleLine(t *testing.T) {
 // TestDemojifyConcurrent verifies that Demojify and ContainsEmoji are safe
 // for concurrent use from multiple goroutines, exercising the compiled
 // package-level regex without data races.
-func TestDemojifyConcurrent(t *testing.T) {
+func TestDemojifyConcurrent(_ *testing.T) {
 	const goroutines = 50
 	inputs := []string{
 		"Hello \U0001F680 World",

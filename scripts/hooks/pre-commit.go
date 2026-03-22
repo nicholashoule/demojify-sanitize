@@ -93,18 +93,25 @@ func checkVet() bool {
 // golangci-lint v2+ is required; v1 installations are skipped with a warning.
 func checkLint() bool {
 	if _, err := exec.LookPath("golangci-lint"); err != nil {
-		fmt.Fprintln(os.Stderr, "WARNING: golangci-lint not found -- skipping lint (install: https://golangci-lint.run/usage/install/)")
+		fmt.Fprintln(os.Stderr, "WARNING: golangci-lint not found -- skipping lint (install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest)")
 		return true
 	}
 	// The project config uses version: "2" syntax; v1 cannot parse it.
 	if verOut, err := exec.Command("golangci-lint", "--version").Output(); err == nil {
 		if strings.Contains(string(verOut), " v1.") {
-			fmt.Fprintln(os.Stderr, "WARNING: golangci-lint v1 detected -- skipping lint (upgrade to v2: https://golangci-lint.run/usage/install/)")
+			fmt.Fprintln(os.Stderr, "WARNING: golangci-lint v1 detected -- skipping lint (upgrade: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest)")
 			return true
 		}
 	}
 	if _, err := os.Stat(".golangci.yml"); err != nil {
 		fmt.Fprintln(os.Stderr, "[FAIL] .golangci.yml not found -- create the config file before committing")
+		return false
+	}
+	verify := exec.Command("golangci-lint", "config", "verify")
+	verify.Stdout = os.Stderr
+	verify.Stderr = os.Stderr
+	if err := verify.Run(); err != nil {
+		fmt.Fprintln(os.Stderr, "[FAIL] golangci-lint config verify -- fix .golangci.yml before committing")
 		return false
 	}
 	cmd := exec.Command("golangci-lint", "run", "./...")

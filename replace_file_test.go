@@ -144,7 +144,7 @@ func TestReplaceFile(t *testing.T) {
 	})
 }
 
-func TestReplaceConcurrent(t *testing.T) {
+func TestReplaceConcurrent(_ *testing.T) {
 	const goroutines = 50
 	repl := demojify.DefaultReplacements()
 	inputs := []string{

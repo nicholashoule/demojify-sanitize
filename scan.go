@@ -326,16 +326,16 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 		var sniff [sniffSize]byte
 		n, sniffErr := io.ReadFull(f, sniff[:])
 		if sniffErr != nil && sniffErr != io.ErrUnexpectedEOF && sniffErr != io.EOF {
-			f.Close()
+			_ = f.Close()
 			return sniffErr
 		}
 		if isBinary(sniff[:n]) {
-			f.Close()
+			_ = f.Close()
 			return nil
 		}
 		// Text file -- read the remainder and combine.
 		rest, readErr := io.ReadAll(f)
-		f.Close()
+		_ = f.Close()
 		if readErr != nil {
 			return readErr
 		}
