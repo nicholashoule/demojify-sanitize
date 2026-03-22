@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-03-22
+
+### Changed
+
+- Test suite restructured: four monolithic test files split into 14
+  contextually focused files, reducing the largest file from 1 259 to 634
+  lines; all 424 tests preserved with no behavioral change
+  - `scan_test.go` (deleted) split into `scan_dir_test.go`,
+    `scan_matches_test.go`, and `scan_file_test.go`
+  - `sanitize_test.go` (trimmed) + new `sanitize_io_test.go`
+    (`SanitizeFile`, `SanitizeReport`, `SanitizeReader`, `SanitizeJSON`)
+  - `cmd/demojify/main_test.go` (trimmed to infrastructure only) + new
+    `cli_audit_test.go`, `cli_flags_test.go`, `cli_json_test.go`,
+    `cli_space_test.go`
+  - `replace_test.go` (trimmed) + new `replace_file_test.go`
+    (`ReplaceFile`, concurrent safety)
+  - `helpers_test.go`: `isWindows()` helper added (moved from
+    `scan_test.go`) and made available across the whole test package
+
 ## [0.7.0] - 2026-03-12
 
 ### Added
@@ -330,7 +349,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `example_test.go` with 17 runnable examples for pkg.go.dev
 - Apache License 2.0
 
-[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.4.0...v0.5.0

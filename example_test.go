@@ -79,7 +79,7 @@ func ExampleSanitize_httpHandler() {
 		}
 		clean := demojify.Sanitize(string(body), demojify.DefaultOptions())
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		fmt.Fprint(w, clean)
+		_, _ = fmt.Fprint(w, clean)
 	})
 	_ = handler
 }

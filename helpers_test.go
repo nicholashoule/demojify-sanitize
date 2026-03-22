@@ -3,6 +3,7 @@ package demojify_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -24,4 +25,9 @@ func writeTempDir(t *testing.T, dir, name string) string {
 		t.Fatalf("mkdir %s: %v", path, err)
 	}
 	return path
+}
+
+// isWindows reports whether the current platform is Windows.
+func isWindows() bool {
+	return runtime.GOOS == "windows"
 }
