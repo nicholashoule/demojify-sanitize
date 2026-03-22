@@ -7,12 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-03-22
+
+### Fixed
+
+- `scan_dir_test.go`: removed mismatched `TestScanFileEmptyFile` doc comment
+  (now replaced by a correct `TestScanDirEmptyFile` comment adjacent to that
+  function); removed orphaned `isWindows` comment (canonical comment lives in
+  `helpers_test.go`); removed stale `TestScanDirNormalizeUnconditional` comment
+  (relocated to `scan_matches_test.go` where the function is defined)
+- `scan_matches_test.go`: `TestScanDirNormalizeUnconditional` doc comment added
+  directly above the function
+- `sanitize_io_test.go`: replaced misattributed `TestSanitizeAgentOutputRemediation`
+  comment with a correct `TestSanitizeReport` comment
+- `sanitize_test.go`: `TestSanitizeAgentOutputRemediation` doc comment added
+  directly above the function
+- `CHANGELOG.md` [0.7.1] entry: number formatted as `1,259` (was `1 259`)
+
 ## [0.7.1] - 2026-03-22
 
 ### Changed
 
 - Test suite restructured: four monolithic test files split into 14
-  contextually focused files, reducing the largest file from 1 259 to 634
+  contextually focused files, reducing the largest file from 1,259 to 634
   lines; all 424 tests preserved with no behavioral change
   - `scan_test.go` (deleted) split into `scan_dir_test.go`,
     `scan_matches_test.go`, and `scan_file_test.go`
@@ -349,7 +366,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `example_test.go` with 17 runnable examples for pkg.go.dev
 - Apache License 2.0
 
-[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.5.0...v0.6.0

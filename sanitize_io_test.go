@@ -130,10 +130,8 @@ func TestSanitizeFile(t *testing.T) {
 	})
 }
 
-// TestSanitizeAgentOutputRemediation proves that the module detects and fully
-// remediates emoji in AI-generated content. ContainsEmoji catches the
-// violation, Sanitize removes emoji in one call, and the result is idempotent.
-
+// TestSanitizeReport verifies that SanitizeReport returns the expected
+// cleaned text, emoji removal count, and bytes saved for various inputs.
 func TestSanitizeReport(t *testing.T) {
 	tests := []struct {
 		name        string
