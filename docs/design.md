@@ -89,9 +89,12 @@ approach and does not weaken the library's error-handling contract.
 
 `ScanConfig` provides three exemption axes -- directories (`SkipDirs`), files
 (`ExemptFiles`), and suffixes (`ExemptSuffixes`) -- plus an extension filter
-(`Extensions`). `DefaultScanConfig` returns safe defaults for a typical Go
-module repo. The scanner reuses the same `Options` struct and `Sanitize` pipeline
-that callers already know, keeping the API surface consistent.
+(`Extensions`), an optional `Replacements` map (uses `Replace` instead of
+`Sanitize` per file when set), and a `CollectMatches` flag (populates
+`Finding.Matches` with per-occurrence detail). `DefaultScanConfig` returns
+safe defaults for a typical Go module repo. The scanner reuses the same
+`Options` struct and `Sanitize` pipeline that callers already know, keeping
+the API surface consistent.
 
 ## Substitution pipeline
 

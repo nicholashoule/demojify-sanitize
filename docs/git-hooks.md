@@ -99,7 +99,7 @@ cd "$root"
 go run github.com/nicholashoule/repogov/cmd/repogov@v0.3.0 -root "$root" -agent copilot
 repogov_exit=$?
 
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.4.0 -root "$root"
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.7.1 -root "$root"
 demojify_exit=$?
 
 exit $((repogov_exit | demojify_exit))
@@ -115,7 +115,7 @@ Set-Location $root
 go run github.com/nicholashoule/repogov/cmd/repogov@v0.3.0 -root $root -agent copilot
 $repogov_exit = $LASTEXITCODE
 
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.4.0 -root $root
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.7.1 -root $root
 $demojify_exit = $LASTEXITCODE
 
 exit ($repogov_exit -bor $demojify_exit)
