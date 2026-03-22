@@ -1,15 +1,17 @@
 # golangci-lint configuration for demojify-sanitize.
 # Run: golangci-lint run ./...
 # Install: https://golangci-lint.run/usage/install/
+# Requires golangci-lint v2.
+
+version: "2"
 
 linters:
   # Disable all linters by default, then enable specific ones.
-  disable-all: true
+  default: none
   enable:
     - govet          # vet-style checks (shadow, printf, etc.)
-    - staticcheck    # Dominik Honnef's comprehensive static analysis
+    - staticcheck    # Dominik Honnef's comprehensive static analysis (includes gosimple)
     - errcheck       # unhandled errors
-    - gosimple       # simplification suggestions
     - ineffassign    # assignments whose values are never used
     - unused         # unused code
     - gofmt          # formatting (catches gofmt -s differences)
@@ -18,33 +20,33 @@ linters:
     - godot          # require period at end of exported godoc comments
     - misspell       # common spelling mistakes in comments and strings
 
-linters-settings:
-  revive:
-    rules:
-      # Enforce exported symbols have godoc comments.
-      - name: exported
-        arguments:
-          - "checkPrivateReceivers"
-          - "sayRepetitiveInsteadOfStutters"
-      # Allow underscore-prefixed error variables (e.g. _test.go patterns).
-      - name: var-naming
-        disabled: false
+  settings:
+    revive:
+      rules:
+        # Enforce exported symbols have godoc comments.
+        - name: exported
+          arguments:
+            - "checkPrivateReceivers"
+            - "sayRepetitiveInsteadOfStutters"
+        # Allow underscore-prefixed error variables (e.g. _test.go patterns).
+        - name: var-naming
+          disabled: false
 
-  gocritic:
-    # Enable only the most useful check categories; avoid style churn.
-    enabled-tags:
-      - diagnostic
-      - performance
-    disabled-checks:
-      - commentedOutCode   # we have intentional commented examples
+    gocritic:
+      # Enable only the most useful check categories; avoid style churn.
+      enabled-tags:
+        - diagnostic
+        - performance
+      disabled-checks:
+        - commentedOutCode   # we have intentional commented examples
 
-  godot:
-    # Only check exported function comments (// SomeFunc ...).
-    scope: toplevel
-    capital: false   # allow sentences that start with lower-case identifiers
+    godot:
+      # Only check exported function comments (// SomeFunc ...).
+      scope: toplevel
+      capital: false   # allow sentences that start with lower-case identifiers
 
-  misspell:
-    locale: US
+    misspell:
+      locale: US
 
 issues:
   # Show all issues, not just the first few per linter.
