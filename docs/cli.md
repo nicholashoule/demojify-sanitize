@@ -7,7 +7,7 @@ occurrence with file, line, and column, and optionally rewrites affected files.
 
 ```bash
 # Run directly with go run
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify [flags]
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest [flags]
 
 # Or build a binary
 go build -o demojify ./cmd/demojify

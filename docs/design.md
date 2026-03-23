@@ -140,15 +140,15 @@ entries) compared to the I/O in `ReplaceFile` or the regex in `Demojify`.
 **Why `collapseRepeatedTokens` skips tokens shorter than 4 characters:**
 Several emoji in `DefaultReplacements()` map to short ASCII sequences: `/`
 (U+2797 heavy division sign), `-` (U+2796 heavy minus), `*` (U+2022 bullet),
-`o` (U+25CB white circle). These characters appear legitimately throughout
-source code (e.g., `//` in Go comments, `**` in Markdown bold, `--` in CLI
-flags). Collapsing them would corrupt any document that contains two adjacent
-instances of the same short character — for example, `Replace` on a Go source
-file would silently rewrite `//` to `/`, breaking every URL and comment.
-Only tokens of 4 or more characters (e.g., `[FAIL]`, `WARNING`, `[DEPLOY]`)
-are label-like quantities produced exclusively by emoji substitution, and are
-safe to deduplicate when two adjacent identical emoji both produce the same
-replacement string.
+`o` (U+25CB white circle), `->` (U+2192 rightwards arrow). These appear
+legitimately throughout source code (e.g., `//` in Go comments, `**` in
+Markdown bold, `--` in CLI flags, `->` in documentation). Collapsing them
+would corrupt any document containing two adjacent instances — for example,
+`Replace` on a Go source file would silently rewrite `//` to `/`, breaking
+every URL and comment. Only tokens of 4 or more characters (e.g., `[FAIL]`,
+`[WARNING]`, `WARNING`, `[DEPLOY]`) are label-like quantities produced
+exclusively by emoji substitution and are safe to deduplicate when two
+adjacent identical emoji both map to the same replacement string.
 
 **Why `ReplaceFile` uses an atomic rename:**
 Writing directly to the target file leaves a window where a crash or

@@ -350,21 +350,28 @@ func TestReplaceDefaultReplacementsPreservesASCII(t *testing.T) {
 	repl := demojify.DefaultReplacements()
 
 	tests := []struct {
-		name  string
-		input string
+		name         string
+		input        string
+		wantContains string // non-empty: output must contain this substring (emoji was transformed)
+		wantChanged  bool   // true: output must differ from input
 	}{
-		{"URL double slash preserved", "https://example.com/path"},
-		{"Go comment double slash preserved", "// this is a comment"},
-		{"Markdown bold preserved", "**bold text**"},
-		{"CLI double dash preserved", "--flag value"},
-		{"triple dash separator preserved", "---"},
-		{"word with oo preserved", "root bool tool"},
-		{"word with oo preserved (capitalized)", "Roo Code"},
-		{"double plus preserved", "count++"},
-		{"double caret preserved", "x^^2"},
-		{"full source-like line preserved", "if err != nil { // handle error\n\treturn nil, fmt.Errorf(\"err: %w\", err)\n}"},
-		{"URL in markdown preserved", "See [docs](https://example.com/page#section) for details."},
-		{"mixed content emoji and ASCII", "\u26a0 WARNING: see https://example.com for details -- read carefully"},
+		{name: "URL double slash preserved", input: "https://example.com/path"},
+		{name: "Go comment double slash preserved", input: "// this is a comment"},
+		{name: "Markdown bold preserved", input: "**bold text**"},
+		{name: "CLI double dash preserved", input: "--flag value"},
+		{name: "triple dash separator preserved", input: "---"},
+		{name: "word with oo preserved", input: "root bool tool"},
+		{name: "word with oo preserved (capitalized)", input: "Roo Code"},
+		{name: "double plus preserved", input: "count++"},
+		{name: "double caret preserved", input: "x^^2"},
+		{name: "full source-like line preserved", input: "if err != nil { // handle error\n\treturn nil, fmt.Errorf(\"err: %w\", err)\n}"},
+		{name: "URL in markdown preserved", input: "See [docs](https://example.com/page#section) for details."},
+		{
+			name:         "mixed content emoji and ASCII",
+			input:        "\u26a0 WARNING: see https://example.com for details -- read carefully",
+			wantContains: "WARNING: see https://example.com for details -- read carefully",
+			wantChanged:  true,
+		},
 	}
 
 	// The inputs above contain no emoji (or only emoji that map to long tokens),
@@ -372,23 +379,22 @@ func TestReplaceDefaultReplacementsPreservesASCII(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := demojify.Replace(tt.input, repl)
-			if tt.name != "mixed content emoji and ASCII" {
+			if tt.wantContains == "" && !tt.wantChanged {
 				// Pure-ASCII inputs must be preserved exactly.
 				if got != tt.input {
 					t.Errorf("Replace(%q) = %q, want %q", tt.input, got, tt.input)
 				}
 				return
 			}
-			// For the mixed case, the ASCII content surrounding the emoji must be
-			// preserved exactly, and the emoji itself must be transformed.
+			// Mixed content: ASCII surrounding the emoji must be preserved, and
+			// the emoji itself must be transformed.
 			// ⚠ (U+26A0) maps to "[WARNING]"; "WARNING:" in the original text is
 			// preserved unchanged since it is a different string from the token.
-			const asciiTail = "WARNING: see https://example.com for details -- read carefully"
-			if !strings.Contains(got, asciiTail) {
+			if tt.wantContains != "" && !strings.Contains(got, tt.wantContains) {
 				t.Errorf("Replace(%q) = %q, expected ASCII content %q to be preserved",
-					tt.input, got, asciiTail)
+					tt.input, got, tt.wantContains)
 			}
-			if got == tt.input {
+			if tt.wantChanged && got == tt.input {
 				t.Errorf("Replace(%q) = %q, expected emoji to be transformed", tt.input, got)
 			}
 		})

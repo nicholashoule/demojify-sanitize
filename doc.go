@@ -85,7 +85,7 @@
 //
 // Or run without installing:
 //
-//	go run github.com/nicholashoule/demojify-sanitize/cmd/demojify [flags]
+//	go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest [flags]
 //
 // See the cmd/demojify package documentation for the full CLI reference,
 // including subcommands (operational modes), flags, exit codes, and JSON

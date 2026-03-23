@@ -9,7 +9,7 @@
 //
 // Or run without installing:
 //
-//	go run github.com/nicholashoule/demojify-sanitize/cmd/demojify [flags]
+//	go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest [flags]
 //
 // # CLI Subcommands
 //

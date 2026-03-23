@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.3] - 2026-03-23
 
+### Breaking
+
+- `replacements.go` (`DefaultReplacements`): the replacement values for
+  warning, status, and severity emoji are now bracket-wrapped
+  (e.g. `WARNING` → `[WARNING]`). Callers who pattern-match or compare the
+  output of `Replace` against bare-word tokens will need to update their
+  expectations. Arrow and math/geometric substitutions (`->`, `-`, `*`, etc.)
+  are unchanged.
+
 ### Fixed
 
 - `replace.go` (`collapseRepeatedTokens`): added `len(v) < 4` guard to skip
@@ -41,8 +50,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Pending` → `[PENDING]`, `Loading` → `[LOADING]`, `Up` → `[UP]`, etc.).
   Arrows (`->`, `<-`, `=>`) and math/geometric symbols (`*`, `o`, `+`, `-`,
   `/`) are unchanged — they represent actual characters, not labels
-- `.github/rules/README.md`: removed leading blank line before the `# Rules`
-  heading
+- `replace.go` (`collapseRepeatedTokens`): tightened the collapse guard from
+  `len(v) < 4` to a bracket check (`v[0] != '[' || v[len(v)-1] != ']'`).
+  The length threshold was a coincidental proxy — all non-bracket replacement
+  values happen to be < 4 characters — but was fragile and non-obvious. The
+  new guard makes the contract explicit: only bracket-wrapped label tokens
+  (e.g. `[FAIL]`, `[WARNING]`) are eligible for deduplication.
 
 ### Added
 
