@@ -46,6 +46,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `doc.go`: added `# CLI` godoc section pointing consumers to
+  `cmd/demojify` with install (`go install`) and run-without-install
+  (`go run`) commands and a cross-reference to the full CLI reference in
+  the `cmd/demojify` package documentation
+- `cmd/demojify/main.go`: restructured package comment into four named
+  godoc sections rendered as headings on pkg.go.dev:
+  - `# CLI` -- install and run-without-install commands
+  - `# CLI Subcommands` -- documents the four operational modes (Audit,
+    Fix, Substitute, Normalize) and notes that modes may be combined
+  - `# CLI Status Markers` -- documents `[PASS]`, `[WARN]`, and `[FAIL]`
+    output tokens with a note that `-quiet` suppresses them and `-json`
+    replaces them with structured output
+  - `# CLI Flags` -- full flag reference (renamed from plain `Flags:`)
 - `replace_test.go`: `TestReplaceDefaultReplacementsPreservesASCII` — regression
   test asserting that `//`, `**`, `--`, `oo` (in `root`, `bool`, `tool`), `++`,
   and full URL strings are never collapsed when using `Replace` with
