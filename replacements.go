@@ -5,7 +5,7 @@ package demojify
 // Because a fresh copy is returned on every call, callers can add, remove, or
 // override entries without affecting other callers.
 //
-// The map covers ~137 codepoint sequences across twelve categories:
+// The map covers ~230 codepoint sequences across eighteen categories:
 //
 //   - Warning and alert symbols (U+26A0, U+203C, ...)
 //   - Status symbols: pass/fail/alert/info indicators
@@ -19,6 +19,12 @@ package demojify
 //   - Geometric shapes and bullet-point codepoints
 //   - Checkboxes (U+2610 series)
 //   - Common dingbats: hearts, diamonds, bullets
+//   - Heart variants: colored and decorative hearts
+//   - Project and issue tracking: gitmoji conventions (bug, wip, breaking, ...)
+//   - Colored squares: CI dashboards and status tables
+//   - Media controls: pause, stop, record, fast-forward/rewind
+//   - Community and contributors: bots, thanks, sponsors, contact
+//   - Platform and language indicators: Docker, Linux, Python, Rust, Go
 //
 // Variation-selector suffixed sequences (e.g., U+26A0 U+FE0F) are listed
 // alongside their bare equivalents so that both forms are substituted.
@@ -104,6 +110,7 @@ func DefaultReplacements() map[string]string {
 		"\U0001f30e":   "[GLOBAL]",
 		"\U0001f5fa":   "[MAP]",
 		"\U0001f4cd":   "[MAP]",
+		"\U0001f449":   "[SEE]", // White right-pointing backhand index (attention/callout marker)
 
 		// CI/CD workflow
 		"\U0001f680":   "[DEPLOY]",  // Rocket
@@ -113,11 +120,14 @@ func DefaultReplacements() map[string]string {
 		"\U0001f3c1":   "[DONE]",    // Checkered flag
 		"\U0001f527":   "[FIX]",     // Wrench
 		"\U0001f6e0":   "[TOOLS]",   // Hammer and wrench
+		"\U0001f9f0":   "[TOOLS]",   // Toolbox (alternate for U+1F6E0 hammer-and-wrench)
 		"\u267b":       "[RECYCLE]", // Recycling symbol
-		"\u267b\ufe0f": "[RECYCLE]",
-		"\U0001f4be":   "[SAVE]", // Floppy disk
-		"\U0001f525":   "[HOT]",  // Fire
-		"\U0001f4af":   "[100]",  // Hundred points
+		"\u267b\ufe0f": "[RECYCLE]", // Recycling symbol
+		"\U0001f4be":   "[SAVE]",    // Floppy disk
+		"\U0001f525":   "[HOT]",     // Fire
+		"\U0001f4af":   "[100]",     // Hundred points
+		"\U0001f6a8":   "[ALERT]",   // Police car revolving light (gitmoji :rotating_light: -- lint/CI failures)
+		"\U0001fa79":   "[PATCH]",   // Adhesive bandage (gitmoji :adhesive_bandage: -- minor/non-critical fix)
 
 		// Status indicators
 		"\u23f3":       "[PENDING]",
@@ -189,5 +199,108 @@ func DefaultReplacements() map[string]string {
 		"\u2023":       ">", // Triangular bullet
 		"\u25e6":       "o", // White bullet
 		"\u2219":       "*", // Bullet operator
+
+		// Heart variants (colored and decorative hearts -- all map to [HEART])
+		"\U0001f499": "[HEART]", // Blue heart
+		"\U0001f49a": "[HEART]", // Green heart
+		"\U0001f49b": "[HEART]", // Yellow heart
+		"\U0001f49c": "[HEART]", // Purple heart
+		"\U0001f5a4": "[HEART]", // Black heart
+		"\U0001f90d": "[HEART]", // White heart
+		"\U0001f90e": "[HEART]", // Brown heart
+		"\U0001f9e1": "[HEART]", // Orange heart
+		"\U0001f494": "[HEART]", // Broken heart
+		"\U0001f495": "[HEART]", // Two hearts
+		"\U0001f496": "[HEART]", // Sparkling heart
+		"\U0001f497": "[HEART]", // Growing heart
+		"\U0001f493": "[HEART]", // Beating heart
+		"\U0001f49e": "[HEART]", // Revolving hearts
+		"\U0001f49d": "[HEART]", // Heart with ribbon
+
+		// Project and issue tracking (gitmoji conventions)
+		"\U0001f41b":       "[BUG]",          // Bug
+		"\U0001f41e":       "[BUG]",          // Lady beetle (also used as bug)
+		"\U0001f4a5":       "[BREAKING]",     // Collision / breaking change
+		"\U0001f6a7":       "[CONSTRUCTION]", // Construction / work in progress
+		"\U0001f9ea":       "[TEST]",         // Test tube
+		"\U0001f9eb":       "[TEST]",         // Petri dish
+		"\U0001f516":       "[RELEASE]",      // Bookmark / tagged release
+		"\U0001f3f7":       "[TAG]",
+		"\U0001f3f7\ufe0f": "[TAG]",     // Label with selector
+		"\U0001f9f9":       "[CLEANUP]", // Broom
+		"\U0001f517":       "[LINK]",    // Link
+		"\U0001f4ac":       "[COMMENT]", // Speech balloon
+		"\U0001f4ad":       "[COMMENT]", // Thought balloon
+		"\U0001f5e3":       "[COMMENT]",
+		"\U0001f5e3\ufe0f": "[COMMENT]",  // Speaking head with selector
+		"\U0001f4e3":       "[ANNOUNCE]", // Megaphone
+		"\U0001f4e2":       "[ANNOUNCE]", // Loudspeaker
+		"\U0001f44d":       "[APPROVED]", // Thumbs up
+		"\U0001f44e":       "[REJECTED]", // Thumbs down
+		"\U0001f9e9":       "[PLUGIN]",   // Puzzle piece
+		"\U0001f3c6":       "[AWARD]",    // Trophy
+		"\U0001f396":       "[AWARD]",
+		"\U0001f396\ufe0f": "[AWARD]",     // Military medal with selector
+		"\U0001f4cb":       "[CLIPBOARD]", // Clipboard
+		"\U0001f5d1":       "[TRASH]",
+		"\U0001f5d1\ufe0f": "[TRASH]",      // Wastebasket with selector
+		"\U0001f4ce":       "[ATTACHMENT]", // Paperclip
+		"\U0001f381":       "[GIFT]",       // Wrapped gift
+		"\U0001f48e":       "[GEM]",        // Gem stone
+
+		// Colored squares (CI dashboards and status tables)
+		"\U0001f7e5": "[ERROR]",    // Red square
+		"\U0001f7e9": "[OK]",       // Green square
+		"\U0001f7e8": "[CAUTION]",  // Yellow square
+		"\U0001f7e6": "[INFO]",     // Blue square
+		"\U0001f7e7": "[WARNING]",  // Orange square
+		"\U0001f7ea": "[INFO]",     // Purple square
+		"\u2b1b":     "[INACTIVE]", // Black large square
+		"\u2b1c":     "[INACTIVE]", // White large square
+
+		// Media controls
+		"\u23f8":       "[PAUSED]",
+		"\u23f8\ufe0f": "[PAUSED]", // Pause button with selector
+		"\u23f9":       "[STOPPED]",
+		"\u23f9\ufe0f": "[STOPPED]", // Stop button with selector
+		"\u23fa":       "[RECORDING]",
+		"\u23fa\ufe0f": "[RECORDING]", // Record button with selector
+		"\u23e9":       "[NEXT]",      // Fast-forward
+		"\u23ea":       "[PREV]",      // Fast-rewind
+
+		// Community and contributors
+		"\U0001f691":       "[HOTFIX]",    // Ambulance / critical fix
+		"\U0001f500":       "[MERGE]",     // Twisted arrows / merge
+		"\U0001f501":       "[RETRY]",     // Clockwise arrows / repeat
+		"\u23eb":           "[UPGRADE]",   // Black up-pointing double triangle
+		"\u23ec":           "[DOWNGRADE]", // Black down-pointing double triangle
+		"\U0001f6e1":       "[PROTECTED]", // Shield
+		"\U0001f6e1\ufe0f": "[PROTECTED]", // Shield with selector
+		"\U0001f916":       "[BOT]",       // Robot face
+		"\U0001f91d":       "[CONTRIB]",   // Handshake
+		"\U0001f464":       "[USER]",      // Bust in silhouette
+		"\U0001f465":       "[USERS]",     // Busts in silhouette
+		"\U0001f64f":       "[THANKS]",    // Folded hands
+		"\U0001f4c4":       "[FILE]",      // Page facing up
+		"\U0001f4c3":       "[FILE]",      // Page with curl
+		"\U0001f4e7":       "[EMAIL]",     // Envelope
+		"\U0001f4b0":       "[SPONSOR]",   // Money bag
+		"\U0001f4b5":       "[SPONSOR]",   // Dollar banknote
+		"\U0001f30d":       "[GLOBAL]",    // Globe Europe/Africa
+		"\U0001f30f":       "[GLOBAL]",    // Globe Asia/Australia
+		"\u21a9":           "[BACK]",      // Leftwards arrow with hook
+		"\u21a9\ufe0f":     "[BACK]",      // With variation selector
+		"\u21aa":           "[FORWARD]",   // Rightwards arrow with hook
+		"\u21aa\ufe0f":     "[FORWARD]",   // With variation selector
+		"\U0001f507":       "[MUTE]",      // Speaker with cancellation stroke
+		"\U0001f515":       "[MUTE]",      // Bell with cancellation stroke
+
+		// Platform and language indicators
+		"\U0001f433": "[DOCKER]", // Spouting whale
+		"\U0001f40b": "[DOCKER]", // Whale
+		"\U0001f427": "[LINUX]",  // Penguin
+		"\U0001f40d": "[PYTHON]", // Snake
+		"\U0001f980": "[RUST]",   // Crab
+		"\U0001f439": "[GO]",     // Hamster (Go gopher)
 	}
 }

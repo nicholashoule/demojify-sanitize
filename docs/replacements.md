@@ -124,6 +124,7 @@ Colored circles widely used in CI dashboards, status pages, and documentation.
 | U+1F30E | Globe showing Americas | `[GLOBAL]` |
 | U+1F5FA | World map | `[MAP]` |
 | U+1F4CD | Round pushpin | `[MAP]` |
+| U+1F449 | White right-pointing backhand index | `[SEE]` |
 
 ---
 
@@ -138,11 +139,14 @@ Colored circles widely used in CI dashboards, status pages, and documentation.
 | U+1F3C1 | Chequered flag | `[DONE]` |
 | U+1F527 | Wrench | `[FIX]` |
 | U+1F6E0 | Hammer and wrench | `[TOOLS]` |
+| U+1F9F0 | Toolbox | `[TOOLS]` |
 | U+267B | Recycling symbol | `[RECYCLE]` |
 | U+267B U+FE0F | Recycling symbol (emoji) | `[RECYCLE]` |
 | U+1F4BE | Floppy disk | `[SAVE]` |
 | U+1F525 | Fire | `[HOT]` |
 | U+1F4AF | Hundred points | `[100]` |
+| U+1F6A8 | Police car revolving light | `[ALERT]` |
+| U+1FA79 | Adhesive bandage | `[PATCH]` |
 
 ---
 
