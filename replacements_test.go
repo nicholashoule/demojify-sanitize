@@ -225,6 +225,21 @@ func TestDefaultReplacementsEntries(t *testing.T) {
 		{"speaker mute", "\U0001f507", "[MUTE]"},
 		{"bell mute", "\U0001f515", "[MUTE]"},
 
+		// Media controls -- v0.8.0 additions (skip/prev track)
+		{"next track skip", "\u23ed", "[SKIP]"},
+		{"next track skip with selector", "\u23ed\ufe0f", "[SKIP]"},
+		{"prev track", "\u23ee", "[PREV]"},
+		{"prev track with selector", "\u23ee\ufe0f", "[PREV]"},
+
+		// Community/status -- v0.8.0 additions
+		{"small red triangle up", "\U0001f53c", "[UP]"},
+		{"small red triangle down", "\U0001f53d", "[DOWN]"},
+		{"backhand index up see", "\U0001f446", "[SEE]"},
+		{"backhand index down see", "\U0001f447", "[SEE]"},
+		{"backhand index left see", "\U0001f448", "[SEE]"},
+		{"horizontal traffic light status", "\U0001f6a5", "[STATUS]"},
+		{"vertical traffic light status", "\U0001f6a6", "[STATUS]"},
+
 		// Platform and language indicators
 		{"spouting whale docker", "\U0001f433", "[DOCKER]"},
 		{"whale docker", "\U0001f40b", "[DOCKER]"},
@@ -232,6 +247,38 @@ func TestDefaultReplacementsEntries(t *testing.T) {
 		{"snake python", "\U0001f40d", "[PYTHON]"},
 		{"crab rust", "\U0001f980", "[RUST]"},
 		{"hamster go", "\U0001f439", "[GO]"},
+		{"red apple macos", "\U0001f34e", "[MACOS]"},
+		{"window windows", "\U0001fa9f", "[WINDOWS]"},
+
+		// Calendar and date indicators -- v0.8.0
+		{"calendar date", "\U0001f4c5", "[DATE]"},
+		{"tear-off calendar date", "\U0001f4c6", "[DATE]"},
+		{"spiral calendar bare", "\U0001f5d3", "[CALENDAR]"},
+		{"spiral calendar with selector", "\U0001f5d3\ufe0f", "[CALENDAR]"},
+
+		// Scissors / removed -- v0.8.0
+		{"scissors bare", "\u2702", "[REMOVED]"},
+		{"scissors with selector", "\u2702\ufe0f", "[REMOVED]"},
+
+		// Deprecated / tombstone -- v0.8.0
+		{"headstone deprecated", "\U0001faa6", "[DEPRECATED]"},
+		{"name badge deprecated", "\U0001f4db", "[DEPRECATED]"},
+
+		// Flags -- v0.8.0: single-codepoint, ZWJ, tag-sequence, regional-indicator
+		{"red flag", "\U0001f6a9", "[FLAG]"},
+		{"white flag bare", "\U0001f3f3", "[FLAG]"},
+		{"white flag with selector", "\U0001f3f3\ufe0f", "[FLAG]"},
+		{"black flag", "\U0001f3f4", "[FLAG]"},
+		{"crossed flags", "\U0001f38c", "[FLAG]"},
+		{"rainbow flag ZWJ", "\U0001f3f3\ufe0f\u200d\U0001f308", "[FLAG]"},
+		{"trans flag ZWJ", "\U0001f3f3\ufe0f\u200d\u26a7\ufe0f", "[FLAG]"},
+		{"England subdivision flag", "\U0001f3f4\U000e0067\U000e0062\U000e0065\U000e006e\U000e0067\U000e007f", "[FLAG]"},
+		{"Scotland subdivision flag", "\U0001f3f4\U000e0067\U000e0062\U000e0073\U000e0063\U000e0074\U000e007f", "[FLAG]"},
+		{"Wales subdivision flag", "\U0001f3f4\U000e0067\U000e0062\U000e0077\U000e006c\U000e0073\U000e007f", "[FLAG]"},
+		{"US regional indicator", "\U0001f1fa\U0001f1f8", "[FLAG]"},
+		{"GB regional indicator", "\U0001f1ec\U0001f1e7", "[FLAG]"},
+		{"DE regional indicator", "\U0001f1e9\U0001f1ea", "[FLAG]"},
+		{"ZA regional indicator", "\U0001f1ff\U0001f1e6", "[FLAG]"},
 	}
 
 	for _, tt := range tests {

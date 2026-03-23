@@ -5,7 +5,7 @@ package demojify
 // Because a fresh copy is returned on every call, callers can add, remove, or
 // override entries without affecting other callers.
 //
-// The map covers ~230 codepoint sequences across eighteen categories:
+// The map covers ~290 codepoint sequences across twenty categories:
 //
 //   - Warning and alert symbols (U+26A0, U+203C, ...)
 //   - Status symbols: pass/fail/alert/info indicators
@@ -22,9 +22,11 @@ package demojify
 //   - Heart variants: colored and decorative hearts
 //   - Project and issue tracking: gitmoji conventions (bug, wip, breaking, ...)
 //   - Colored squares: CI dashboards and status tables
-//   - Media controls: pause, stop, record, fast-forward/rewind
+//   - Media controls: pause, stop, skip, record, fast-forward/rewind
 //   - Community and contributors: bots, thanks, sponsors, contact
-//   - Platform and language indicators: Docker, Linux, Python, Rust, Go
+//   - Platform and language indicators: Docker, Linux, Python, Rust, Go, macOS, Windows
+//   - Calendar and date indicators
+//   - Flags: country (regional-indicator pairs), subdivision (tag sequences), and ZWJ flags
 //
 // Variation-selector suffixed sequences (e.g., U+26A0 U+FE0F) are listed
 // alongside their bare equivalents so that both forms are substituted.
@@ -267,6 +269,10 @@ func DefaultReplacements() map[string]string {
 		"\u23fa\ufe0f": "[RECORDING]", // Record button with selector
 		"\u23e9":       "[NEXT]",      // Fast-forward
 		"\u23ea":       "[PREV]",      // Fast-rewind
+		"\u23ed":       "[SKIP]",      // Next track / skip chapter
+		"\u23ed\ufe0f": "[SKIP]",      // Next track with VS-16
+		"\u23ee":       "[PREV]",      // Previous track
+		"\u23ee\ufe0f": "[PREV]",      // Previous track with VS-16
 
 		// Community and contributors
 		"\U0001f691":       "[HOTFIX]",    // Ambulance / critical fix
@@ -274,6 +280,8 @@ func DefaultReplacements() map[string]string {
 		"\U0001f501":       "[RETRY]",     // Clockwise arrows / repeat
 		"\u23eb":           "[UPGRADE]",   // Black up-pointing double triangle
 		"\u23ec":           "[DOWNGRADE]", // Black down-pointing double triangle
+		"\U0001f53c":       "[UP]",        // Small red triangle up (version bump indicator)
+		"\U0001f53d":       "[DOWN]",      // Small red triangle down (version downgrade)
 		"\U0001f6e1":       "[PROTECTED]", // Shield
 		"\U0001f6e1\ufe0f": "[PROTECTED]", // Shield with selector
 		"\U0001f916":       "[BOT]",       // Robot face
@@ -294,13 +302,74 @@ func DefaultReplacements() map[string]string {
 		"\u21aa\ufe0f":     "[FORWARD]",   // With variation selector
 		"\U0001f507":       "[MUTE]",      // Speaker with cancellation stroke
 		"\U0001f515":       "[MUTE]",      // Bell with cancellation stroke
+		"\U0001f446":       "[SEE]",       // Backhand index finger pointing up (see above)
+		"\U0001f447":       "[SEE]",       // Backhand index finger pointing down (see below)
+		"\U0001f448":       "[SEE]",       // Backhand index finger pointing left
+		"\U0001f6a5":       "[STATUS]",    // Horizontal traffic light (used in roadmaps/dashboards)
+		"\U0001f6a6":       "[STATUS]",    // Vertical traffic light
 
 		// Platform and language indicators
-		"\U0001f433": "[DOCKER]", // Spouting whale
-		"\U0001f40b": "[DOCKER]", // Whale
-		"\U0001f427": "[LINUX]",  // Penguin
-		"\U0001f40d": "[PYTHON]", // Snake
-		"\U0001f980": "[RUST]",   // Crab
-		"\U0001f439": "[GO]",     // Hamster (Go gopher)
+		"\U0001f433": "[DOCKER]",  // Spouting whale
+		"\U0001f40b": "[DOCKER]",  // Whale
+		"\U0001f427": "[LINUX]",   // Penguin
+		"\U0001f40d": "[PYTHON]",  // Snake
+		"\U0001f980": "[RUST]",    // Crab
+		"\U0001f439": "[GO]",      // Hamster (Go gopher)
+		"\U0001f34e": "[MACOS]",   // Red apple (macOS platform indicator)
+		"\U0001fa9f": "[WINDOWS]", // Window (Windows platform indicator)
+
+		// Calendar and date indicators
+		"\U0001f4c5":       "[DATE]",     // Calendar
+		"\U0001f4c6":       "[DATE]",     // Tear-off calendar
+		"\U0001f5d3":       "[CALENDAR]", // Spiral notepad/calendar (U+1F5D3)
+		"\U0001f5d3\ufe0f": "[CALENDAR]", // Spiral notepad with VS-16
+
+		// Scissors / cut / removed (gitmoji for "removed" sections)
+		"\u2702":       "[REMOVED]", // Scissors (bare, U+2702)
+		"\u2702\ufe0f": "[REMOVED]", // Scissors with VS-16
+
+		// Deprecated / tombstone
+		"\U0001faa6": "[DEPRECATED]", // Headstone / tombstone
+		"\U0001f4db": "[DEPRECATED]", // Name badge (used in changelogs as "deprecated")
+
+		// Flags — all flag variants map to the generic [FLAG] token.
+		// No preference is given to any particular country, subdivision, or identity.
+		//
+		// Single-codepoint flag emoji:
+		"\U0001f6a9":       "[FLAG]", // Red flag / flagged item (U+1F6A9)
+		"\U0001f3f3":       "[FLAG]", // White flag (bare, U+1F3F3)
+		"\U0001f3f3\ufe0f": "[FLAG]", // White flag with VS-16
+		"\U0001f3f4":       "[FLAG]", // Black flag (bare codepoint; subdivision variants below)
+		"\U0001f38c":       "[FLAG]", // Crossed flags (U+1F38C)
+		//
+		// ZWJ flag sequences:
+		"\U0001f3f3\ufe0f\u200d\U0001f308":   "[FLAG]", // Rainbow flag
+		"\U0001f3f3\ufe0f\u200d\u26a7\ufe0f": "[FLAG]", // Trans flag
+		//
+		// Subdivision flags (tag sequences: U+1F3F4 + ISO 3166-2 tags + U+E007F):
+		"\U0001f3f4\U000e0067\U000e0062\U000e0065\U000e006e\U000e0067\U000e007f": "[FLAG]", // England (gb-eng)
+		"\U0001f3f4\U000e0067\U000e0062\U000e0073\U000e0063\U000e0074\U000e007f": "[FLAG]", // Scotland (gb-sct)
+		"\U0001f3f4\U000e0067\U000e0062\U000e0077\U000e006c\U000e0073\U000e007f": "[FLAG]", // Wales (gb-wls)
+		//
+		// Regional-indicator pairs (U+1F1E6–U+1F1FF × 2).
+		// Each pair encodes a two-letter ISO 3166-1 alpha-2 country code.
+		// The listed pairs → [FLAG]: no country is preferred over another.
+		"\U0001f1fa\U0001f1f8": "[FLAG]", // US
+		"\U0001f1ec\U0001f1e7": "[FLAG]", // GB
+		"\U0001f1e9\U0001f1ea": "[FLAG]", // DE
+		"\U0001f1eb\U0001f1f7": "[FLAG]", // FR
+		"\U0001f1ef\U0001f1f5": "[FLAG]", // JP
+		"\U0001f1e8\U0001f1e6": "[FLAG]", // CA
+		"\U0001f1e6\U0001f1fa": "[FLAG]", // AU
+		"\U0001f1e7\U0001f1f7": "[FLAG]", // BR
+		"\U0001f1ee\U0001f1f3": "[FLAG]", // IN
+		"\U0001f1e8\U0001f1f3": "[FLAG]", // CN
+		"\U0001f1f7\U0001f1fa": "[FLAG]", // RU
+		"\U0001f1f0\U0001f1f7": "[FLAG]", // KR
+		"\U0001f1f2\U0001f1fd": "[FLAG]", // MX
+		"\U0001f1f3\U0001f1ec": "[FLAG]", // NG
+		"\U0001f1ff\U0001f1e6": "[FLAG]", // ZA
+		"\U0001f1f8\U0001f1e6": "[FLAG]", // SA
+		"\U0001f1e6\U0001f1ea": "[FLAG]", // AE
 	}
 }

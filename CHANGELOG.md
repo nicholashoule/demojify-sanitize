@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-03-23
+
+### Added
+
+- `replacements.go` (`DefaultReplacements`): expanded from ~230 entries and 18
+  categories to ~290 entries and 20 categories; doc comment updated accordingly.
+  New and extended entries:
+  - **Calendar** (new category): `\U0001F4C5`/`\U0001F4C6` → `[DATE]`;
+    `\U0001F5D3`/`\U0001F5D3\uFE0F` → `[CALENDAR]`
+  - **Scissors** (new category): `\u2702`/`\u2702\uFE0F` → `[REMOVED]`
+  - **Deprecated** (new category): `\U0001FAA6` → `[DEPRECATED]`;
+    `\U0001F4DB` → `[DEPRECATED]`
+  - **Flags** (new category, 27 entries): single-codepoint flag emoji
+    (`\U0001F6A9`, `\U0001F3F3`, `\U0001F3F4`, `\U0001F38C`) and VS-16 variants
+    → `[FLAG]`; ZWJ sequences for flag → `[FLAG]`; tag-sequence flags for England, Scotland, and Wales → `[FLAG]`;
+    17 regional-indicator pairs (US, GB, DE, FR, JP, CA, AU, BR, IN, CN, RU,
+    KR, MX, NG, ZA, SA, AE) → `[FLAG]`
+  - **Media controls**: `\u23ED`/`\u23ED\uFE0F` → `[SKIP]`;
+    `\u23EE`/`\u23EE\uFE0F` → `[PREV]`
+  - **Community/status**: `\U0001F53C` → `[UP]`; `\U0001F53D` → `[DOWN]`;
+    `\U0001F446`/`\U0001F447`/`\U0001F448` → `[SEE]`;
+    `\U0001F6A5`/`\U0001F6A6` → `[STATUS]`
+  - **Platform**: `\U0001F34E` → `[MACOS]`; `\U0001FA9F` → `[WINDOWS]`
+- Expanded demojify end-to-end fixtures: comprehensive emoji test corpus
+  (~870 lines, 34,249 bytes) covering all `DefaultReplacements` entries, ZWJ
+  sequences, variation selectors, skin tones, keycap sequences, subdivision
+  flags, regional indicators, and Unicode 14/15/16 additions; verified
+  against both `-sub` (2,044 substitutions) and `-fix -normalize` (2,135
+  occurrences stripped) passes
+
+### Fixed
+
+- `repo_test.go` (`TestRepoAllDocsEmojiClean`, `TestRepoProductionFilesIdempotent`):
+  added `"tmp/"` to `cfg.SkipDirs` to exempt `cmd/demojify/tmp/` from the
+  repo-wide emoji hygiene scans; `tmp/` holds intentional emoji-laden test
+  fixtures analogous to the existing `_test.go` suffix exemption
+
 ## [0.7.3] - 2026-03-23
 
 ### Breaking
@@ -479,7 +516,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `example_test.go` with 17 runnable examples for pkg.go.dev
 - Apache License 2.0
 
-[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.3...HEAD
+[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.3...v0.8.0
 [0.7.3]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.0...v0.7.1
