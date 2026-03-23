@@ -663,8 +663,8 @@ func TestScanDirPreservesCRLF(t *testing.T) {
 	}
 
 	// No bare LF should remain (every newline must be \r\n).
-	cleandLF := strings.ReplaceAll(cleaned, "\r\n", "")
-	if strings.Contains(cleandLF, "\n") {
+	cleanedNoCRLF := strings.ReplaceAll(cleaned, "\r\n", "")
+	if strings.Contains(cleanedNoCRLF, "\n") {
 		t.Errorf("cleaned output contains bare LF line endings: %q", cleaned)
 	}
 

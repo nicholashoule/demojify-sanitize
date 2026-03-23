@@ -83,10 +83,10 @@ func TestFixCollapseSpacesAfterEmojiRemoval(t *testing.T) {
 //
 //	"# ⚠️  The text here. "
 //
-// must become "# WARNING The text here." rather than leaving extra spaces.
+// must become "# [WARNING] The text here." rather than leaving extra spaces.
 //
 // Consecutive identical tokens produced by adjacent repeated emoji are also
-// collapsed to a single token: "⚠️⚠️" -> "WARNING" (not "WARNINGWARNING").
+// collapsed to a single token: "⚠️⚠️" -> "[WARNING]" (not "[WARNING][WARNING]").
 // Tokens that differ (e.g. [PASS] followed by [FAIL]) are preserved as-is.
 func TestSubCollapseSpacesAfterSubstitution(t *testing.T) {
 	tests := []struct {
@@ -98,18 +98,18 @@ func TestSubCollapseSpacesAfterSubstitution(t *testing.T) {
 			// Two adjacent emoji (no space between) -> single collapsed token.
 			name:  "heading two adjacent warning emoji collapsed to one token",
 			input: "# \u26A0\uFE0F\u26A0\uFE0F  The text here. \n",
-			want:  "# WARNING The text here.\n",
+			want:  "# [WARNING] The text here.\n",
 		},
 		{
 			// Two emoji separated by a space -> single collapsed token.
 			name:  "heading two spaced warning emoji collapsed to one token",
 			input: "# \u26A0\uFE0F \u26A0\uFE0F  The text here. \n",
-			want:  "# WARNING The text here.\n",
+			want:  "# [WARNING] The text here.\n",
 		},
 		{
 			name:  "single warning emoji token with extra spaces",
 			input: "# \u26A0\uFE0F  A section title. \n",
-			want:  "# WARNING A section title.\n",
+			want:  "# [WARNING] A section title.\n",
 		},
 		{
 			name:  "checkmark token with trailing space",
@@ -136,7 +136,7 @@ func TestSubCollapseSpacesAfterSubstitution(t *testing.T) {
 		{
 			name:  "multi-line with tokens",
 			input: "# \u26A0\uFE0F  Warning title. \n\nBody text.\n",
-			want:  "# WARNING Warning title.\n\nBody text.\n",
+			want:  "# [WARNING] Warning title.\n\nBody text.\n",
 		},
 	}
 

@@ -388,7 +388,11 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 			// convention. This prevents emoji removal from silently changing
 			// \r\n → \n for every CRLF file touched, which would create noisy
 			// git diffs unrelated to the emoji changes.
-			hasCRLF := strings.Contains(original, "\r\n")
+			// Only treat the file as pure-CRLF (and restore \r\n) when all
+			// line endings are \r\n; mixed or bare-LF files are left with LF
+			// so we do not spread \r\n further than the file's own convention.
+			hasCRLF := strings.Contains(original, "\r\n") &&
+				!strings.Contains(strings.ReplaceAll(original, "\r\n", ""), "\n")
 			cleaned = crlfReplacer.Replace(cleaned)
 			cleaned = collapseInlineSpaces(cleaned)
 			cleaned = trailingSpaceRE.ReplaceAllString(cleaned, "\n")

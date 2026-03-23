@@ -38,8 +38,8 @@ func TestDefaultReplacementsEntries(t *testing.T) {
 		want     string
 	}{
 		// Warning and alerts
-		{"warning bare", "\u26a0", "WARNING"},
-		{"warning with selector", "\u26a0\ufe0f", "WARNING"},
+		{"warning bare", "\u26a0", "[WARNING]"},
+		{"warning with selector", "\u26a0\ufe0f", "[WARNING]"},
 		{"double exclamation", "\u203c", "[ALERT]"},
 
 		// Status symbols
@@ -56,8 +56,8 @@ func TestDefaultReplacementsEntries(t *testing.T) {
 		{"light bulb", "\U0001f4a1", "[TIP]"},
 		{"pushpin", "\U0001f4cc", "[PINNED]"},
 		{"key", "\U0001f511", "[KEY]"},
-		{"locked", "\U0001f512", "LOCKED"},
-		{"unlocked", "\U0001f513", "UNLOCKED"},
+		{"locked", "\U0001f512", "[LOCKED]"},
+		{"unlocked", "\U0001f513", "[UNLOCKED]"},
 
 		// Information symbol
 		{"info bare", "\u2139", "[INFO]"},
@@ -78,13 +78,13 @@ func TestDefaultReplacementsEntries(t *testing.T) {
 		{"prohibited", "\U0001f6ab", "[PROHIBITED]"},
 
 		// Cloud and deployment
-		{"cloud", "\u2601", "Cloud"},
-		{"cloud with selector", "\u2601\ufe0f", "Cloud"},
-		{"chart increasing", "\U0001f4c8", "Growth"},
-		{"notebook", "\U0001f4da", "Documentation"},
-		{"gear", "\u2699", "Configuration"},
-		{"gear with selector", "\u2699\ufe0f", "Configuration"},
-		{"laptop", "\U0001f4bb", "Code"},
+		{"cloud", "\u2601", "[CLOUD]"},
+		{"cloud with selector", "\u2601\ufe0f", "[CLOUD]"},
+		{"chart increasing", "\U0001f4c8", "[GROWTH]"},
+		{"notebook", "\U0001f4da", "[DOCS]"},
+		{"gear", "\u2699", "[CONFIG]"},
+		{"gear with selector", "\u2699\ufe0f", "[CONFIG]"},
+		{"laptop", "\U0001f4bb", "[CODE]"},
 
 		// CI/CD workflow
 		{"rocket - deploy", "\U0001f680", "[DEPLOY]"},
@@ -174,12 +174,12 @@ func TestReplaceWithDefaultReplacements(t *testing.T) {
 		{
 			name:  "warning bare codepoint",
 			input: "\u26a0 check config",
-			want:  "WARNING check config",
+			want:  "[WARNING] check config",
 		},
 		{
 			name:  "warning variation selector preferred over bare",
 			input: "\u26a0\ufe0f check config",
-			want:  "WARNING check config",
+			want:  "[WARNING] check config",
 		},
 		{
 			name:  "arrow substitution",
@@ -204,7 +204,7 @@ func TestReplaceWithDefaultReplacements(t *testing.T) {
 		{
 			name:  "gear configuration",
 			input: "\u2699\ufe0f settings",
-			want:  "Configuration settings",
+			want:  "[CONFIG] settings",
 		},
 		{
 			name:  "unmapped emoji is stripped",

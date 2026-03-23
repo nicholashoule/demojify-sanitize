@@ -161,7 +161,7 @@ func ExampleReplace_defaultReplacements() {
 	out := demojify.Replace("\u2705 tests passed, \u274c build failed, \u26a0 review needed", demojify.DefaultReplacements())
 	fmt.Println(out)
 	// Output:
-	// [PASS] tests passed, [FAIL] build failed, WARNING review needed
+	// [PASS] tests passed, [FAIL] build failed, [WARNING] review needed
 }
 
 // ExampleReplaceFile shows how to apply a substitution map to a file in place.

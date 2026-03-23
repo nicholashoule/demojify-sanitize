@@ -14,8 +14,8 @@ shown below. Any emoji **not** present in the map is subsequently stripped by
 
 | Codepoint | Sequence | Replacement |
 |-----------|----------|-------------|
-| U+26A0 U+FE0F | Warning sign (emoji) | `WARNING` |
-| U+26A0 | Warning sign | `WARNING` |
+| U+26A0 U+FE0F | Warning sign (emoji) | `[WARNING]` |
+| U+26A0 | Warning sign | `[WARNING]` |
 
 ---
 
@@ -90,8 +90,8 @@ Colored circles widely used in CI dashboards, status pages, and documentation.
 | U+1F514 | Bell | `[NOTIFICATION]` |
 | U+1F4CC | Pushpin | `[PINNED]` |
 | U+1F511 | Key | `[KEY]` |
-| U+1F512 | Padlock | `LOCKED` |
-| U+1F513 | Open padlock | `UNLOCKED` |
+| U+1F512 | Padlock | `[LOCKED]` |
+| U+1F513 | Open padlock | `[UNLOCKED]` |
 
 ---
 
@@ -99,31 +99,31 @@ Colored circles widely used in CI dashboards, status pages, and documentation.
 
 | Codepoint | Sequence | Replacement |
 |-----------|----------|-------------|
-| U+2601 U+FE0F | Cloud (emoji) | `Cloud` |
-| U+2601 | Cloud | `Cloud` |
-| U+1F4CA | Bar chart | `Report` |
-| U+1F4C8 | Chart with upwards trend | `Growth` |
-| U+1F4C9 | Chart with downwards trend | `Decline` |
-| U+1F4DA | Books | `Documentation` |
-| U+1F4D6 | Open book | `Guide` |
-| U+1F4DD | Memo | `Note` |
-| U+1F4C1 | File folder | `Directory` |
-| U+1F4C2 | Open file folder | `Folder` |
-| U+1F50D | Left-pointing magnifying glass | `Search` |
-| U+1F50E | Right-pointing magnifying glass | `Search` |
-| U+1F510 | Closed lock with key | `Security` |
-| U+2699 | Gear | `Configuration` |
-| U+2699 U+FE0F | Gear (emoji) | `Configuration` |
-| U+26A1 | High voltage | `Settings` |
-| U+1F3D7 | Building construction | `Build` |
-| U+1F3AF | Direct hit | `Target` |
-| U+1F3A8 | Artist palette | `Design` |
-| U+1F4BB | Personal computer | `Code` |
-| U+1F5A5 | Desktop computer | `Server` |
-| U+1F310 | Globe with meridians | `Network` |
-| U+1F30E | Globe showing Americas | `Global` |
-| U+1F5FA | World map | `Map` |
-| U+1F4CD | Round pushpin | `Map` |
+| U+2601 U+FE0F | Cloud (emoji) | `[CLOUD]` |
+| U+2601 | Cloud | `[CLOUD]` |
+| U+1F4CA | Bar chart | `[REPORT]` |
+| U+1F4C8 | Chart with upwards trend | `[GROWTH]` |
+| U+1F4C9 | Chart with downwards trend | `[DECLINE]` |
+| U+1F4DA | Books | `[DOCS]` |
+| U+1F4D6 | Open book | `[GUIDE]` |
+| U+1F4DD | Memo | `[NOTE]` |
+| U+1F4C1 | File folder | `[DIR]` |
+| U+1F4C2 | Open file folder | `[FOLDER]` |
+| U+1F50D | Left-pointing magnifying glass | `[SEARCH]` |
+| U+1F50E | Right-pointing magnifying glass | `[SEARCH]` |
+| U+1F510 | Closed lock with key | `[SECURITY]` |
+| U+2699 | Gear | `[CONFIG]` |
+| U+2699 U+FE0F | Gear (emoji) | `[CONFIG]` |
+| U+26A1 | High voltage | `[SETTINGS]` |
+| U+1F3D7 | Building construction | `[BUILD]` |
+| U+1F3AF | Direct hit | `[TARGET]` |
+| U+1F3A8 | Artist palette | `[DESIGN]` |
+| U+1F4BB | Personal computer | `[CODE]` |
+| U+1F5A5 | Desktop computer | `[SERVER]` |
+| U+1F310 | Globe with meridians | `[NETWORK]` |
+| U+1F30E | Globe showing Americas | `[GLOBAL]` |
+| U+1F5FA | World map | `[MAP]` |
+| U+1F4CD | Round pushpin | `[MAP]` |
 
 ---
 
@@ -150,21 +150,21 @@ Colored circles widely used in CI dashboards, status pages, and documentation.
 
 | Codepoint | Sequence | Replacement |
 |-----------|----------|-------------|
-| U+23F3 | Hourglass with flowing sand | `Pending` |
-| U+23F3 U+FE0F | Hourglass with flowing sand (emoji) | `Pending` |
-| U+23F1 | Stopwatch | `Timer` |
-| U+23F1 U+FE0F | Stopwatch (emoji) | `Timer` |
-| U+23F0 | Alarm clock | `Timer` |
-| U+1F504 | Counterclockwise arrows | `Refresh` |
-| U+231B | Hourglass | `Loading` |
-| U+231B U+FE0F | Hourglass (emoji) | `Loading` |
-| U+2B06 | Upwards black arrow | `Up` |
-| U+2B07 | Downwards black arrow | `Down` |
-| U+27A1 | Black rightwards arrow | `Next` |
-| U+2B05 | Leftwards black arrow | `Previous` |
-| U+1F440 | Eyes | `See` |
-| U+1F4E4 | Outbox tray | `From` |
-| U+2611 U+FE0F | Ballot box with check (emoji) | `Selected` |
+| U+23F3 | Hourglass with flowing sand | `[PENDING]` |
+| U+23F3 U+FE0F | Hourglass with flowing sand (emoji) | `[PENDING]` |
+| U+23F1 | Stopwatch | `[TIMER]` |
+| U+23F1 U+FE0F | Stopwatch (emoji) | `[TIMER]` |
+| U+23F0 | Alarm clock | `[TIMER]` |
+| U+1F504 | Counterclockwise arrows | `[REFRESH]` |
+| U+231B | Hourglass | `[LOADING]` |
+| U+231B U+FE0F | Hourglass (emoji) | `[LOADING]` |
+| U+2B06 | Upwards black arrow | `[UP]` |
+| U+2B07 | Downwards black arrow | `[DOWN]` |
+| U+27A1 | Black rightwards arrow | `[NEXT]` |
+| U+2B05 | Leftwards black arrow | `[PREV]` |
+| U+1F440 | Eyes | `[SEE]` |
+| U+1F4E4 | Outbox tray | `[FROM]` |
+| U+2611 U+FE0F | Ballot box with check (emoji) | `[SELECTED]` |
 
 ---
 

@@ -1,6 +1,7 @@
 package demojify_test
 
 import (
+	"strings"
 	"testing"
 
 	demojify "github.com/nicholashoule/demojify-sanitize"
@@ -358,7 +359,7 @@ func TestReplaceDefaultReplacementsPreservesASCII(t *testing.T) {
 		{"CLI double dash preserved", "--flag value"},
 		{"triple dash separator preserved", "---"},
 		{"word with oo preserved", "root bool tool"},
-		{"word with xx preserved", "Roo Code"},
+		{"word with oo preserved (capitalized)", "Roo Code"},
 		{"double plus preserved", "count++"},
 		{"double caret preserved", "x^^2"},
 		{"full source-like line preserved", "if err != nil { // handle error\n\treturn nil, fmt.Errorf(\"err: %w\", err)\n}"},
@@ -371,10 +372,25 @@ func TestReplaceDefaultReplacementsPreservesASCII(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := demojify.Replace(tt.input, repl)
-			// For the mixed case strip the expected emoji substitution; the
-			// ASCII content surrounding the emoji must be preserved exactly.
-			// We check the most critical invariants individually.
-			_ = got
+			if tt.name != "mixed content emoji and ASCII" {
+				// Pure-ASCII inputs must be preserved exactly.
+				if got != tt.input {
+					t.Errorf("Replace(%q) = %q, want %q", tt.input, got, tt.input)
+				}
+				return
+			}
+			// For the mixed case, the ASCII content surrounding the emoji must be
+			// preserved exactly, and the emoji itself must be transformed.
+			// ⚠ (U+26A0) maps to "[WARNING]"; "WARNING:" in the original text is
+			// preserved unchanged since it is a different string from the token.
+			const asciiTail = "WARNING: see https://example.com for details -- read carefully"
+			if !strings.Contains(got, asciiTail) {
+				t.Errorf("Replace(%q) = %q, expected ASCII content %q to be preserved",
+					tt.input, got, asciiTail)
+			}
+			if got == tt.input {
+				t.Errorf("Replace(%q) = %q, expected emoji to be transformed", tt.input, got)
+			}
 		})
 	}
 
@@ -396,7 +412,7 @@ func TestReplaceDefaultReplacementsPreservesASCII(t *testing.T) {
 	for _, tc := range invariants {
 		t.Run(tc.name, func(t *testing.T) {
 			got := demojify.Replace(tc.input, repl)
-			if !contains(got, tc.mustContain) {
+			if !strings.Contains(got, tc.mustContain) {
 				t.Errorf("Replace(%q) = %q: ASCII sequence %q was incorrectly collapsed",
 					tc.input, got, tc.mustContain)
 			}
@@ -417,14 +433,14 @@ func TestReplaceLongTokensStillCollapse(t *testing.T) {
 		want  string
 	}{
 		{
-			name:  "adjacent warning emoji collapse to one WARNING",
+			name:  "adjacent warning emoji collapse to one [WARNING]",
 			input: "\u26a0 \u26a0",
-			want:  "WARNING",
+			want:  "[WARNING]",
 		},
 		{
-			name:  "concatenated warning emoji collapse to one WARNING",
+			name:  "concatenated warning emoji collapse to one [WARNING]",
 			input: "\u26a0\u26a0",
-			want:  "WARNING",
+			want:  "[WARNING]",
 		},
 		{
 			name:  "adjacent fail emoji collapse to one [FAIL]",
@@ -450,20 +466,6 @@ func TestReplaceLongTokensStillCollapse(t *testing.T) {
 			}
 		})
 	}
-}
-
-// contains is a helper used by the regression tests above.
-func contains(s, sub string) bool {
-	return len(sub) > 0 && len(s) >= len(sub) && (s == sub || len(s) > 0 && containsStr(s, sub))
-}
-
-func containsStr(s, sub string) bool {
-	for i := 0; i <= len(s)-len(sub); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
-	}
-	return false
 }
 
 // TestReplaceConcurrent verifies that Replace and ReplaceCount are safe for

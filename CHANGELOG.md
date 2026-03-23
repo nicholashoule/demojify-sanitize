@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every URL and Go comment), `**` → `*` (converting Markdown bold to italic),
   `--` → `-` (stripping CLI flag docs), and `oo` → `o` (corrupting words like
   `root` and `bool`). Only label-like tokens of 4+ characters (`[FAIL]`,
-  `WARNING`, `[DEPLOY]`, etc.) are now eligible for deduplication — the
+  `[WARNING]`, `[DEPLOY]`, etc.) are now eligible for deduplication — the
   intended behavior when two adjacent identical emoji both produce the same
   substitution token
 - `scan.go` (`scanDirCounted`): CRLF (`\r\n`) line endings are now restored
@@ -28,17 +28,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   converted to LF during emoji removal — even when `NormalizeWhitespace` was
   false — creating noisy git diffs unrelated to emoji changes. The fix detects
   `hasCRLF` before the cleanup block and re-applies `\r\n` in the output when
-  the original file used Windows line endings
+  the original file used Windows line endings. Detection is now robust: CRLF
+  restoration only applies when the file is pure-CRLF (contains `\r\n` and
+  no bare `\n` after stripping those pairs), preventing false-positive rewrites
+  on mixed-ending or LF-only files that happen to contain the byte sequence
+  `\r\n` in a string literal
+- `replacements.go` (`DefaultReplacements`): all unbracketed plain-word
+  replacement values are now bracket-wrapped and uppercased for consistency
+  with the rest of the map. Affected tokens: `WARNING` → `[WARNING]`,
+  `LOCKED` → `[LOCKED]`, `UNLOCKED` → `[UNLOCKED]`, and all cloud/deployment
+  and status-indicator words (`Cloud` → `[CLOUD]`, `Configuration` → `[CONFIG]`,
+  `Pending` → `[PENDING]`, `Loading` → `[LOADING]`, `Up` → `[UP]`, etc.).
+  Arrows (`->`, `<-`, `=>`) and math/geometric symbols (`*`, `o`, `+`, `-`,
+  `/`) are unchanged — they represent actual characters, not labels
+- `.github/rules/README.md`: removed leading blank line before the `# Rules`
+  heading
 
 ### Added
 
 - `replace_test.go`: `TestReplaceDefaultReplacementsPreservesASCII` — regression
   test asserting that `//`, `**`, `--`, `oo` (in `root`, `bool`, `tool`), `++`,
   and full URL strings are never collapsed when using `Replace` with
-  `DefaultReplacements()`
+  `DefaultReplacements()`; pure-ASCII cases assert `got == input` exactly;
+  mixed emoji/ASCII case asserts the ASCII tail is preserved and the emoji is
+  transformed
 - `replace_test.go`: `TestReplaceLongTokensStillCollapse` — complementary test
-  verifying that adjacent identical emoji (warning sign x2, check mark x3, rocket x2) still collapse
-  to a single label token after the `collapseRepeatedTokens` fix
+  verifying that adjacent identical emoji (warning sign ×2, check mark ×3,
+  rocket ×2) still collapse to a single label token after the
+  `collapseRepeatedTokens` fix
 - `scan_dir_test.go`: `TestScanDirPreservesCRLF` — regression test verifying
   that emoji is removed and CRLF line endings are preserved in the `Cleaned`
   output when `NormalizeWhitespace` is false
@@ -61,6 +78,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `Path traversal protection` (`TestFixDir/does_not_write_outside_root`)
   - `ASCII preservation regression` (`TestReplaceDefaultReplacementsPreservesASCII`,
     `TestReplaceLongTokensStillCollapse`)
+- `docs/design.md`: "Why `collapseRepeatedTokens` skips tokens shorter than 4
+  characters" — explains the `/`, `-`, `*`, `o` false-positive risk and why
+  only label-like tokens are safe to deduplicate
+- `docs/design.md`: "Why CRLF line endings are preserved" — documents the
+  internal LF-normalization → cleanup → CRLF-restoration sequence and the
+  pure-CRLF detection guard
+
+### Changed
+
+- `replace_test.go`: custom `contains`/`containsStr` helper functions replaced
+  with `strings.Contains` directly at the call site; test case
+  `"word with xx preserved"` renamed to `"word with oo preserved (capitalized)"`
+  to accurately describe its input `"Roo Code"`
+- `scan_dir_test.go`: variable `cleandLF` renamed to `cleanedNoCRLF` for
+  clarity
 
 ## [0.7.2] - 2026-03-22
 
