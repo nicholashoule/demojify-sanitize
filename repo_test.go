@@ -64,6 +64,8 @@ func TestRepoAllDocsEmojiClean(t *testing.T) {
 	cfg.Extensions = []string{".md"}
 	// docs/ is intentionally included: all production docs must be emoji-free.
 	// Use Unicode escape sequences (\U0001F680) when writing about emoji in docs.
+	// tmp/ directories hold intentionally emoji-laden test fixtures; skip them.
+	cfg.SkipDirs = append(cfg.SkipDirs, "tmp/")
 
 	findings, err := demojify.ScanDir(cfg)
 	if err != nil {
@@ -89,6 +91,8 @@ func TestRepoProductionFilesIdempotent(t *testing.T) {
 	cfg.Extensions = []string{".go", ".md"}
 	// docs/ is included: production docs must be clean and idempotent.
 	// RemoveEmojis only; NormalizeWhitespace stays false (default).
+	// tmp/ directories hold intentionally emoji-laden test fixtures; skip them.
+	cfg.SkipDirs = append(cfg.SkipDirs, "tmp/")
 
 	findings, err := demojify.ScanDir(cfg)
 	if err != nil {
