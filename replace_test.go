@@ -1,6 +1,7 @@
 package demojify_test
 
 import (
+	"strings"
 	"testing"
 
 	demojify "github.com/nicholashoule/demojify-sanitize"
@@ -332,6 +333,142 @@ func TestReplaceCount(t *testing.T) {
 			}
 			if gotCount != tt.wantCount {
 				t.Errorf("ReplaceCount(%q) count = %d, want %d", tt.input, gotCount, tt.wantCount)
+			}
+		})
+	}
+}
+
+// TestReplaceDefaultReplacementsPreservesASCII is a regression test for the
+// bug reported by a downstream consumer where running Replace with
+// DefaultReplacements() destroyed plain ASCII content: "//" was collapsed to
+// "/", "**" to "*", "--" to "-", and "oo" in words like "root" and "bool" to
+// "o". The root cause was collapseRepeatedTokens running against single-
+// character replacement values (e.g. "/" from U+2797, "*" from U+2022, "-"
+// from U+2796, "o" from U+25CB) that appear legitimately throughout source
+// code and documentation.
+func TestReplaceDefaultReplacementsPreservesASCII(t *testing.T) {
+	repl := demojify.DefaultReplacements()
+
+	tests := []struct {
+		name         string
+		input        string
+		wantContains string // non-empty: output must contain this substring (emoji was transformed)
+		wantChanged  bool   // true: output must differ from input
+	}{
+		{name: "URL double slash preserved", input: "https://example.com/path"},
+		{name: "Go comment double slash preserved", input: "// this is a comment"},
+		{name: "Markdown bold preserved", input: "**bold text**"},
+		{name: "CLI double dash preserved", input: "--flag value"},
+		{name: "triple dash separator preserved", input: "---"},
+		{name: "word with oo preserved", input: "root bool tool"},
+		{name: "word with oo preserved (capitalized)", input: "Roo Code"},
+		{name: "double plus preserved", input: "count++"},
+		{name: "double caret preserved", input: "x^^2"},
+		{name: "full source-like line preserved", input: "if err != nil { // handle error\n\treturn nil, fmt.Errorf(\"err: %w\", err)\n}"},
+		{name: "URL in markdown preserved", input: "See [docs](https://example.com/page#section) for details."},
+		{
+			name:         "mixed content emoji and ASCII",
+			input:        "\u26a0 WARNING: see https://example.com for details -- read carefully",
+			wantContains: "WARNING: see https://example.com for details -- read carefully",
+			wantChanged:  true,
+		},
+	}
+
+	// The inputs above contain no emoji (or only emoji that map to long tokens),
+	// so the only ASCII sequences present must emerge from the output unchanged.
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := demojify.Replace(tt.input, repl)
+			if tt.wantContains == "" && !tt.wantChanged {
+				// Pure-ASCII inputs must be preserved exactly.
+				if got != tt.input {
+					t.Errorf("Replace(%q) = %q, want %q", tt.input, got, tt.input)
+				}
+				return
+			}
+			// Mixed content: ASCII surrounding the emoji must be preserved, and
+			// the emoji itself must be transformed.
+			// ⚠ (U+26A0) maps to "[WARNING]"; "WARNING:" in the original text is
+			// preserved unchanged since it is a different string from the token.
+			if tt.wantContains != "" && !strings.Contains(got, tt.wantContains) {
+				t.Errorf("Replace(%q) = %q, expected ASCII content %q to be preserved",
+					tt.input, got, tt.wantContains)
+			}
+			if tt.wantChanged && got == tt.input {
+				t.Errorf("Replace(%q) = %q, expected emoji to be transformed", tt.input, got)
+			}
+		})
+	}
+
+	// Explicit invariant checks: none of these double-char sequences must be collapsed.
+	invariants := []struct {
+		name        string
+		input       string
+		mustContain string
+	}{
+		{"double slash in URL", "visit https://go.dev/", "//"},
+		{"double slash comment", "// TODO: fix", "//"},
+		{"double star bold", "**important**", "**"},
+		{"double dash flag", "run with --verbose", "--"},
+		{"oo in root", "root directory", "oo"},
+		{"oo in bool", "bool value", "oo"},
+		{"oo in tool", "go tool", "oo"},
+		{"double plus", "i++", "++"},
+	}
+	for _, tc := range invariants {
+		t.Run(tc.name, func(t *testing.T) {
+			got := demojify.Replace(tc.input, repl)
+			if !strings.Contains(got, tc.mustContain) {
+				t.Errorf("Replace(%q) = %q: ASCII sequence %q was incorrectly collapsed",
+					tc.input, got, tc.mustContain)
+			}
+		})
+	}
+}
+
+// TestReplaceLongTokensStillCollapse verifies that the fix to
+// collapseRepeatedTokens did not break the intended behavior: adjacent
+// identical emoji that both map to a long label token are still collapsed to a
+// single occurrence.
+func TestReplaceLongTokensStillCollapse(t *testing.T) {
+	repl := demojify.DefaultReplacements()
+
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "adjacent warning emoji collapse to one [WARNING]",
+			input: "\u26a0 \u26a0",
+			want:  "[WARNING]",
+		},
+		{
+			name:  "concatenated warning emoji collapse to one [WARNING]",
+			input: "\u26a0\u26a0",
+			want:  "[WARNING]",
+		},
+		{
+			name:  "adjacent fail emoji collapse to one [FAIL]",
+			input: "\u274c \u274c build",
+			want:  "[FAIL] build",
+		},
+		{
+			name:  "three pass emoji collapse to one [PASS]",
+			input: "\u2705 \u2705 \u2705 ok",
+			want:  "[PASS] ok",
+		},
+		{
+			name:  "adjacent deploy emoji collapse to one [DEPLOY]",
+			input: "\U0001f680 \U0001f680",
+			want:  "[DEPLOY]",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := demojify.Replace(tt.input, repl)
+			if got != tt.want {
+				t.Errorf("Replace(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
 	}

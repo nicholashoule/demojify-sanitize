@@ -103,6 +103,30 @@ not removed.
 The `-sub` flag in the CLI does exactly this: substitutes known emoji with text
 equivalents, then `Demojify` removes any residual unmapped codepoints.
 
+`DefaultReplacements()` covers approximately 230 codepoint sequences across
+eighteen categories:
+
+1. Warning and Alerts
+2. Status Symbols
+3. Information
+4. Severity (colored circles)
+5. Stop and Prohibition
+6. Favorites and Highlights
+7. Cloud and Deployment
+8. CI/CD Workflow
+9. Status Indicators
+10. Arrows
+11. Math Operators
+12. Geometric Shapes
+13. Checkboxes
+14. Common Dingbats
+15. Heart Variants
+16. Project and Issue Tracking
+17. Colored Squares
+18. Media Controls
+19. Community and Contributors
+20. Platform and Language Indicators
+
 See [replacements.md](replacements.md) for the full substitution table.
 
 ## Checking coverage programmatically

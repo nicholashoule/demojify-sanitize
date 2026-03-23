@@ -96,6 +96,16 @@ safe defaults for a typical Go module repo. The scanner reuses the same
 `Options` struct and `Sanitize` pipeline that callers already know, keeping
 the API surface consistent.
 
+**Why CRLF line endings are preserved:**
+The scanner internally normalizes `\r\n` to `\n` before running inline-space
+cleanup, because the trailing-space regex and space-collapse logic must treat
+all platforms consistently. After cleanup, the original line-ending convention
+is restored: if the source file used `\r\n`, the output uses `\r\n`. This
+ensures that removing emoji from a Windows-native file does not silently convert
+it to LF line endings, which would produce noisy git diffs unrelated to the
+actual emoji changes. The restoration only applies when `NormalizeWhitespace`
+is false; callers who request full whitespace normalization accept LF output.
+
 ## Substitution pipeline
 
 The `Replace` family of functions (`Replace`, `ReplaceFile`, `ReplaceCount`,
@@ -126,6 +136,19 @@ A shared global map is not safe for concurrent mutation. Returning a fresh
 copy on every call lets each caller add, remove, or override entries without
 affecting other goroutines or call sites. The copy cost is negligible (~137
 entries) compared to the I/O in `ReplaceFile` or the regex in `Demojify`.
+
+**Why `collapseRepeatedTokens` skips tokens shorter than 4 characters:**
+Several emoji in `DefaultReplacements()` map to short ASCII sequences: `/`
+(U+2797 heavy division sign), `-` (U+2796 heavy minus), `*` (U+2022 bullet),
+`o` (U+25CB white circle), `->` (U+2192 rightwards arrow). These appear
+legitimately throughout source code (e.g., `//` in Go comments, `**` in
+Markdown bold, `--` in CLI flags, `->` in documentation). Collapsing them
+would corrupt any document containing two adjacent instances — for example,
+`Replace` on a Go source file would silently rewrite `//` to `/`, breaking
+every URL and comment. Only tokens of 4 or more characters (e.g., `[FAIL]`,
+`[WARNING]`, `WARNING`, `[DEPLOY]`) are label-like quantities produced
+exclusively by emoji substitution and are safe to deduplicate when two
+adjacent identical emoji both map to the same replacement string.
 
 **Why `ReplaceFile` uses an atomic rename:**
 Writing directly to the target file leaves a window where a crash or

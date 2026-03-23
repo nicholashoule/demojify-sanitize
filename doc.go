@@ -74,4 +74,20 @@
 //     [ScanConfig.CollectMatches] (populates [Finding.Matches] per file).
 //   - [DefaultScanConfig] returns a config that scans all file types with
 //     sensible directory and suffix exemptions.
+//
+// # CLI
+//
+// A standalone command-line tool is provided at
+// github.com/nicholashoule/demojify-sanitize/cmd/demojify.
+// Install it with:
+//
+//	go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest
+//
+// Or run without installing:
+//
+//	go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest [flags]
+//
+// See the cmd/demojify package documentation for the full CLI reference,
+// including subcommands (operational modes), flags, exit codes, and JSON
+// output format.
 package demojify

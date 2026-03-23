@@ -384,11 +384,26 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 			// and at the very end of the file is also trimmed so callers do
 			// not need -normalize just to get a clean result.
 			// Normalize CRLF/CR to LF so regex-based whitespace cleanup is
-			// consistent across platforms.
+			// consistent across platforms, then restore the original line-ending
+			// convention. This prevents emoji removal from silently changing
+			// \r\n → \n for every CRLF file touched, which would create noisy
+			// git diffs unrelated to the emoji changes.
+			// Only treat the file as pure-CRLF (and restore \r\n) when all
+			// line endings are \r\n; mixed or bare-LF files are left with LF
+			// so we do not spread \r\n further than the file's own convention.
+			hasCRLF := strings.Contains(original, "\r\n") &&
+				!strings.Contains(strings.ReplaceAll(original, "\r\n", ""), "\n")
 			cleaned = crlfReplacer.Replace(cleaned)
 			cleaned = collapseInlineSpaces(cleaned)
 			cleaned = trailingSpaceRE.ReplaceAllString(cleaned, "\n")
 			cleaned = strings.TrimRight(cleaned, " \t")
+			// Restore Windows line endings when the original used them and the
+			// caller did not request full whitespace normalization. At this
+			// point all line endings in cleaned are bare \n (crlfReplacer ran
+			// above), so the replacement is safe and will not produce \r\r\n.
+			if hasCRLF {
+				cleaned = strings.ReplaceAll(cleaned, "\n", "\r\n")
+			}
 		}
 
 		if cleaned != original {

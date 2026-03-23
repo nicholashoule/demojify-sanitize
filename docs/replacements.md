@@ -14,8 +14,8 @@ shown below. Any emoji **not** present in the map is subsequently stripped by
 
 | Codepoint | Sequence | Replacement |
 |-----------|----------|-------------|
-| U+26A0 U+FE0F | Warning sign (emoji) | `WARNING` |
-| U+26A0 | Warning sign | `WARNING` |
+| U+26A0 U+FE0F | Warning sign (emoji) | `[WARNING]` |
+| U+26A0 | Warning sign | `[WARNING]` |
 
 ---
 
@@ -90,8 +90,8 @@ Colored circles widely used in CI dashboards, status pages, and documentation.
 | U+1F514 | Bell | `[NOTIFICATION]` |
 | U+1F4CC | Pushpin | `[PINNED]` |
 | U+1F511 | Key | `[KEY]` |
-| U+1F512 | Padlock | `LOCKED` |
-| U+1F513 | Open padlock | `UNLOCKED` |
+| U+1F512 | Padlock | `[LOCKED]` |
+| U+1F513 | Open padlock | `[UNLOCKED]` |
 
 ---
 
@@ -99,31 +99,32 @@ Colored circles widely used in CI dashboards, status pages, and documentation.
 
 | Codepoint | Sequence | Replacement |
 |-----------|----------|-------------|
-| U+2601 U+FE0F | Cloud (emoji) | `Cloud` |
-| U+2601 | Cloud | `Cloud` |
-| U+1F4CA | Bar chart | `Report` |
-| U+1F4C8 | Chart with upwards trend | `Growth` |
-| U+1F4C9 | Chart with downwards trend | `Decline` |
-| U+1F4DA | Books | `Documentation` |
-| U+1F4D6 | Open book | `Guide` |
-| U+1F4DD | Memo | `Note` |
-| U+1F4C1 | File folder | `Directory` |
-| U+1F4C2 | Open file folder | `Folder` |
-| U+1F50D | Left-pointing magnifying glass | `Search` |
-| U+1F50E | Right-pointing magnifying glass | `Search` |
-| U+1F510 | Closed lock with key | `Security` |
-| U+2699 | Gear | `Configuration` |
-| U+2699 U+FE0F | Gear (emoji) | `Configuration` |
-| U+26A1 | High voltage | `Settings` |
-| U+1F3D7 | Building construction | `Build` |
-| U+1F3AF | Direct hit | `Target` |
-| U+1F3A8 | Artist palette | `Design` |
-| U+1F4BB | Personal computer | `Code` |
-| U+1F5A5 | Desktop computer | `Server` |
-| U+1F310 | Globe with meridians | `Network` |
-| U+1F30E | Globe showing Americas | `Global` |
-| U+1F5FA | World map | `Map` |
-| U+1F4CD | Round pushpin | `Map` |
+| U+2601 U+FE0F | Cloud (emoji) | `[CLOUD]` |
+| U+2601 | Cloud | `[CLOUD]` |
+| U+1F4CA | Bar chart | `[REPORT]` |
+| U+1F4C8 | Chart with upwards trend | `[GROWTH]` |
+| U+1F4C9 | Chart with downwards trend | `[DECLINE]` |
+| U+1F4DA | Books | `[DOCS]` |
+| U+1F4D6 | Open book | `[GUIDE]` |
+| U+1F4DD | Memo | `[NOTE]` |
+| U+1F4C1 | File folder | `[DIR]` |
+| U+1F4C2 | Open file folder | `[FOLDER]` |
+| U+1F50D | Left-pointing magnifying glass | `[SEARCH]` |
+| U+1F50E | Right-pointing magnifying glass | `[SEARCH]` |
+| U+1F510 | Closed lock with key | `[SECURITY]` |
+| U+2699 | Gear | `[CONFIG]` |
+| U+2699 U+FE0F | Gear (emoji) | `[CONFIG]` |
+| U+26A1 | High voltage | `[SETTINGS]` |
+| U+1F3D7 | Building construction | `[BUILD]` |
+| U+1F3AF | Direct hit | `[TARGET]` |
+| U+1F3A8 | Artist palette | `[DESIGN]` |
+| U+1F4BB | Personal computer | `[CODE]` |
+| U+1F5A5 | Desktop computer | `[SERVER]` |
+| U+1F310 | Globe with meridians | `[NETWORK]` |
+| U+1F30E | Globe showing Americas | `[GLOBAL]` |
+| U+1F5FA | World map | `[MAP]` |
+| U+1F4CD | Round pushpin | `[MAP]` |
+| U+1F449 | White right-pointing backhand index | `[SEE]` |
 
 ---
 
@@ -138,11 +139,14 @@ Colored circles widely used in CI dashboards, status pages, and documentation.
 | U+1F3C1 | Chequered flag | `[DONE]` |
 | U+1F527 | Wrench | `[FIX]` |
 | U+1F6E0 | Hammer and wrench | `[TOOLS]` |
+| U+1F9F0 | Toolbox | `[TOOLS]` |
 | U+267B | Recycling symbol | `[RECYCLE]` |
 | U+267B U+FE0F | Recycling symbol (emoji) | `[RECYCLE]` |
 | U+1F4BE | Floppy disk | `[SAVE]` |
 | U+1F525 | Fire | `[HOT]` |
 | U+1F4AF | Hundred points | `[100]` |
+| U+1F6A8 | Police car revolving light | `[ALERT]` |
+| U+1FA79 | Adhesive bandage | `[PATCH]` |
 
 ---
 
@@ -150,21 +154,21 @@ Colored circles widely used in CI dashboards, status pages, and documentation.
 
 | Codepoint | Sequence | Replacement |
 |-----------|----------|-------------|
-| U+23F3 | Hourglass with flowing sand | `Pending` |
-| U+23F3 U+FE0F | Hourglass with flowing sand (emoji) | `Pending` |
-| U+23F1 | Stopwatch | `Timer` |
-| U+23F1 U+FE0F | Stopwatch (emoji) | `Timer` |
-| U+23F0 | Alarm clock | `Timer` |
-| U+1F504 | Counterclockwise arrows | `Refresh` |
-| U+231B | Hourglass | `Loading` |
-| U+231B U+FE0F | Hourglass (emoji) | `Loading` |
-| U+2B06 | Upwards black arrow | `Up` |
-| U+2B07 | Downwards black arrow | `Down` |
-| U+27A1 | Black rightwards arrow | `Next` |
-| U+2B05 | Leftwards black arrow | `Previous` |
-| U+1F440 | Eyes | `See` |
-| U+1F4E4 | Outbox tray | `From` |
-| U+2611 U+FE0F | Ballot box with check (emoji) | `Selected` |
+| U+23F3 | Hourglass with flowing sand | `[PENDING]` |
+| U+23F3 U+FE0F | Hourglass with flowing sand (emoji) | `[PENDING]` |
+| U+23F1 | Stopwatch | `[TIMER]` |
+| U+23F1 U+FE0F | Stopwatch (emoji) | `[TIMER]` |
+| U+23F0 | Alarm clock | `[TIMER]` |
+| U+1F504 | Counterclockwise arrows | `[REFRESH]` |
+| U+231B | Hourglass | `[LOADING]` |
+| U+231B U+FE0F | Hourglass (emoji) | `[LOADING]` |
+| U+2B06 | Upwards black arrow | `[UP]` |
+| U+2B07 | Downwards black arrow | `[DOWN]` |
+| U+27A1 | Black rightwards arrow | `[NEXT]` |
+| U+2B05 | Leftwards black arrow | `[PREV]` |
+| U+1F440 | Eyes | `[SEE]` |
+| U+1F4E4 | Outbox tray | `[FROM]` |
+| U+2611 U+FE0F | Ballot box with check (emoji) | `[SELECTED]` |
 
 ---
 
@@ -245,6 +249,150 @@ Used as decorative bullet points in AI-generated and rich-text content.
 | U+2022 | Bullet | `*` |
 | U+2023 | Triangular bullet | `>` |
 | U+25E6 | White bullet | `o` |
+| U+2219 | Bullet operator | `*` |
+
+---
+
+## Heart Variants
+
+Colored and decorative hearts — all map to `[HEART]`.
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+1F499 | Blue heart | `[HEART]` |
+| U+1F49A | Green heart | `[HEART]` |
+| U+1F49B | Yellow heart | `[HEART]` |
+| U+1F49C | Purple heart | `[HEART]` |
+| U+1F5A4 | Black heart | `[HEART]` |
+| U+1F90D | White heart | `[HEART]` |
+| U+1F90E | Brown heart | `[HEART]` |
+| U+1F9E1 | Orange heart | `[HEART]` |
+| U+1F494 | Broken heart | `[HEART]` |
+| U+1F495 | Two hearts | `[HEART]` |
+| U+1F496 | Sparkling heart | `[HEART]` |
+| U+1F497 | Growing heart | `[HEART]` |
+| U+1F493 | Beating heart | `[HEART]` |
+| U+1F49E | Revolving hearts | `[HEART]` |
+| U+1F49D | Heart with ribbon | `[HEART]` |
+
+---
+
+## Project and Issue Tracking
+
+Gitmoji conventions used in commit messages, changelogs, and READMEs.
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+1F41B | Bug | `[BUG]` |
+| U+1F41E | Lady beetle | `[BUG]` |
+| U+1F4A5 | Collision | `[BREAKING]` |
+| U+1F6A7 | Construction sign | `[CONSTRUCTION]` |
+| U+1F9EA | Test tube | `[TEST]` |
+| U+1F9EB | Petri dish | `[TEST]` |
+| U+1F516 | Bookmark | `[RELEASE]` |
+| U+1F3F7 | Label | `[TAG]` |
+| U+1F3F7 U+FE0F | Label (emoji) | `[TAG]` |
+| U+1F9F9 | Broom | `[CLEANUP]` |
+| U+1F517 | Link | `[LINK]` |
+| U+1F4AC | Speech balloon | `[COMMENT]` |
+| U+1F4AD | Thought balloon | `[COMMENT]` |
+| U+1F5E3 | Speaking head | `[COMMENT]` |
+| U+1F5E3 U+FE0F | Speaking head (emoji) | `[COMMENT]` |
+| U+1F4E3 | Megaphone | `[ANNOUNCE]` |
+| U+1F4E2 | Loudspeaker | `[ANNOUNCE]` |
+| U+1F44D | Thumbs up | `[APPROVED]` |
+| U+1F44E | Thumbs down | `[REJECTED]` |
+| U+1F9E9 | Puzzle piece | `[PLUGIN]` |
+| U+1F3C6 | Trophy | `[AWARD]` |
+| U+1F396 | Military medal | `[AWARD]` |
+| U+1F396 U+FE0F | Military medal (emoji) | `[AWARD]` |
+| U+1F4CB | Clipboard | `[CLIPBOARD]` |
+| U+1F5D1 | Wastebasket | `[TRASH]` |
+| U+1F5D1 U+FE0F | Wastebasket (emoji) | `[TRASH]` |
+| U+1F4CE | Paperclip | `[ATTACHMENT]` |
+| U+1F381 | Wrapped gift | `[GIFT]` |
+| U+1F48E | Gem stone | `[GEM]` |
+
+---
+
+## Colored Squares
+
+Used in CI dashboards and status tables alongside the colored circle set.
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+1F7E5 | Red square | `[ERROR]` |
+| U+1F7E9 | Green square | `[OK]` |
+| U+1F7E8 | Yellow square | `[CAUTION]` |
+| U+1F7E6 | Blue square | `[INFO]` |
+| U+1F7E7 | Orange square | `[WARNING]` |
+| U+1F7EA | Purple square | `[INFO]` |
+| U+2B1B | Black large square | `[INACTIVE]` |
+| U+2B1C | White large square | `[INACTIVE]` |
+
+---
+
+## Media Controls
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+23F8 | Pause button | `[PAUSED]` |
+| U+23F8 U+FE0F | Pause button (emoji) | `[PAUSED]` |
+| U+23F9 | Stop button | `[STOPPED]` |
+| U+23F9 U+FE0F | Stop button (emoji) | `[STOPPED]` |
+| U+23FA | Record button | `[RECORDING]` |
+| U+23FA U+FE0F | Record button (emoji) | `[RECORDING]` |
+| U+23E9 | Fast-forward button | `[NEXT]` |
+| U+23EA | Fast-reverse button | `[PREV]` |
+
+---
+
+## Community and Contributors
+
+Common in CONTRIBUTING.md, acknowledgement sections, and bot-generated content.
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+1F691 | Ambulance | `[HOTFIX]` |
+| U+1F500 | Twisted rightwards arrows | `[MERGE]` |
+| U+1F501 | Clockwise rightwards arrows | `[RETRY]` |
+| U+23EB | Black up-pointing double triangle | `[UPGRADE]` |
+| U+23EC | Black down-pointing double triangle | `[DOWNGRADE]` |
+| U+1F6E1 | Shield | `[PROTECTED]` |
+| U+1F6E1 U+FE0F | Shield (emoji) | `[PROTECTED]` |
+| U+1F916 | Robot face | `[BOT]` |
+| U+1F91D | Handshake | `[CONTRIB]` |
+| U+1F464 | Bust in silhouette | `[USER]` |
+| U+1F465 | Busts in silhouette | `[USERS]` |
+| U+1F64F | Folded hands | `[THANKS]` |
+| U+1F4C4 | Page facing up | `[FILE]` |
+| U+1F4C3 | Page with curl | `[FILE]` |
+| U+1F4E7 | Envelope | `[EMAIL]` |
+| U+1F4B0 | Money bag | `[SPONSOR]` |
+| U+1F4B5 | Dollar banknote | `[SPONSOR]` |
+| U+1F30D | Globe showing Europe/Africa | `[GLOBAL]` |
+| U+1F30F | Globe showing Asia/Australia | `[GLOBAL]` |
+| U+21A9 | Leftwards arrow with hook | `[BACK]` |
+| U+21A9 U+FE0F | Leftwards arrow with hook (emoji) | `[BACK]` |
+| U+21AA | Rightwards arrow with hook | `[FORWARD]` |
+| U+21AA U+FE0F | Rightwards arrow with hook (emoji) | `[FORWARD]` |
+| U+1F507 | Speaker with cancellation stroke | `[MUTE]` |
+| U+1F515 | Bell with cancellation stroke | `[MUTE]` |
+
+---
+
+## Platform and Language Indicators
+
+Used in README badges, setup sections, and toolchain documentation.
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+1F433 | Spouting whale | `[DOCKER]` |
+| U+1F40B | Whale | `[DOCKER]` |
+| U+1F427 | Penguin | `[LINUX]` |
+| U+1F40D | Snake | `[PYTHON]` |
+| U+1F980 | Crab | `[RUST]` |
+| U+1F439 | Hamster | `[GO]` |
 | U+2219 | Bullet operator | `*` |
 
 ---

@@ -1,11 +1,41 @@
 // Command demojify audits a directory tree for emoji, reports every occurrence
 // with file, line, and column, and optionally rewrites affected files.
 //
-// Usage:
+// # CLI
 //
-//	go run github.com/nicholashoule/demojify-sanitize/cmd/demojify [flags]
+// Install demojify:
 //
-// Flags:
+//	go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest
+//
+// Or run without installing:
+//
+//	go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest [flags]
+//
+// # CLI Subcommands
+//
+// demojify has no traditional subcommands. The operational mode is selected
+// by flags:
+//
+//   - Audit (default): scan the directory tree and report all findings.
+//   - Fix (-fix): rewrite affected files in place after reporting.
+//   - Substitute (-sub): replace emoji with text tokens; implies -fix.
+//   - Normalize (-normalize): collapse redundant whitespace; implies -fix.
+//
+// Modes may be combined; for example, -sub and -normalize apply both
+// substitution and whitespace normalization in a single pass.
+//
+// # CLI Status Markers
+//
+// Human-readable output uses bracketed status tokens at the start of each line:
+//
+//   - [PASS]: no emoji found, or all occurrences fixed successfully.
+//   - [WARN]: emoji detected in a file; reported with per-occurrence detail.
+//   - [FAIL]: a write error occurred while applying a fix.
+//
+// These markers are suppressed when -quiet is set and replaced by structured
+// JSON output when -json is set.
+//
+// # CLI Flags
 //
 //	-root <dir>      directory to scan (default: ".")
 //	-fix             rewrite affected files in place after reporting

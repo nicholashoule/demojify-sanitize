@@ -34,6 +34,10 @@ go get github.com/nicholashoule/demojify-sanitize
 go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest
 ```
 
+```bash
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest -sub
+```
+
 ### Quick start
 
 ```go
