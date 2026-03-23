@@ -624,3 +624,72 @@ func TestScanDirConcurrent(t *testing.T) {
 		}
 	}
 }
+
+// TestScanDirPreservesCRLF is a regression test for the bug where emoji removal
+// silently converted CRLF (\r\n) line endings to LF (\n) even when
+// NormalizeWhitespace was false. After the fix, CRLF files with emoji must have
+// their line endings preserved in the Cleaned output; only the emoji is removed.
+func TestScanDirPreservesCRLF(t *testing.T) {
+	root := t.TempDir()
+	// File with CRLF line endings and an emoji on the second line.
+	const content = "line one\r\n" +
+		"deploy \U0001F680 done\r\n" +
+		"line three\r\n"
+	writeTempFile(t, root, "deploy.md", content)
+
+	cfg := demojify.ScanConfig{
+		Root:    root,
+		Options: demojify.Options{RemoveEmojis: true},
+		// NormalizeWhitespace deliberately left false (the default).
+	}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("got %d findings, want 1", len(findings))
+	}
+
+	cleaned := findings[0].Cleaned
+
+	// The emoji must be gone.
+	if strings.Contains(cleaned, "\U0001F680") {
+		t.Errorf("emoji still present in cleaned output: %q", cleaned)
+	}
+
+	// CRLF line endings must be preserved.
+	if !strings.Contains(cleaned, "\r\n") {
+		t.Errorf("CRLF line endings were lost (converted to LF): %q", cleaned)
+	}
+
+	// No bare LF should remain (every newline must be \r\n).
+	cleandLF := strings.ReplaceAll(cleaned, "\r\n", "")
+	if strings.Contains(cleandLF, "\n") {
+		t.Errorf("cleaned output contains bare LF line endings: %q", cleaned)
+	}
+
+	// The surrounding text must be intact.
+	if !strings.Contains(cleaned, "line one") || !strings.Contains(cleaned, "deploy") || !strings.Contains(cleaned, "done") {
+		t.Errorf("surrounding text was altered in cleaned output: %q", cleaned)
+	}
+}
+
+// TestScanDirPreservesCRLFCleanFile verifies that a CRLF file with no emoji
+// is not reported as a finding (i.e., CRLF is not altered for clean files).
+func TestScanDirPreservesCRLFCleanFile(t *testing.T) {
+	root := t.TempDir()
+	const content = "no emoji here\r\nall clean\r\n"
+	writeTempFile(t, root, "clean.md", content)
+
+	cfg := demojify.ScanConfig{
+		Root:    root,
+		Options: demojify.Options{RemoveEmojis: true},
+	}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 0 {
+		t.Errorf("got %d findings for clean CRLF file, want 0", len(findings))
+	}
+}

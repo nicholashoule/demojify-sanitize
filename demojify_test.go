@@ -380,3 +380,27 @@ func TestSanitizeBuildPlaceholderCollisionFallback(t *testing.T) {
 		t.Errorf("plain text 'launch' is missing from result: %q", result)
 	}
 }
+
+// TestDemojifyPreservesLegalSymbols verifies that ©, ®, and ™ are never
+// stripped by Demojify. These codepoints (U+00A9, U+00AE, U+2122) have the
+// Unicode emoji property in some contexts but are standard legal/documentation
+// characters that must be preserved in source files.
+func TestDemojifyPreservesLegalSymbols(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"copyright sign U+00A9", "Copyright \u00a9 2024 Example Corp."},
+		{"registered sign U+00AE", "Registered trademark\u00ae"},
+		{"trade mark sign U+2122", "Example\u2122 is a trademark."},
+		{"all three together", "\u00a9 \u00ae \u2122 in one line"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := demojify.Demojify(tt.input)
+			if got != tt.input {
+				t.Errorf("Demojify(%q) = %q; want input unchanged", tt.input, got)
+			}
+		})
+	}
+}

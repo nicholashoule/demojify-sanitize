@@ -58,8 +58,20 @@ func distinctValues(m map[string]string) []string {
 // to a single occurrence. Both direct concatenation ("TOKENTOK") and
 // space-separated repetition ("TOKEN TOKEN") are collapsed, handling runs of
 // three or more via repeated passes. Tokens in vals must be non-empty.
+//
+// Only tokens of length >= 4 are collapsed. Shorter tokens (e.g. "-", "/",
+// "*", "->", "<=") are common ASCII sequences that appear legitimately in
+// source code, URLs, and documentation, and must never be deduplicated. Only
+// label-like tokens such as "[FAIL]" or "WARNING" are safe to collapse.
 func collapseRepeatedTokens(text string, vals []string) string {
 	for _, v := range vals {
+		// Skip short tokens: single-character and short ASCII sequences
+		// (e.g. "-", "/", "*", "o", "->", "<=") appear in normal source code
+		// and must not be collapsed. Only multi-character label tokens produced
+		// by emoji substitution (e.g. "[FAIL]", "WARNING") are safe to reduce.
+		if len(v) < 4 {
+			continue
+		}
 		// Collapse space-separated repeats first so the concat pass can later
 		// catch any newly adjacent duplicates.
 		doubled := v + " " + v

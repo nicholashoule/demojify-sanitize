@@ -82,3 +82,40 @@ jobs:
         uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
         with:
           version: v2.11.4
+
+  os-compat:
+    name: OS compatibility (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.23"
+
+      - name: "CRLF line-ending preservation"
+        run: go test -v -race -run "TestScanDirPreservesCRLF" github.com/nicholashoule/demojify-sanitize
+
+      - name: "Atomic write and file permissions"
+        run: go test -v -race -run "TestWriteFinding|TestReplaceFile" github.com/nicholashoule/demojify-sanitize
+
+      - name: "Binary file detection"
+        run: go test -v -race -run "TestScanDirSkipsBinaryFiles|TestScanDirBinaryNulAfterSniffSizeNotSkipped" github.com/nicholashoule/demojify-sanitize
+
+      - name: "File read protection (chmod)"
+        run: go test -v -race -run "TestScanDirUnreadableFile" github.com/nicholashoule/demojify-sanitize
+
+      - name: "Symlink handling"
+        run: go test -v -race -run "TestScanDirSymlink|TestFixDir/rejects_symlink" github.com/nicholashoule/demojify-sanitize
+
+      - name: "Path traversal protection"
+        run: go test -v -race -run "TestFixDir/does_not_write_outside_root" github.com/nicholashoule/demojify-sanitize
+
+      - name: "ASCII preservation regression"
+        run: go test -v -race -run "TestReplaceDefaultReplacementsPreservesASCII|TestReplaceLongTokensStillCollapse" github.com/nicholashoule/demojify-sanitize

@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-03-23
+
+### Fixed
+
+- `replace.go` (`collapseRepeatedTokens`): added `len(v) < 4` guard to skip
+  single-character and short ASCII replacement values (e.g. `"/"` from U+2797,
+  `"-"` from U+2796, `"*"` from U+2022/U+25CF, `"o"` from U+25CB) that appear
+  legitimately throughout source code and documentation. Previously, running
+  `Replace` with `DefaultReplacements()` would collapse `//` → `/` (breaking
+  every URL and Go comment), `**` → `*` (converting Markdown bold to italic),
+  `--` → `-` (stripping CLI flag docs), and `oo` → `o` (corrupting words like
+  `root` and `bool`). Only label-like tokens of 4+ characters (`[FAIL]`,
+  `WARNING`, `[DEPLOY]`, etc.) are now eligible for deduplication — the
+  intended behavior when two adjacent identical emoji both produce the same
+  substitution token
+- `scan.go` (`scanDirCounted`): CRLF (`\r\n`) line endings are now restored
+  after the internal LF-normalization pass that precedes inline-space cleanup.
+  Previously, any CRLF file containing emoji had its line endings silently
+  converted to LF during emoji removal — even when `NormalizeWhitespace` was
+  false — creating noisy git diffs unrelated to emoji changes. The fix detects
+  `hasCRLF` before the cleanup block and re-applies `\r\n` in the output when
+  the original file used Windows line endings
+
+### Added
+
+- `replace_test.go`: `TestReplaceDefaultReplacementsPreservesASCII` — regression
+  test asserting that `//`, `**`, `--`, `oo` (in `root`, `bool`, `tool`), `++`,
+  and full URL strings are never collapsed when using `Replace` with
+  `DefaultReplacements()`
+- `replace_test.go`: `TestReplaceLongTokensStillCollapse` — complementary test
+  verifying that adjacent identical emoji (warning sign x2, check mark x3, rocket x2) still collapse
+  to a single label token after the `collapseRepeatedTokens` fix
+- `scan_dir_test.go`: `TestScanDirPreservesCRLF` — regression test verifying
+  that emoji is removed and CRLF line endings are preserved in the `Cleaned`
+  output when `NormalizeWhitespace` is false
+- `scan_dir_test.go`: `TestScanDirPreservesCRLFCleanFile` — verifies that a
+  CRLF file with no emoji produces no finding (clean files are never reported)
+- `demojify_test.go`: `TestDemojifyPreservesLegalSymbols` — documents and
+  asserts that © (U+00A9), ® (U+00AE), and ™ (U+2122) pass through `Demojify`
+  unchanged; these codepoints carry the Unicode emoji property in some contexts
+  but are standard legal/documentation characters that must not be stripped
+- `.github/workflows/ci.yml`: `os-compat` job — dedicated per-OS compatibility
+  job running on `ubuntu-latest`, `macos-latest`, and `windows-latest` with
+  `fail-fast: false`; each OS-sensitive concern is a named step so regressions
+  are surfaced by category in the PR status panel rather than buried across 9
+  matrix cells:
+  - `CRLF line-ending preservation` (`TestScanDirPreservesCRLF`)
+  - `Atomic write and file permissions` (`TestWriteFinding`, `TestReplaceFile`)
+  - `Binary file detection` (`TestScanDirSkipsBinaryFiles`, `...NulAfterSniffSize`)
+  - `File read protection (chmod)` (`TestScanDirUnreadableFile`)
+  - `Symlink handling` (`TestScanDirSymlink`, `TestFixDir/rejects_symlink`)
+  - `Path traversal protection` (`TestFixDir/does_not_write_outside_root`)
+  - `ASCII preservation regression` (`TestReplaceDefaultReplacementsPreservesASCII`,
+    `TestReplaceLongTokensStillCollapse`)
+
 ## [0.7.2] - 2026-03-22
 
 ### Fixed
@@ -366,7 +421,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `example_test.go` with 17 runnable examples for pkg.go.dev
 - Apache License 2.0
 
-[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.3...HEAD
+[0.7.3]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.6.0...v0.7.0

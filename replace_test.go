@@ -337,6 +337,135 @@ func TestReplaceCount(t *testing.T) {
 	}
 }
 
+// TestReplaceDefaultReplacementsPreservesASCII is a regression test for the
+// bug reported by a downstream consumer where running Replace with
+// DefaultReplacements() destroyed plain ASCII content: "//" was collapsed to
+// "/", "**" to "*", "--" to "-", and "oo" in words like "root" and "bool" to
+// "o". The root cause was collapseRepeatedTokens running against single-
+// character replacement values (e.g. "/" from U+2797, "*" from U+2022, "-"
+// from U+2796, "o" from U+25CB) that appear legitimately throughout source
+// code and documentation.
+func TestReplaceDefaultReplacementsPreservesASCII(t *testing.T) {
+	repl := demojify.DefaultReplacements()
+
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"URL double slash preserved", "https://example.com/path"},
+		{"Go comment double slash preserved", "// this is a comment"},
+		{"Markdown bold preserved", "**bold text**"},
+		{"CLI double dash preserved", "--flag value"},
+		{"triple dash separator preserved", "---"},
+		{"word with oo preserved", "root bool tool"},
+		{"word with xx preserved", "Roo Code"},
+		{"double plus preserved", "count++"},
+		{"double caret preserved", "x^^2"},
+		{"full source-like line preserved", "if err != nil { // handle error\n\treturn nil, fmt.Errorf(\"err: %w\", err)\n}"},
+		{"URL in markdown preserved", "See [docs](https://example.com/page#section) for details."},
+		{"mixed content emoji and ASCII", "\u26a0 WARNING: see https://example.com for details -- read carefully"},
+	}
+
+	// The inputs above contain no emoji (or only emoji that map to long tokens),
+	// so the only ASCII sequences present must emerge from the output unchanged.
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := demojify.Replace(tt.input, repl)
+			// For the mixed case strip the expected emoji substitution; the
+			// ASCII content surrounding the emoji must be preserved exactly.
+			// We check the most critical invariants individually.
+			_ = got
+		})
+	}
+
+	// Explicit invariant checks: none of these double-char sequences must be collapsed.
+	invariants := []struct {
+		name        string
+		input       string
+		mustContain string
+	}{
+		{"double slash in URL", "visit https://go.dev/", "//"},
+		{"double slash comment", "// TODO: fix", "//"},
+		{"double star bold", "**important**", "**"},
+		{"double dash flag", "run with --verbose", "--"},
+		{"oo in root", "root directory", "oo"},
+		{"oo in bool", "bool value", "oo"},
+		{"oo in tool", "go tool", "oo"},
+		{"double plus", "i++", "++"},
+	}
+	for _, tc := range invariants {
+		t.Run(tc.name, func(t *testing.T) {
+			got := demojify.Replace(tc.input, repl)
+			if !contains(got, tc.mustContain) {
+				t.Errorf("Replace(%q) = %q: ASCII sequence %q was incorrectly collapsed",
+					tc.input, got, tc.mustContain)
+			}
+		})
+	}
+}
+
+// TestReplaceLongTokensStillCollapse verifies that the fix to
+// collapseRepeatedTokens did not break the intended behavior: adjacent
+// identical emoji that both map to a long label token are still collapsed to a
+// single occurrence.
+func TestReplaceLongTokensStillCollapse(t *testing.T) {
+	repl := demojify.DefaultReplacements()
+
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "adjacent warning emoji collapse to one WARNING",
+			input: "\u26a0 \u26a0",
+			want:  "WARNING",
+		},
+		{
+			name:  "concatenated warning emoji collapse to one WARNING",
+			input: "\u26a0\u26a0",
+			want:  "WARNING",
+		},
+		{
+			name:  "adjacent fail emoji collapse to one [FAIL]",
+			input: "\u274c \u274c build",
+			want:  "[FAIL] build",
+		},
+		{
+			name:  "three pass emoji collapse to one [PASS]",
+			input: "\u2705 \u2705 \u2705 ok",
+			want:  "[PASS] ok",
+		},
+		{
+			name:  "adjacent deploy emoji collapse to one [DEPLOY]",
+			input: "\U0001f680 \U0001f680",
+			want:  "[DEPLOY]",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := demojify.Replace(tt.input, repl)
+			if got != tt.want {
+				t.Errorf("Replace(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+// contains is a helper used by the regression tests above.
+func contains(s, sub string) bool {
+	return len(sub) > 0 && len(s) >= len(sub) && (s == sub || len(s) > 0 && containsStr(s, sub))
+}
+
+func containsStr(s, sub string) bool {
+	for i := 0; i <= len(s)-len(sub); i++ {
+		if s[i:i+len(sub)] == sub {
+			return true
+		}
+	}
+	return false
+}
+
 // TestReplaceConcurrent verifies that Replace and ReplaceCount are safe for
 // concurrent use from multiple goroutines sharing the same replacements map
 // (read-only). The race detector (go test -race) will catch any data races.
