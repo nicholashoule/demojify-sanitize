@@ -248,6 +248,150 @@ Used as decorative bullet points in AI-generated and rich-text content.
 | U+2219 | Bullet operator | `*` |
 
 ---
+
+## Heart Variants
+
+Colored and decorative hearts — all map to `[HEART]`.
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+1F499 | Blue heart | `[HEART]` |
+| U+1F49A | Green heart | `[HEART]` |
+| U+1F49B | Yellow heart | `[HEART]` |
+| U+1F49C | Purple heart | `[HEART]` |
+| U+1F5A4 | Black heart | `[HEART]` |
+| U+1F90D | White heart | `[HEART]` |
+| U+1F90E | Brown heart | `[HEART]` |
+| U+1F9E1 | Orange heart | `[HEART]` |
+| U+1F494 | Broken heart | `[HEART]` |
+| U+1F495 | Two hearts | `[HEART]` |
+| U+1F496 | Sparkling heart | `[HEART]` |
+| U+1F497 | Growing heart | `[HEART]` |
+| U+1F493 | Beating heart | `[HEART]` |
+| U+1F49E | Revolving hearts | `[HEART]` |
+| U+1F49D | Heart with ribbon | `[HEART]` |
+
+---
+
+## Project and Issue Tracking
+
+Gitmoji conventions used in commit messages, changelogs, and READMEs.
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+1F41B | Bug | `[BUG]` |
+| U+1F41E | Lady beetle | `[BUG]` |
+| U+1F4A5 | Collision | `[BREAKING]` |
+| U+1F6A7 | Construction sign | `[CONSTRUCTION]` |
+| U+1F9EA | Test tube | `[TEST]` |
+| U+1F9EB | Petri dish | `[TEST]` |
+| U+1F516 | Bookmark | `[RELEASE]` |
+| U+1F3F7 | Label | `[TAG]` |
+| U+1F3F7 U+FE0F | Label (emoji) | `[TAG]` |
+| U+1F9F9 | Broom | `[CLEANUP]` |
+| U+1F517 | Link | `[LINK]` |
+| U+1F4AC | Speech balloon | `[COMMENT]` |
+| U+1F4AD | Thought balloon | `[COMMENT]` |
+| U+1F5E3 | Speaking head | `[COMMENT]` |
+| U+1F5E3 U+FE0F | Speaking head (emoji) | `[COMMENT]` |
+| U+1F4E3 | Megaphone | `[ANNOUNCE]` |
+| U+1F4E2 | Loudspeaker | `[ANNOUNCE]` |
+| U+1F44D | Thumbs up | `[APPROVED]` |
+| U+1F44E | Thumbs down | `[REJECTED]` |
+| U+1F9E9 | Puzzle piece | `[PLUGIN]` |
+| U+1F3C6 | Trophy | `[AWARD]` |
+| U+1F396 | Military medal | `[AWARD]` |
+| U+1F396 U+FE0F | Military medal (emoji) | `[AWARD]` |
+| U+1F4CB | Clipboard | `[CLIPBOARD]` |
+| U+1F5D1 | Wastebasket | `[TRASH]` |
+| U+1F5D1 U+FE0F | Wastebasket (emoji) | `[TRASH]` |
+| U+1F4CE | Paperclip | `[ATTACHMENT]` |
+| U+1F381 | Wrapped gift | `[GIFT]` |
+| U+1F48E | Gem stone | `[GEM]` |
+
+---
+
+## Colored Squares
+
+Used in CI dashboards and status tables alongside the colored circle set.
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+1F7E5 | Red square | `[ERROR]` |
+| U+1F7E9 | Green square | `[OK]` |
+| U+1F7E8 | Yellow square | `[CAUTION]` |
+| U+1F7E6 | Blue square | `[INFO]` |
+| U+1F7E7 | Orange square | `[WARNING]` |
+| U+1F7EA | Purple square | `[INFO]` |
+| U+2B1B | Black large square | `[INACTIVE]` |
+| U+2B1C | White large square | `[INACTIVE]` |
+
+---
+
+## Media Controls
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+23F8 | Pause button | `[PAUSED]` |
+| U+23F8 U+FE0F | Pause button (emoji) | `[PAUSED]` |
+| U+23F9 | Stop button | `[STOPPED]` |
+| U+23F9 U+FE0F | Stop button (emoji) | `[STOPPED]` |
+| U+23FA | Record button | `[RECORDING]` |
+| U+23FA U+FE0F | Record button (emoji) | `[RECORDING]` |
+| U+23E9 | Fast-forward button | `[NEXT]` |
+| U+23EA | Fast-reverse button | `[PREV]` |
+
+---
+
+## Community and Contributors
+
+Common in CONTRIBUTING.md, acknowledgement sections, and bot-generated content.
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+1F691 | Ambulance | `[HOTFIX]` |
+| U+1F500 | Twisted rightwards arrows | `[MERGE]` |
+| U+1F501 | Clockwise rightwards arrows | `[RETRY]` |
+| U+23EB | Black up-pointing double triangle | `[UPGRADE]` |
+| U+23EC | Black down-pointing double triangle | `[DOWNGRADE]` |
+| U+1F6E1 | Shield | `[PROTECTED]` |
+| U+1F6E1 U+FE0F | Shield (emoji) | `[PROTECTED]` |
+| U+1F916 | Robot face | `[BOT]` |
+| U+1F91D | Handshake | `[CONTRIB]` |
+| U+1F464 | Bust in silhouette | `[USER]` |
+| U+1F465 | Busts in silhouette | `[USERS]` |
+| U+1F64F | Folded hands | `[THANKS]` |
+| U+1F4C4 | Page facing up | `[FILE]` |
+| U+1F4C3 | Page with curl | `[FILE]` |
+| U+1F4E7 | Envelope | `[EMAIL]` |
+| U+1F4B0 | Money bag | `[SPONSOR]` |
+| U+1F4B5 | Dollar banknote | `[SPONSOR]` |
+| U+1F30D | Globe showing Europe/Africa | `[GLOBAL]` |
+| U+1F30F | Globe showing Asia/Australia | `[GLOBAL]` |
+| U+21A9 | Leftwards arrow with hook | `[BACK]` |
+| U+21A9 U+FE0F | Leftwards arrow with hook (emoji) | `[BACK]` |
+| U+21AA | Rightwards arrow with hook | `[FORWARD]` |
+| U+21AA U+FE0F | Rightwards arrow with hook (emoji) | `[FORWARD]` |
+| U+1F507 | Speaker with cancellation stroke | `[MUTE]` |
+| U+1F515 | Bell with cancellation stroke | `[MUTE]` |
+
+---
+
+## Platform and Language Indicators
+
+Used in README badges, setup sections, and toolchain documentation.
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+1F433 | Spouting whale | `[DOCKER]` |
+| U+1F40B | Whale | `[DOCKER]` |
+| U+1F427 | Penguin | `[LINUX]` |
+| U+1F40D | Snake | `[PYTHON]` |
+| U+1F980 | Crab | `[RUST]` |
+| U+1F439 | Hamster | `[GO]` |
+| U+2219 | Bullet operator | `*` |
+
+---
 ## Adding Custom Replacements
 
 `DefaultReplacements()` returns a fresh copy of the map on every call. To add
