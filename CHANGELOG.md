@@ -30,13 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `\U0001F446`/`\U0001F447`/`\U0001F448` → `[SEE]`;
     `\U0001F6A5`/`\U0001F6A6` → `[STATUS]`
   - **Platform**: `\U0001F34E` → `[MACOS]`; `\U0001FA9F` → `[WINDOWS]`
-- `cmd/demojify/tmp/dummy.md`: comprehensive emoji test fixture (~870 lines,
-  34,249 bytes) covering all `DefaultReplacements` entries, ZWJ sequences,
-  variation selectors, skin tones, keycap sequences, subdivision flags,
-  regional indicators, and Unicode 14/15/16 additions; verified against both
-  `-sub` (2,044 substitutions) and `-fix -normalize` (2,135 occurrences
-  stripped) passes; `dummy.substituted.md` and `dummy.stripped.md` retained
-  as reference outputs
+- Expanded demojify end-to-end fixtures: comprehensive emoji test corpus
+  (~870 lines, 34,249 bytes) covering all `DefaultReplacements` entries, ZWJ
+  sequences, variation selectors, skin tones, keycap sequences, subdivision
+  flags, regional indicators, and Unicode 14/15/16 additions; verified
+  against both `-sub` (2,044 substitutions) and `-fix -normalize` (2,135
+  occurrences stripped) passes
 
 ### Fixed
 

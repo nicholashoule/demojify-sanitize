@@ -353,7 +353,7 @@ func DefaultReplacements() map[string]string {
 		//
 		// Regional-indicator pairs (U+1F1E6–U+1F1FF × 2).
 		// Each pair encodes a two-letter ISO 3166-1 alpha-2 country code.
-		// All → [FLAG]: no country is preferred over another.
+		// The listed pairs → [FLAG]: no country is preferred over another.
 		"\U0001f1fa\U0001f1f8": "[FLAG]", // US
 		"\U0001f1ec\U0001f1e7": "[FLAG]", // GB
 		"\U0001f1e9\U0001f1ea": "[FLAG]", // DE
