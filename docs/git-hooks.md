@@ -99,7 +99,7 @@ cd "$root"
 go run github.com/nicholashoule/repogov/cmd/repogov@v0.3.0 -root "$root" -agent copilot
 repogov_exit=$?
 
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.7.1 -root "$root"
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.7.1 -root "$root" -exts .go,.md
 demojify_exit=$?
 
 exit $((repogov_exit | demojify_exit))
@@ -140,4 +140,3 @@ Install it the same way:
 cp scripts/hooks/pre-commit .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
 ```
-

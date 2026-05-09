@@ -104,6 +104,23 @@ func TestRepoProductionFilesIdempotent(t *testing.T) {
 	}
 }
 
+// TestHookDemojifyUsesExtensionFilter ensures the shipped pre-commit hook limits
+// demojify scanning to known text file types so compressed binary assets do not
+// produce false-positive emoji matches.
+func TestHookDemojifyUsesExtensionFilter(t *testing.T) {
+	data, err := os.ReadFile("scripts/hooks/pre-commit")
+	if err != nil {
+		t.Fatalf("read pre-commit hook: %v", err)
+	}
+	s := string(data)
+	if !strings.Contains(s, "demojify_exts=") {
+		t.Fatal("scripts/hooks/pre-commit must define demojify_exts for filtered scanning")
+	}
+	if !strings.Contains(s, "-exts \"$demojify_exts\"") {
+		t.Fatal("scripts/hooks/pre-commit must pass -exts \"$demojify_exts\" to demojify")
+	}
+}
+
 // TestRepoTestFilesContainEmoji is a meta-test that verifies at least one
 // *_test.go file contains literal emoji. This confirms that exemptions are
 // load-bearing: test files ARE the module's input data, and they must contain
