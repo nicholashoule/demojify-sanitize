@@ -51,7 +51,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cross-platform Go helpers (`scripts/fmtcheck.go`, `scripts/installhooks.go`,
   `scripts/clean.go`) instead of POSIX `gofmt`/`cp`/`chmod`/`rm` shell
   recipes, so they work whether `make` runs recipes via `sh` or `cmd.exe`
-  on Windows. `fmt-check` remains report-only (never runs `gofmt -w`)
+  on Windows. `fmt-check` remains report-only (never runs `gofmt -w`).
+  `scripts/installhooks.go` resolves the hooks directory through Git
+  (`git rev-parse --git-path hooks`, honoring `core.hooksPath` and linked
+  worktrees / a `.git` file) and fails if not inside a work tree, rather
+  than hard-coding and creating `.git/hooks`
 
 ### Fixed
 
@@ -67,12 +71,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `TestDefaultScanConfig`): added a brotli regression guard. A `tailwind.css.br`
   blob whose bytes have no early NUL (so the binary NUL-sniff would not skip it)
   yet decode `U+27A2` (a rightwards-arrowhead glyph inside `emojiRE`'s
-  U+2600–U+27BF range) is asserted
-  to be skipped via the default `SkipExtensions` `.br` entry, and `.br` is now
-  a required member of the spot-checked default skip set. Addresses a
-  downstream false-positive report where a precompressed asset was scanned;
-  investigation confirmed `DefaultScanConfig` already skips `.br` before the
-  file is opened — the guard prevents that protection from regressing
+  U+2600–U+27BF range) is asserted to be skipped, and `.br` is now a
+  required member of the spot-checked default skip set. Addresses a
+  downstream false-positive report where an unfiltered scan of a
+  precompressed asset produced a bogus match: before v0.9.0
+  `DefaultScanConfig` had no extension denylist and would read such blobs
+  (only `-exts` scoping avoided it); the new `SkipExtensions` `.br` default
+  entry (see Added) now skips them before the file is opened, and this
+  guard prevents that protection from regressing
 
 ## [0.8.0] - 2026-03-23
 
