@@ -53,7 +53,7 @@ Install (pin to a tagged release for reproducibility, or build locally):
 
 ```sh
 # Tagged release (recommended for CI/stable environments)
-go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.7.0
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.8.0
 
 # Local build from the repository
 go build -o demojify ./cmd/demojify

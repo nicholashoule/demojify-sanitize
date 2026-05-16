@@ -34,6 +34,76 @@ func TestDefaultScanConfig(t *testing.T) {
 	if cfg.MaxFileBytes != 1<<20 {
 		t.Errorf("MaxFileBytes = %d, want %d (1 MiB)", cfg.MaxFileBytes, 1<<20)
 	}
+	// SkipExtensions must be populated and independent of ExemptSuffixes so
+	// that clearing ExemptSuffixes (to scan *_test.go) keeps binary/minified
+	// protection. Spot-check the suffixes explicitly required by the design.
+	skipSet := make(map[string]bool, len(cfg.SkipExtensions))
+	for _, s := range cfg.SkipExtensions {
+		skipSet[s] = true
+	}
+	// ".br" is explicitly required: a downstream consumer reported a brotli
+	// blob (tailwind.css.br) producing a false-positive emoji match.
+	for _, want := range []string{".min.js", ".min.css", ".gz", ".br", ".bz", ".bz2", ".png", ".pdf", ".woff2", ".wasm"} {
+		if !skipSet[want] {
+			t.Errorf("SkipExtensions missing %q; got %v", want, cfg.SkipExtensions)
+		}
+	}
+	// Mutating the returned slice must not affect a subsequent config.
+	cfg.SkipExtensions = append(cfg.SkipExtensions, ".sentinel")
+	if got := demojify.DefaultScanConfig(); slicesContains(got.SkipExtensions, ".sentinel") {
+		t.Error("DefaultScanConfig SkipExtensions slice is shared across calls; want a fresh slice")
+	}
+}
+
+func slicesContains(s []string, v string) bool {
+	for _, e := range s {
+		if e == v {
+			return true
+		}
+	}
+	return false
+}
+
+func TestDefaultScanConfigSkipsBinaryAndMinified(t *testing.T) {
+	root := t.TempDir()
+	emoji := "rocket \U0001F680\n"
+	// Files that must be skipped purely by extension.
+	for _, name := range []string{
+		"bundle.min.js", "site.min.css", "app.js.map",
+		"data.json.gz", "logs.tar.bz2", "old.bz",
+		"logo.png", "manual.pdf", "font.woff2", "mod.wasm",
+	} {
+		writeTempFile(t, root, name, emoji)
+	}
+	// Regression guard for the downstream brotli false positive: a real
+	// .br blob has no early NUL byte (so the binary NUL-sniff would NOT
+	// skip it) yet its compressed bytes happen to decode U+27A2 "➢",
+	// which is inside emojiRE's U+2600-U+27BF range. Only the
+	// SkipExtensions ".br" entry prevents this file from being scanned,
+	// stripped, and reported. If ".br" is ever dropped from the default
+	// skip set, this file becomes a finding and the assertion below fails.
+	brotliBlob := string([]byte{0x1b, 0x2e, 0x4f, 0x07, 0x09, 0xe2, 0x9e, 0xa2, 0x11, 0x22, 0x33, 0x44})
+	writeTempFile(t, root, "tailwind.css.br", brotliBlob)
+
+	// A normal source file that must still be flagged.
+	writeTempFile(t, root, "main.go", "package main // "+emoji)
+
+	cfg := demojify.DefaultScanConfig()
+	cfg.Root = root
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 1 {
+		got := make([]string, len(findings))
+		for i, f := range findings {
+			got[i] = f.Path
+		}
+		t.Fatalf("findings = %v, want exactly [main.go] (binary/minified files must be skipped)", got)
+	}
+	if findings[0].Path != "main.go" {
+		t.Errorf("flagged %q, want main.go", findings[0].Path)
+	}
 }
 
 func TestScanDirMaxFileBytes(t *testing.T) {

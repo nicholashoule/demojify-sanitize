@@ -69,6 +69,14 @@ linters:
           - gocritic
           - godot
 
+      # Cross-platform Makefile helpers (fmt-check / hooks / clean). Like the
+      # pre-commit script these are go:build ignore standalone programs.
+      - path: scripts/(fmtcheck|installhooks|clean)\.go
+        linters:
+          - revive
+          - gocritic
+          - godot
+
       # The driver example is a standalone main; relax doc requirements.
       - path: docs/examples/driver/main\.go
         linters:

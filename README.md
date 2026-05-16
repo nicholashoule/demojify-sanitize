@@ -128,10 +128,10 @@ Both tools run from their published module versions -- no local clone required.
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
-go run github.com/nicholashoule/repogov/cmd/repogov@v0.3.0 -root "$root" -agent copilot
+go run github.com/nicholashoule/repogov/cmd/repogov@v0.7.0 -root "$root" -agent copilot
 repogov_exit=$?
 
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.7.1 -root "$root" -exts .go,.md
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.8.0 -root "$root" -exts .go,.md
 demojify_exit=$?
 
 exit $((repogov_exit | demojify_exit))
