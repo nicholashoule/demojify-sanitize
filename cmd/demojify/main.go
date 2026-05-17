@@ -51,6 +51,47 @@
 //	                 defaults (.git, vendor, node_modules); a trailing slash is
 //	                 added automatically if omitted
 //	-version         print version and exit
+//
+// # CLI Exit Codes
+//
+//	0  no emoji found, or all findings fixed successfully
+//	1  emoji found and -fix not set, a write error occurred, or -root
+//	   does not exist / is not a directory
+//	2  an unknown flag was passed (flag package parse error)
+//
+// # CLI JSON Output
+//
+// With -json, all output is a single JSON object on stdout and the
+// human-readable [PASS]/[WARN] text is suppressed. The envelope has one
+// key, findings, an array of objects:
+//
+//   - path: forward-slash relative file path.
+//   - hasEmoji: whether the file contains emoji.
+//   - matches: per-occurrence detail, omitted when empty; each element has
+//     sequence (raw UTF-8 codepoints), replacement (mapped substitute or
+//     empty), line (1-based), column (0-based byte offset), and context
+//     (the full source line).
+//   - fixed: present only with -fix or -sub; has success (bool),
+//     count (int), and error (string, omitted on success).
+//
+// When no findings exist the output is {"findings":[]} with exit code 0.
+// The JSON format is a stable, machine-readable API; downstream consumers
+// should prefer it over parsing the text format.
+//
+// # CLI Default Scan Behavior
+//
+// The CLI uses [demojify.DefaultScanConfig], which skips:
+//
+//   - Directories: .git/, vendor/, node_modules/ (plus any added via -skip).
+//   - Suffixes: *_test.go.
+//   - Binary, minified, compressed, and media extensions (e.g. .min.js,
+//     .css.map, .gz, .bz2, .zip, .png, .woff2, .pdf, .wasm) -- skipped
+//     before the file is opened, so minified assets never produce false
+//     positives and the audit performs no I/O on files it cannot act on.
+//
+// All other file types are scanned unless -exts restricts them. Any
+// remaining binary file is detected by a NUL byte in the first 512 bytes
+// and skipped, and files larger than 1 MiB are skipped.
 package main
 
 import (
@@ -66,7 +107,53 @@ import (
 	demojify "github.com/nicholashoule/demojify-sanitize"
 )
 
+// usageHeader is printed before the auto-generated flag list. It gives the
+// synopsis and the flag-selected operational modes (demojify has no
+// subcommands). flag.PrintDefaults appends the per-flag detail after this.
+const usageHeader = `demojify -- audit a directory tree for emoji and optionally rewrite affected files.
+
+Usage:
+  demojify [flags]
+
+demojify has no subcommands; the operational mode is selected by flags:
+  audit (default)   scan and report all findings (exit 1 if any found)
+  -fix              rewrite affected files in place after reporting
+  -sub              substitute emoji with text tokens (implies -fix)
+  -normalize        collapse redundant whitespace (implies -fix)
+
+Flags:
+`
+
+// usageFooter is printed after the auto-generated flag list: exit codes and
+// a few worked examples, mirroring docs/cli.md.
+const usageFooter = `
+Exit codes:
+  0   no emoji found, or all findings fixed successfully
+  1   emoji found without -fix, a write error, or invalid -root
+  2   unknown flag (flag parse error)
+
+Examples:
+  demojify -root .                 audit the current tree (no writes)
+  demojify -root . -fix            strip emoji in place
+  demojify -root . -sub            substitute emoji with text tokens
+  demojify -root . -exts .go,.md   restrict to Go and Markdown files
+  demojify -root . -json           machine-readable JSON output
+
+Full reference: https://github.com/nicholashoule/demojify-sanitize/blob/main/docs/cli.md
+`
+
+// usage writes the complete help text. It replaces the flag package default
+// (which prints "Usage of <absolute-binary-path>:" with no description,
+// synopsis, or examples) so `demojify -h` shows usable documentation.
+func usage() {
+	fmt.Fprint(os.Stderr, usageHeader)
+	flag.PrintDefaults()
+	fmt.Fprint(os.Stderr, usageFooter)
+}
+
 func main() {
+	flag.Usage = usage
+
 	root := flag.String("root", ".", "directory to scan")
 	fix := flag.Bool("fix", false, "rewrite affected files in place")
 	sub := flag.Bool("sub", false, "substitute emoji with text tokens (implies -fix)")

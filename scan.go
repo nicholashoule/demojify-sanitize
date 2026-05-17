@@ -39,8 +39,23 @@ type ScanConfig struct {
 	ExemptFiles []string
 
 	// ExemptSuffixes lists file name suffixes that are exempt from checks.
-	// For example, "_test.go" exempts all Go test files.
+	// For example, "_test.go" exempts all Go test files. This is the
+	// project-policy denylist callers are expected to tune (e.g. clear it
+	// to scan test files); it is independent of SkipExtensions.
 	ExemptSuffixes []string
+
+	// SkipExtensions lists file name suffixes for binary, minified, and
+	// compressed files that must never be scanned or rewritten. Matching
+	// uses the same suffix rule as ExemptSuffixes but is kept as a separate
+	// field so that clearing ExemptSuffixes (the documented way to scan
+	// *_test.go files) does not also re-enable scanning of minified assets
+	// or compressed archives. A file is skipped before it is opened, so
+	// entries here also save I/O. This complements -- and runs before --
+	// the NUL-byte binary sniff, which only inspects the first 512 bytes
+	// and therefore misses minified text (.min.js/.min.css) and compressed
+	// files whose first NUL byte falls past that window.
+	// [DefaultScanConfig] populates this with a comprehensive default set.
+	SkipExtensions []string
 
 	// Extensions filters which file types to scan. Only files whose names
 	// end with one of these extensions are checked. An empty or nil slice
@@ -92,11 +107,20 @@ type ScanConfig struct {
 // to avoid reading large files into memory, and binary files (detected by a
 // NUL byte in the first 512 bytes) are always skipped regardless of size.
 //
+// SkipExtensions is pre-populated with a comprehensive set of binary,
+// minified, compressed, and media suffixes (e.g. .min.js, .css.map, .gz,
+// .bz2, .zip, .png, .woff2, .pdf, .wasm). These are never scanned or
+// rewritten, which both prevents false positives in minified assets and
+// avoids the I/O of opening files the emoji audit can never meaningfully
+// act on. Because SkipExtensions is independent of ExemptSuffixes, this
+// protection survives clearing ExemptSuffixes to scan test files.
+//
 // NOTE for downstream consumers: the default config exempts *_test.go files
 // via ExemptSuffixes. This is appropriate for scanning this module's own repo
 // (where test files intentionally contain literal emoji as input data), but
 // downstream projects that want to scan their own test files should clear or
-// override ExemptSuffixes:
+// override ExemptSuffixes (binary/minified protection in SkipExtensions is
+// retained):
 //
 //	cfg := demojify.DefaultScanConfig()
 //	cfg.ExemptSuffixes = nil // scan test files too
@@ -113,11 +137,37 @@ func DefaultScanConfig() ScanConfig {
 		Root:           ".",
 		SkipDirs:       []string{".git/", "vendor/", "node_modules/"},
 		ExemptSuffixes: []string{"_test.go"},
+		SkipExtensions: defaultSkipExtensions(),
 		Extensions:     nil,     // scan all file types
 		MaxFileBytes:   1 << 20, // 1 MiB
 		Options: Options{
 			RemoveEmojis: true,
 		},
+	}
+}
+
+// defaultSkipExtensions returns the binary/minified/compressed/media file
+// suffixes that [DefaultScanConfig] never scans. A fresh slice is returned on
+// every call so callers can mutate the result without affecting other configs,
+// matching the behavior of the other DefaultScanConfig slice fields.
+func defaultSkipExtensions() []string {
+	return []string{
+		// Minified web assets: text, but a single line -- emoji removal or
+		// whitespace normalization would corrupt them and findings are noise.
+		".min.js", ".min.css",
+		// Source maps: large generated JSON, never authored by hand.
+		".js.map", ".css.map",
+		// Compressed and archive formats.
+		".gz", ".tgz", ".bz", ".bz2", ".xz", ".zst",
+		".zip", ".tar", ".7z", ".br",
+		// Images.
+		".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".bmp", ".svgz",
+		// Fonts.
+		".woff", ".woff2", ".ttf", ".otf", ".eot",
+		// Media.
+		".mp3", ".mp4", ".wav", ".mov", ".webm", ".ogg",
+		// Documents and compiled binaries.
+		".pdf", ".exe", ".dll", ".so", ".dylib", ".wasm", ".class", ".jar",
 	}
 }
 
@@ -189,7 +239,7 @@ type Finding struct {
 // emoji were found or replaced. This guarantees that redundant whitespace
 // is always cleaned in a single pass.
 //
-// Files matching ExemptFiles, ExemptSuffixes, or outside the
+// Files matching ExemptFiles, ExemptSuffixes, SkipExtensions, or outside the
 // Extensions filter are skipped. Directories matching SkipDirs are not entered.
 // Files larger than cfg.MaxFileBytes are silently skipped (zero disables the
 // limit). Binary files (detected by a NUL byte in the first 512 bytes) are
@@ -300,6 +350,17 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 		// Exempt files by suffix.
 		for _, suffix := range cfg.ExemptSuffixes {
 			if strings.HasSuffix(base, suffix) {
+				return nil
+			}
+		}
+
+		// Skip binary, minified, and compressed files by extension. This
+		// runs before the size guard and the file open so these files cost
+		// no I/O, and it catches minified text (.min.js/.min.css) and
+		// compressed files whose first NUL byte falls past the sniff window
+		// that the binary check below would otherwise miss.
+		for _, ext := range cfg.SkipExtensions {
+			if strings.HasSuffix(base, ext) {
 				return nil
 			}
 		}

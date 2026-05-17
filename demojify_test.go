@@ -381,6 +381,48 @@ func TestSanitizeBuildPlaceholderCollisionFallback(t *testing.T) {
 	}
 }
 
+// TestDemojifyPreservesNonLatinScripts verifies that codepoints from
+// non-Latin Unicode scripts (Devanagari, Arabic, Hebrew, CJK, Cyrillic,
+// Thai) are never stripped by Demojify and are never reported by
+// ContainsEmoji. These scripts occupy entirely different Unicode blocks from
+// the emoji ranges matched by emojiRE; this test is a regression guard
+// against those ranges accidentally expanding to overlap non-emoji scripts
+// (see GitHub issue #26 — Devanagari false-positive report).
+func TestDemojifyPreservesNonLatinScripts(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		// Devanagari: राज (rāj / "Raj") — U+0930 U+093E U+091C
+		{"Devanagari name (issue #26)", "\u0930\u093E\u091C"},
+		{"Devanagari sentence", "नमस्ते दुनिया"},
+		// Arabic
+		{"Arabic word", "\u0645\u0631\u062D\u0628\u0627"},
+		// Hebrew
+		{"Hebrew word", "\u05E9\u05DC\u05D5\u05DD"},
+		// CJK
+		{"CJK Chinese", "\u4E2D\u6587"},
+		{"CJK Japanese", "\u65E5\u672C\u8A9E"},
+		// Cyrillic
+		{"Cyrillic word", "\u041F\u0440\u0438\u0432\u0435\u0442"},
+		// Thai
+		{"Thai word", "\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35"},
+		// Extended Latin with diacritics (U+00C0–U+024F)
+		{"extended Latin", "\u00C9l\u00E8ve"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := demojify.Demojify(tt.input)
+			if got != tt.input {
+				t.Errorf("Demojify(%q) = %q; want input unchanged", tt.input, got)
+			}
+			if demojify.ContainsEmoji(tt.input) {
+				t.Errorf("ContainsEmoji(%q) = true; want false (not emoji script)", tt.input)
+			}
+		})
+	}
+}
+
 // TestDemojifyPreservesLegalSymbols verifies that ©, ®, and ™ are never
 // stripped by Demojify. These codepoints (U+00A9, U+00AE, U+2122) have the
 // Unicode emoji property in some contexts but are standard legal/documentation

@@ -96,10 +96,22 @@ text format.
 Uses `DefaultScanConfig()`, which skips:
 - Directories: `.git/`, `vendor/`, `node_modules/`
 - File suffixes: `_test.go`
+- Binary / minified / compressed / media extensions (never scanned or
+  rewritten, skipped before the file is even opened):
+  - Minified assets & source maps: `.min.js`, `.min.css`, `.js.map`,
+    `.css.map`
+  - Compressed / archive: `.gz`, `.tgz`, `.bz`, `.bz2`, `.xz`, `.zst`,
+    `.zip`, `.tar`, `.7z`, `.br`
+  - Images: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.ico`, `.bmp`,
+    `.svgz`
+  - Fonts: `.woff`, `.woff2`, `.ttf`, `.otf`, `.eot`
+  - Media: `.mp3`, `.mp4`, `.wav`, `.mov`, `.webm`, `.ogg`
+  - Documents / compiled: `.pdf`, `.exe`, `.dll`, `.so`, `.dylib`,
+    `.wasm`, `.class`, `.jar`
 
-All file types are scanned unless `-exts` restricts them.
-Binary files are auto-detected (NUL byte sniff) and skipped.
-Files larger than 1 MiB are skipped.
+All other file types are scanned unless `-exts` restricts them.
+Remaining binary files are auto-detected (NUL byte sniff in the first 512
+bytes) and skipped. Files larger than 1 MiB are skipped.
 
 ## Examples
 

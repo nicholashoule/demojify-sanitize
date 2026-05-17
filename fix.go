@@ -20,8 +20,8 @@ import (
 //
 // FixDir sets cfg.Root to root before scanning, so callers do not need to
 // set it separately. All other [ScanConfig] fields -- SkipDirs, Extensions,
-// ExemptFiles, ExemptSuffixes, MaxFileBytes, Options, Replacements, and
-// CollectMatches -- behave identically to [ScanDir].
+// ExemptFiles, ExemptSuffixes, SkipExtensions, MaxFileBytes, Options,
+// Replacements, and CollectMatches -- behave identically to [ScanDir].
 //
 // Each resolved write target is validated to remain within root, preventing
 // path-traversal writes via ".." components or symlinks in [Finding.Path].
