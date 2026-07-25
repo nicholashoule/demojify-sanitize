@@ -70,6 +70,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   step also runs `TestReplacePreservesLiteralTokenRuns`, and a new
   "Whitespace alignment preservation regression" step runs
   `TestScanDirPreservesAlignmentOnUntouchedLines`
+- `.github/workflows/ci.yml`: Go matrix refreshed to
+  `1.21 / 1.23 / stable`, with the `(1.21, macos-latest)` cell excluded --
+  Go 1.21 test binaries lack an `LC_UUID` load command and are aborted by
+  dyld on macOS 15 runners under `-race` (golang/go#68678; 1.21 is EOL and
+  never received the linker backport). The 1.21 floor stays covered on
+  ubuntu and windows; spotlight steps, coverage upload, and the lint job now
+  key on `stable` instead of a pinned minor version
 
 ### Documentation
 
