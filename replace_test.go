@@ -426,10 +426,9 @@ func TestReplaceDefaultReplacementsPreservesASCII(t *testing.T) {
 	}
 }
 
-// TestReplaceLongTokensStillCollapse verifies that the fix to
-// collapseRepeatedTokens did not break the intended behavior: adjacent
-// identical emoji that both map to a long label token are still collapsed to a
-// single occurrence.
+// TestReplaceLongTokensStillCollapse verifies that the run-collapse logic
+// keeps its intended behavior across rewrites: adjacent identical emoji that
+// both map to a long label token are still collapsed to a single occurrence.
 func TestReplaceLongTokensStillCollapse(t *testing.T) {
 	repl := demojify.DefaultReplacements()
 

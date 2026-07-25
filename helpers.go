@@ -32,10 +32,11 @@ func sortByLenDesc(s []string) {
 // sortedKeys returns the keys of m sorted by descending byte length so that
 // longer sequences are matched before shorter sub-sequences (e.g., a key
 // containing a variation selector such as U+FE0F is tried before its base
-// codepoint). Empty keys are silently omitted because an empty key in
-// [strings.NewReplacer] inserts a replacement between every rune, causing
-// unbounded memory growth -- a potential denial-of-service vector for any
-// caller that passes user-supplied map keys.
+// codepoint). Empty keys are silently omitted because an empty key would
+// prefix-match at every byte position in the substitution scan, emitting its
+// replacement between every rune and causing unbounded output growth -- a
+// potential denial-of-service vector for any caller that passes
+// user-supplied map keys.
 func sortedKeys(m map[string]string) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {

@@ -205,9 +205,9 @@ func FindAllMapped(text string, replacements map[string]string) []string {
 	if len(replacements) == 0 || text == "" {
 		return nil
 	}
-	// Process text left-to-right with the same longest-first greedy match that
-	// strings.NewReplacer uses, so variation-selector sequences are attributed
-	// to the longer key rather than the bare codepoint.
+	// Process text left-to-right with the same longest-first greedy walk as
+	// applyReplacer, so variation-selector sequences are attributed to the
+	// longer key rather than the bare codepoint.
 	keys := sortedKeys(replacements) // longest first
 	seen := make(map[string]struct{})
 	var result []string
