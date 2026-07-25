@@ -72,12 +72,19 @@ func applyReplacer(text string, replacements map[string]string, keys []string) s
 		}
 		// Unmapped emoji are stripped. Every codepoint matched by emojiRE is
 		// U+200D or higher, so its UTF-8 encoding starts with a non-ASCII
-		// byte; ASCII bytes skip the regex entirely.
+		// byte; ASCII bytes skip the regex entirely. Non-emoji runes are
+		// copied whole so the regex runs once per rune, never on mid-rune
+		// slices. Invalid UTF-8 decodes with size 1 and is copied through
+		// byte-for-byte unchanged.
 		if c >= utf8.RuneSelf {
 			if loc := emojiRE.FindStringIndex(text[i:]); len(loc) > 0 && loc[0] == 0 {
 				i += loc[1]
 				continue
 			}
+			_, size := utf8.DecodeRuneInString(text[i:])
+			out = append(out, text[i:i+size]...)
+			i += size
+			continue
 		}
 		out = append(out, c)
 		i++
@@ -110,7 +117,11 @@ func emitToken(out []byte, tok string) []byte {
 	return append(out, tok...)
 }
 
-// endsWith reports whether b ends with the bytes of s.
+// endsWith reports whether b ends with the bytes of s. The string
+// conversion inside the comparison does not allocate: the compiler
+// recognizes the string(b)==s pattern and emits a direct memory compare
+// (escape analysis: "string(...) does not escape"; verified zero allocs
+// per call via testing.AllocsPerRun).
 func endsWith(b []byte, s string) bool {
 	return len(b) >= len(s) && string(b[len(b)-len(s):]) == s
 }
