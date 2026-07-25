@@ -12,7 +12,7 @@ import (
 )
 
 // ErrMultipleJSONValues is returned by [SanitizeJSON] when the input contains
-// more than one top-level JSON value (e.g., `{"a":1}{"b":2}`).
+// more than one top-level JSON value (e.g., `{"a":1}{"b":2}` or `{"a":1} 5`).
 var ErrMultipleJSONValues = errors.New("demojify: input contains multiple JSON values")
 
 // Options configures the sanitization pipeline used by [Sanitize].
@@ -155,6 +155,11 @@ const sanitizeReaderMaxTokenSize = 1024 * 1024 // 1 MiB per line
 // Lines up to [sanitizeReaderMaxTokenSize] bytes are supported. Longer
 // lines cause [bufio.ErrTooLong] to be returned.
 //
+// The output never ends with a newline: lines are written separated by
+// newlines, so a trailing newline on the final input line is not
+// reproduced. This holds even when opts.NormalizeWhitespace is false and
+// matches the trailing-trim behavior of [Normalize].
+//
 // SanitizeReader returns an error for any I/O failure or scanner error.
 func SanitizeReader(r io.Reader, w io.Writer, opts Options) error {
 	scanner := bufio.NewScanner(r)
@@ -241,11 +246,14 @@ func SanitizeJSON(data []byte, opts Options) ([]byte, error) {
 		return nil, err
 	}
 	// Ensure the entire input is a single valid JSON value by requiring EOF
-	// after the first successful decode. This rejects inputs with trailing
-	// non-whitespace data such as `{"a":1} trailing`.
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
+	// after the first successful decode. Decoding into json.RawMessage
+	// accepts ANY well-formed second value (object, array, number, string,
+	// bool, null), so every multiple-value input consistently returns
+	// [ErrMultipleJSONValues]; trailing garbage that is not valid JSON
+	// (e.g. `{"a":1} trailing`) returns the decoder's syntax error instead.
+	var extra json.RawMessage
+	if err := dec.Decode(&extra); err != io.EOF {
 		if err == nil {
-			// A second value decoded successfully: input has multiple values.
 			return nil, ErrMultipleJSONValues
 		}
 		return nil, err

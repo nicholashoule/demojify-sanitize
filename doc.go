@@ -38,14 +38,16 @@
 // Rather than stripping emoji, callers can substitute them with meaningful
 // text equivalents using the replacement functions:
 //
-//   - [Replace] substitutes codepoints using a caller-supplied map, then
-//     strips any residual emoji via [Demojify]. Longer keys match first.
+//   - [Replace] substitutes codepoints using a caller-supplied map and
+//     strips any residual unmapped emoji. Longer keys match first, and
+//     replacement values are emitted verbatim (identity mappings preserve
+//     their codepoints).
 //   - [ReplaceFile] applies [Replace] to a file atomically; no write
 //     occurs when the file is already clean.
 //   - [ReplaceCount] applies [Replace] and also returns the substitution count.
 //   - [FindAll] returns distinct emoji sequences found in text.
 //   - [FindAllMapped] returns only mapped-key sequences, greedy longest-first.
-//   - [DefaultReplacements] returns a built-in ~137-entry emoji-to-text map
+//   - [DefaultReplacements] returns a built-in ~280-entry emoji-to-text map
 //     covering status symbols, arrows, shapes, checkboxes, and dingbats.
 //
 // Typical usage:

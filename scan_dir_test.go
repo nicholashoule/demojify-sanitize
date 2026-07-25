@@ -763,3 +763,74 @@ func TestScanDirPreservesCRLFCleanFile(t *testing.T) {
 		t.Errorf("got %d findings for clean CRLF file, want 0", len(findings))
 	}
 }
+
+// TestScanDirPreservesAlignmentOnUntouchedLines is a regression test for the
+// bug where the non-normalize cleanup ran collapseInlineSpaces over the whole
+// file: one emoji anywhere caused every alignment tab and multi-space run in
+// the file to collapse, so a single fix pass broke gofmt column alignment on
+// lines the emoji removal never touched. The cleanup must be scoped to
+// changed lines only.
+func TestScanDirPreservesAlignmentOnUntouchedLines(t *testing.T) {
+	root := t.TempDir()
+	const content = "package p\n" +
+		"\n" +
+		"type T struct {\n" +
+		"\tName\tstring\t// aligned\n" +
+		"\tAge\tint\t// aligned too \U0001F600\n" +
+		"}\n" +
+		"\n" +
+		"var x = 1  // two spaces before comment\n"
+	writeTempFile(t, root, "a.go", content)
+
+	cfg := demojify.DefaultScanConfig()
+	cfg.Root = root
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("got %d findings, want 1", len(findings))
+	}
+	cleaned := findings[0].Cleaned
+
+	// Untouched lines must keep their exact whitespace.
+	if !strings.Contains(cleaned, "\tName\tstring\t// aligned\n") {
+		t.Errorf("alignment tabs on untouched struct field were collapsed: %q", cleaned)
+	}
+	if !strings.Contains(cleaned, "var x = 1  // two spaces before comment") {
+		t.Errorf("double space on untouched line was collapsed: %q", cleaned)
+	}
+	// The changed line has the emoji removed and its leftover whitespace
+	// tidied (inline runs collapsed, trailing whitespace trimmed).
+	if !strings.Contains(cleaned, "\tAge int // aligned too\n") {
+		t.Errorf("changed line was not tidied as expected: %q", cleaned)
+	}
+	if strings.Contains(cleaned, "\U0001F600") {
+		t.Errorf("emoji was not removed: %q", cleaned)
+	}
+}
+
+// TestScanDirMixedCRLFWithBareCRStaysLF verifies the pure-CRLF detection is
+// not fooled by a stray bare CR: such a file is mixed, so the cleaned output
+// is left with LF line endings rather than promoting the bare CR to CRLF and
+// spreading the \r\n convention beyond the file's own usage.
+func TestScanDirMixedCRLFWithBareCRStaysLF(t *testing.T) {
+	root := t.TempDir()
+	const content = "line one\r\nbare carriage\rreturn \U0001F680\r\n"
+	writeTempFile(t, root, "mixed.txt", content)
+
+	cfg := demojify.ScanConfig{
+		Root:    root,
+		Options: demojify.Options{RemoveEmojis: true},
+	}
+	findings, err := demojify.ScanDir(cfg)
+	if err != nil {
+		t.Fatalf("ScanDir: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("got %d findings, want 1", len(findings))
+	}
+	if strings.Contains(findings[0].Cleaned, "\r") {
+		t.Errorf("mixed-ending file should be normalized to LF, got %q", findings[0].Cleaned)
+	}
+}

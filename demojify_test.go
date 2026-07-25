@@ -381,6 +381,29 @@ func TestSanitizeBuildPlaceholderCollisionFallback(t *testing.T) {
 	}
 }
 
+// TestSanitizeAllowedEmojisBareNoncharacterInput is a regression test for a
+// reordering corruption: when the input contained a bare U+FDD0 noncharacter
+// followed by a digit, the old per-placeholder collision check passed (the
+// full placeholder string was absent), but after phase-1 substitution the
+// stray noncharacter and adjacent digit assembled a spurious placeholder that
+// phase 3 restored at the wrong position -- swapping the allowed emoji and
+// the noncharacter. Rejecting any sentinel whose bare rune appears in the
+// input guarantees an exact round-trip.
+func TestSanitizeAllowedEmojisBareNoncharacterInput(t *testing.T) {
+	heart := "❤️"
+	// U+FDD0 followed by the digit "0", then the allowed emoji.
+	input := string(rune(0xFDD0)) + "0" + heart
+
+	opts := demojify.Options{
+		RemoveEmojis:  true,
+		AllowedEmojis: []string{heart},
+	}
+	got := demojify.Sanitize(input, opts)
+	if got != input {
+		t.Errorf("Sanitize(%q) = %q, want input unchanged (exact round-trip)", input, got)
+	}
+}
+
 // TestDemojifyPreservesNonLatinScripts verifies that codepoints from
 // non-Latin Unicode scripts (Devanagari, Arabic, Hebrew, CJK, Cyrillic,
 // Thai) are never stripped by Demojify and are never reported by

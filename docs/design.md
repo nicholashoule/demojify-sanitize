@@ -105,6 +105,19 @@ ensures that removing emoji from a Windows-native file does not silently convert
 it to LF line endings, which would produce noisy git diffs unrelated to the
 actual emoji changes. The restoration only applies when `NormalizeWhitespace`
 is false; callers who request full whitespace normalization accept LF output.
+A file counts as CRLF only when every line break is `\r\n` -- a stray bare
+`\r` or `\n` marks the file as mixed, and mixed files are left with LF so the
+scanner never spreads `\r\n` beyond the file's own convention.
+
+**Why the non-normalize cleanup is scoped to changed lines:**
+When `NormalizeWhitespace` is false, the scanner still tidies the whitespace
+artifacts that emoji removal leaves behind (two spaces where an emoji sat,
+trailing spaces at line end). That cleanup compares the file line by line
+against the original and touches only the lines emoji removal actually
+changed. Running the collapse over the whole file -- the original behavior --
+meant one emoji anywhere destroyed gofmt tab alignment and column-aligned
+comments on every other line, so a "fix" pass left Go files unformatted.
+Untouched lines are now preserved byte for byte.
 
 ## Substitution pipeline
 
@@ -114,41 +127,53 @@ silently removing emoji, callers want to map them to readable text equivalents
 (e.g., `[PASS]`, `WARNING`, `->`) so that context is preserved in plain-text
 output.
 
-**Why `Replace` delegates to `Demojify` after substitution:**
-The replacement map is curated and finite. Inputs may contain emoji outside
-the map -- especially supplementary block emoji (U+1F000–U+1FAFF) added in
-recent Unicode versions. Rather than silently producing garbled output,
-`Replace` passes the substituted text through `Demojify` as a residual cleanup
-step. Callers get a clean string regardless of whether every codepoint was in
-their map.
+**Why `Replace` is a single position-aware scan:**
+`Replace` walks the input left to right once. At each position it tries the
+replacement keys longest-first; if none match, it checks for an unmapped emoji
+codepoint (stripped) and otherwise copies the input byte through. This design
+has three consequences that a find-and-replace pipeline cannot deliver:
+
+1. **Unmapped emoji are still removed.** The replacement map is curated and
+   finite; inputs may contain emoji outside it -- especially supplementary
+   block emoji (U+1F000–U+1FAFF) added in recent Unicode versions. The scan
+   strips them in the same pass, so callers get a clean string regardless of
+   whether every codepoint was in their map.
+2. **Replacement values are emitted verbatim.** A value is never re-scanned
+   for emoji, so identity mappings (key == value) preserve the mapped
+   codepoints exactly -- the documented way to keep specific codepoints during
+   replacement-based scans.
+3. **Only substituted tokens collapse.** Because the scan knows which output
+   spans came from substitution, runs of adjacent repeated emoji collapse to a
+   single token without ever touching literal input text that happens to equal
+   a replacement token. The earlier whole-output collapse corrupted emoji-free
+   documents that legitimately contained repeated token text such as
+   `[WARNING] [WARNING]` in example CLI output.
 
 **Why longest-key matching is required:**
 Many emoji appear in both a bare form (e.g., U+26A0 WARNING SIGN) and a
 variation-selector form (U+26A0 U+FE0F). If the bare codepoint were matched
-first, the variation selector U+FE0F would remain and be stripped by `Demojify`
-as a residual, leaving a stray space or no-op character. Processing keys in
-descending byte-length order (via `strings.NewReplacer` for `Replace`, and a
-explicit linear scan for `FindAllMapped`) ensures multi-codepoint sequences are
-always consumed atomically.
+first, the variation selector U+FE0F would remain and be stripped as a
+residual, leaving a stray space or no-op character. Trying keys in descending
+byte-length order at each position (the same greedy walk used by
+`FindAllMapped`) ensures multi-codepoint sequences are always consumed
+atomically.
 
 **Why `DefaultReplacements()` returns a copy:**
 A shared global map is not safe for concurrent mutation. Returning a fresh
 copy on every call lets each caller add, remove, or override entries without
-affecting other goroutines or call sites. The copy cost is negligible (~137
+affecting other goroutines or call sites. The copy cost is negligible (~280
 entries) compared to the I/O in `ReplaceFile` or the regex in `Demojify`.
 
-**Why `collapseRepeatedTokens` skips tokens shorter than 4 characters:**
+**Why run collapsing skips tokens shorter than 4 characters:**
 Several emoji in `DefaultReplacements()` map to short ASCII sequences: `/`
 (U+2797 heavy division sign), `-` (U+2796 heavy minus), `*` (U+2022 bullet),
-`o` (U+25CB white circle), `->` (U+2192 rightwards arrow). These appear
-legitimately throughout source code (e.g., `//` in Go comments, `**` in
-Markdown bold, `--` in CLI flags, `->` in documentation). Collapsing them
-would corrupt any document containing two adjacent instances — for example,
-`Replace` on a Go source file would silently rewrite `//` to `/`, breaking
-every URL and comment. Only tokens of 4 or more characters (e.g., `[FAIL]`,
-`[WARNING]`, `WARNING`, `[DEPLOY]`) are label-like quantities produced
-exclusively by emoji substitution and are safe to deduplicate when two
-adjacent identical emoji both map to the same replacement string.
+`o` (U+25CB white circle), `->` (U+2192 rightwards arrow). Two of those can
+land adjacent in perfectly normal output (an arrow next to a bullet), and
+deduplicating short sequences is far more likely to corrupt meaning than to
+remove clutter. Only tokens of 4 or more bytes (e.g., `[FAIL]`, `[WARNING]`,
+`WARNING`, `[DEPLOY]`) are label-like quantities where an adjacent repeat is
+redundant, and even those collapse only when the run's last member was
+produced by substitution -- literal input text is never removed.
 
 **Why `ReplaceFile` uses an atomic rename:**
 Writing directly to the target file leaves a window where a crash or
@@ -184,10 +209,12 @@ limit. Lines longer than 1 MiB cause `bufio.ErrTooLong` to be returned.
 `SanitizeJSON(data []byte, opts Options) ([]byte, error)` sanitizes only the
 string values within a JSON document, leaving keys, numbers, booleans, and null
 untouched. It uses `json.Decoder` with `UseNumber` to preserve numeric precision,
-and after decoding the first value it performs a second `Decode` to verify EOF is
-reached. Inputs with trailing non-whitespace data (e.g., `{"a":1} trailing` or
-two concatenated JSON objects) are rejected with an error, ensuring the caller
-always receives a single, complete, structurally valid JSON document.
+and after decoding the first value it performs a second `Decode` into a
+`json.RawMessage` to verify EOF is reached. Any second well-formed JSON value
+(object, array, number, string, bool, null) returns `ErrMultipleJSONValues`;
+trailing garbage that is not valid JSON (e.g., `{"a":1} trailing`) returns the
+decoder's syntax error. Either way the caller only ever receives a single,
+complete, structurally valid JSON document.
 
 ## Batch scan-and-fix
 
@@ -210,34 +237,3 @@ The library intentionally does not:
 scope expansion that would dilute the library's focused purpose. Projects
 needing those capabilities should compose this library with purpose-built tools.
 
-## Per-file line limit configuration
-
-`LimitConfig`, `DefaultLimitConfig()`, and `ResolveLimit()` provide a lightweight mechanism for
-expressing per-file line limit policies that external governance tooling can
-apply when deciding how many lines of a file to inspect.
-
-**Important:** The core scanner APIs (`ScanDir`, `ScanDirContext`, `ScanFile`)
-do not currently consume `LimitConfig` directly. Callers that need hard
-per-file line limits should enforce those limits in their own orchestration
-layer (for example, by truncating content or skipping files) based on
-`LimitConfig` before or around calls into the scanner.
-
-**Why a separate config type instead of a field on `ScanConfig`:**
-`ScanConfig` controls what to scan (root, skip dirs, extensions) and how to
-process it (options, replacements). Line limits are a governance concern --
-they express policy about file size -- and belong in a dedicated type. This
-keeps `ScanConfig` focused and lets callers compose their own governance
-policies without coupling them to the scan pipeline's implementation details.
-
-**Why the zero-value of `Default` falls back to `DefaultLineLimit`:**
-A zero `Default` is indistinguishable from "not set by the caller" when the
-struct is value-initialized. Treating zero as a sentinel avoids a separate
-`bool` sentinel field and lets callers use `LimitConfig{}` to mean
-"apply the standard 500-line default" without explicitly knowing the constant.
-
-**Why `.claude/CLAUDE.md` has a built-in 50-line override:**
-AI context files (CLAUDE.md, AGENTS.md, and similar) are designed to be
-short, focused instruction sets. A 50-line override in `DefaultLimitConfig()`
-expresses this constraint out of the box for the most common AI-agent workspace
-layout, giving projects a governance nudge without requiring manual
-configuration.

@@ -3,12 +3,26 @@ package demojify
 import (
 	"os"
 	"strings"
+	"unicode/utf8"
 )
 
+// minCollapseLen is the minimum replacement-token length eligible for
+// run collapsing in [applyReplacer]. Shorter tokens (e.g. "-", "/", "*",
+// "->", "<=") are common ASCII sequences that appear legitimately in source
+// code, URLs, and documentation, and must never be deduplicated. Only
+// label-like tokens such as "[FAIL]" or "WARNING" are safe to collapse.
+const minCollapseLen = 4
+
 // Replace substitutes emoji codepoints found in text using the provided
-// replacements map, then strips any remaining unmatched emoji codepoints
-// via [Demojify]. Longer map keys are matched before shorter ones to handle
+// replacements map, then strips any remaining unmatched emoji codepoints.
+// Longer map keys are matched before shorter ones to handle
 // variation-selector sequences (e.g., WARNING sign U+26A0 with U+FE0F) correctly.
+//
+// Replacement values are emitted verbatim: a value is never re-scanned for
+// emoji, so identity mappings (key == value) preserve the mapped codepoints
+// exactly. Runs of adjacent emoji that substitute to the same token of
+// [minCollapseLen] or more bytes are collapsed to a single occurrence;
+// literal text that happens to equal a replacement token is never collapsed.
 //
 // Replace with a nil or empty replacements map behaves identically to [Demojify].
 // Replace is safe for concurrent use provided the replacements map is not
@@ -20,71 +34,96 @@ func Replace(text string, replacements map[string]string) string {
 	return applyReplacer(text, replacements, sortedKeys(replacements))
 }
 
-// applyReplacer substitutes emoji codepoints using keys (pre-sorted by
-// descending length) and the replacements map, then strips residual emoji
-// via [Demojify]. Consecutive identical tokens produced by adjacent repeated
-// emoji (e.g. two warning signs yielding "WARNINGWARNING") are collapsed to a
-// single token. Called by [Replace], [ReplaceCount], and [ReplaceFile]
-// to avoid re-sorting keys in composed operations.
-func applyReplacer(text string, replacements map[string]string, keys []string) string {
-	args := make([]string, 0, len(keys)*2)
-	for _, k := range keys {
-		args = append(args, k, replacements[k])
-	}
-	result := Demojify(strings.NewReplacer(args...).Replace(text))
-	return collapseRepeatedTokens(result, distinctValues(replacements))
-}
-
-// distinctValues returns a deduplicated slice of the non-empty values in m,
-// sorted by descending length so that longer tokens are collapsed before any
-// shorter sub-string tokens they might contain.
-func distinctValues(m map[string]string) []string {
-	seen := make(map[string]struct{}, len(m))
-	vals := make([]string, 0, len(m))
-	for _, v := range m {
-		if v == "" {
-			continue
-		}
-		if _, ok := seen[v]; !ok {
-			seen[v] = struct{}{}
-			vals = append(vals, v)
-		}
-	}
-	sortByLenDesc(vals)
-	return vals
-}
-
-// collapseRepeatedTokens reduces runs of the same replacement token in text
-// to a single occurrence. Both direct concatenation ("TOKENTOK") and
-// space-separated repetition ("TOKEN TOKEN") are collapsed, handling runs of
-// three or more via repeated passes. Tokens in vals must be non-empty.
+// applyReplacer walks text left to right, substituting mapped keys (tried
+// longest-first at each position) and stripping unmapped emoji codepoints.
+// Because it tracks which output spans were produced by substitution, it can
+// collapse runs of adjacent substituted tokens without ever touching literal
+// text that happens to equal a replacement token -- the position-blind
+// find-and-replace it superseded corrupted such text. Called by [Replace],
+// [ReplaceCount], [ReplaceFile], and the [ScanDir] walk to avoid re-sorting
+// keys in composed operations.
 //
-// Only tokens of length >= 4 are collapsed. Shorter tokens (e.g. "-", "/",
-// "*", "->", "<=") are common ASCII sequences that appear legitimately in
-// source code, URLs, and documentation, and must never be deduplicated. Only
-// label-like tokens such as "[FAIL]" or "WARNING" are safe to collapse.
-func collapseRepeatedTokens(text string, vals []string) string {
-	for _, v := range vals {
-		// Skip short tokens: single-character and short ASCII sequences
-		// (e.g. "-", "/", "*", "o", "->", "<=") appear in normal source code
-		// and must not be collapsed. Only multi-character label tokens produced
-		// by emoji substitution (e.g. "[FAIL]", "WARNING") are safe to reduce.
-		if len(v) < 4 {
+// The keys parameter must hold the map's non-empty keys sorted by descending
+// byte length (see [sortedKeys]).
+func applyReplacer(text string, replacements map[string]string, keys []string) string {
+	// Group keys by first byte, preserving longest-first order inside each
+	// bucket, so the per-position candidate loop only sees keys that can
+	// possibly match. ASCII text then skips the key loop entirely for
+	// buckets with no keys.
+	var byFirst [256][]string
+	for _, k := range keys {
+		byFirst[k[0]] = append(byFirst[k[0]], k)
+	}
+
+	out := make([]byte, 0, len(text))
+	for i := 0; i < len(text); {
+		c := text[i]
+		matched := false
+		for _, k := range byFirst[c] {
+			if strings.HasPrefix(text[i:], k) {
+				out = emitToken(out, replacements[k])
+				i += len(k)
+				matched = true
+				break
+			}
+		}
+		if matched {
 			continue
 		}
-		// Collapse space-separated repeats first so the concat pass can later
-		// catch any newly adjacent duplicates.
-		doubled := v + " " + v
-		for strings.Contains(text, doubled) {
-			text = strings.ReplaceAll(text, doubled, v)
+		// Unmapped emoji are stripped. Every codepoint matched by emojiRE is
+		// U+200D or higher, so its UTF-8 encoding starts with a non-ASCII
+		// byte; ASCII bytes skip the regex entirely. Non-emoji runes are
+		// copied whole so the regex runs once per rune, never on mid-rune
+		// slices. Invalid UTF-8 decodes with size 1 and is copied through
+		// byte-for-byte unchanged.
+		if c >= utf8.RuneSelf {
+			if loc := emojiRE.FindStringIndex(text[i:]); len(loc) > 0 && loc[0] == 0 {
+				i += loc[1]
+				continue
+			}
+			_, size := utf8.DecodeRuneInString(text[i:])
+			out = append(out, text[i:i+size]...)
+			i += size
+			continue
 		}
-		// Collapse direct concatenation ("TOKTOKEN" -> "TOK").
-		concat := v + v
-		for strings.Contains(text, concat) {
-			text = strings.ReplaceAll(text, concat, v)
+		out = append(out, c)
+		i++
+	}
+	return string(out)
+}
+
+// emitToken appends a substituted token to out, collapsing runs: when out
+// already ends with the same token -- directly or separated by a single
+// space -- the new occurrence is dropped (and the separating space removed)
+// so that adjacent repeated emoji yield one token instead of
+// "TOKENTOKEN" or "TOKEN TOKEN". Only tokens of [minCollapseLen] or more
+// bytes are collapsed; short tokens like "-" or "->" always append.
+//
+// Collapsing only ever suppresses the token being emitted, so literal input
+// text is never removed: a run collapses only when its last member came from
+// a substitution.
+func emitToken(out []byte, tok string) []byte {
+	if tok == "" {
+		return out
+	}
+	if len(tok) >= minCollapseLen {
+		if endsWith(out, tok) {
+			return out
+		}
+		if n := len(out) - 1; n >= 0 && out[n] == ' ' && endsWith(out[:n], tok) {
+			return out[:n]
 		}
 	}
-	return text
+	return append(out, tok...)
+}
+
+// endsWith reports whether b ends with the bytes of s. The string
+// conversion inside the comparison does not allocate: the compiler
+// recognizes the string(b)==s pattern and emits a direct memory compare
+// (escape analysis: "string(...) does not escape"; verified zero allocs
+// per call via testing.AllocsPerRun).
+func endsWith(b []byte, s string) bool {
+	return len(b) >= len(s) && string(b[len(b)-len(s):]) == s
 }
 
 // FindAll returns the distinct emoji codepoint sequences found in text.
@@ -107,7 +146,7 @@ func FindAll(text string) []string {
 // replacements map, and writes the result back only if changes were made.
 // The original file permissions are preserved. Returns the number of
 // substitutions and removals performed (mapped sequences from the replacement
-// map plus any residual emoji codepoints stripped by [Demojify]).
+// map plus any residual unmapped emoji codepoints stripped).
 //
 // Binary files (detected by a NUL byte in the first 512 bytes) are silently
 // skipped and return (0, nil), matching the behavior of [ScanDir] and
@@ -166,9 +205,9 @@ func FindAllMapped(text string, replacements map[string]string) []string {
 	if len(replacements) == 0 || text == "" {
 		return nil
 	}
-	// Process text left-to-right with the same longest-first greedy match that
-	// strings.NewReplacer uses, so variation-selector sequences are attributed
-	// to the longer key rather than the bare codepoint.
+	// Process text left-to-right with the same longest-first greedy walk as
+	// applyReplacer, so variation-selector sequences are attributed to the
+	// longer key rather than the bare codepoint.
 	keys := sortedKeys(replacements) // longest first
 	seen := make(map[string]struct{})
 	var result []string
@@ -197,7 +236,8 @@ func FindAllMapped(text string, replacements map[string]string) []string {
 
 // ReplaceCount applies [Replace] to text and returns both the cleaned string
 // and the total number of substitutions and removals performed (mapped-key
-// matches plus residual emoji stripped by [Demojify]).
+// matches plus residual unmapped emoji stripped). When adjacent repeated
+// emoji collapse to a single token, each occurrence still counts.
 //
 // ReplaceCount is safe for concurrent use provided the replacements map is
 // not mutated concurrently.

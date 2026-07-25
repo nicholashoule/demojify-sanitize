@@ -209,53 +209,50 @@ func demojifyPreserving(text string, allowedEmojis []string, allowedRanges []*un
 }
 
 // buildPlaceholders generates n placeholder strings that are guaranteed not to
-// appear anywhere in text. It uses Unicode noncharacters (U+FDD0–U+FDEF) as
+// appear anywhere in text. It uses Unicode noncharacters (U+FDD0-U+FDEF) as
 // sentinel prefixes. These codepoints are permanently reserved by Unicode and
 // must never appear in conforming text, making collisions extremely unlikely.
-// If a collision is detected the function advances to the next noncharacter
-// until all placeholders are absent from text.
+//
+// A sentinel is rejected when its bare rune appears anywhere in text -- not
+// merely when a full placeholder string does. Requiring total absence
+// guarantees that after phase-1 substitution every occurrence of the sentinel
+// in the working string belongs to a placeholder, so the phase-3 restore can
+// never match a spurious placeholder assembled from adjacent input text
+// (e.g. a stray noncharacter followed by a digit from the input). When a
+// sentinel is present in text the function advances to the next noncharacter.
 func buildPlaceholders(n int, text string) []string {
-	// Unicode defines 32 noncharacters in U+FDD0–U+FDEF. That gives us
+	// Unicode defines 32 noncharacters in U+FDD0-U+FDEF. That gives us
 	// 32 sentinel prefixes to try before falling back to the BMP
 	// noncharacters U+FFFE and U+FFFF, for a total of 34 candidates.
 	const firstSentinel = '\uFDD0'
 	const lastSentinel = '\uFDEF'
 
-	sentinel := firstSentinel
-	for {
-		phs := make([]string, n)
-		prefix := string(sentinel)
-		collision := false
-		for i := 0; i < n; i++ {
-			ph := prefix + strconv.Itoa(i) + prefix
-			if strings.Contains(text, ph) {
-				collision = true
-				break
+	for sentinel := rune(firstSentinel); ; {
+		if !strings.ContainsRune(text, sentinel) {
+			prefix := string(sentinel)
+			phs := make([]string, n)
+			for i := 0; i < n; i++ {
+				phs[i] = prefix + strconv.Itoa(i) + prefix
 			}
-			phs[i] = ph
-		}
-		if !collision {
 			return phs
 		}
-		sentinel++
-		if sentinel > lastSentinel {
-			// Extreme fallback: use U+FFFE and U+FFFF.
-			if sentinel == lastSentinel+1 {
-				sentinel = '\uFFFE'
-				continue
-			}
-			// sentinel is U+FFFF (incremented from U+FFFE after a
-			// collision) -- try it before falling back to multi-rune.
-			if sentinel <= '\uFFFF' {
-				continue
-			}
-			// All 34 noncharacters collide -- practically impossible.
-			// Fall back to a multi-rune prefix that cannot occur naturally.
+		switch sentinel {
+		case lastSentinel:
+			// Extreme fallback: try the BMP noncharacters next.
+			sentinel = '\uFFFE'
+		case '\uFFFE':
+			sentinel = '\uFFFF'
+		case '\uFFFF':
+			// All 34 noncharacters appear in the input -- practically
+			// impossible outside deliberately hostile text. Fall back to a
+			// multi-rune prefix that cannot occur naturally.
 			phs := make([]string, n)
 			for i := 0; i < n; i++ {
 				phs[i] = "\uFDD0\uFDD1\uFDD2" + strconv.Itoa(i) + "\uFDD0\uFDD1\uFDD2"
 			}
 			return phs
+		default:
+			sentinel++
 		}
 	}
 }

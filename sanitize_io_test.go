@@ -465,6 +465,33 @@ func TestSanitizeFileWhitespaceOnlyChanges(t *testing.T) {
 	}
 }
 
-// TestSanitizeConcurrent verifies that Sanitize is safe for concurrent use
-// from multiple goroutines. The race detector (go test -race) will catch
-// any data races on the compiled package-level regexes.
+// TestSanitizeJSONMultipleValuesSentinel verifies that every input holding a
+// second well-formed top-level JSON value returns [ErrMultipleJSONValues],
+// regardless of the second value's type. The old implementation decoded the
+// second value into struct{}, so only a second object hit the sentinel while
+// `{"a":1} 5` surfaced as an unrelated unmarshal-type error.
+func TestSanitizeJSONMultipleValuesSentinel(t *testing.T) {
+	inputs := []string{
+		`{"a":1}{"b":2}`,
+		`{"a":1} 5`,
+		`{"a":1} "str"`,
+		`{"a":1} [2,3]`,
+		`{"a":1} true`,
+		`{"a":1} null`,
+	}
+	for _, in := range inputs {
+		t.Run(in, func(t *testing.T) {
+			_, err := demojify.SanitizeJSON([]byte(in), demojify.DefaultOptions())
+			if !errors.Is(err, demojify.ErrMultipleJSONValues) {
+				t.Errorf("SanitizeJSON(%q) err = %v, want ErrMultipleJSONValues", in, err)
+			}
+		})
+	}
+
+	// Trailing garbage that is not valid JSON keeps returning the decoder's
+	// syntax error, not the multiple-values sentinel.
+	_, err := demojify.SanitizeJSON([]byte(`{"a":1} trailing`), demojify.DefaultOptions())
+	if err == nil || errors.Is(err, demojify.ErrMultipleJSONValues) {
+		t.Errorf("SanitizeJSON with trailing garbage err = %v, want a syntax error", err)
+	}
+}

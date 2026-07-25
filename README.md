@@ -13,7 +13,7 @@ A dependency-free Go module for auditing, detecting, removing, and substituting 
 - **Emoji removal** -- strips all emoji and pictographic codepoints using compiled Unicode range tables; ZWJ sequences, variation selectors, and tag characters handled correctly
 - **Whitespace normalization** -- collapses redundant inline spaces and blank lines while preserving leading indentation
 - **Configurable pipeline** -- `Sanitize` runs removal and normalization in one call; `AllowedRanges` and `AllowedEmojis` let callers preserve specific codepoints
-- **Substitution** -- `Replace` maps ~137 built-in emoji to readable text equivalents (e.g., `[PASS]`, `[FAIL]`); custom maps supported
+- **Substitution** -- `Replace` maps ~280 built-in emoji to readable text equivalents (e.g., `[PASS]`, `[FAIL]`); custom maps supported
 - **Metrics** -- `SanitizeReport` returns emoji count removed and bytes saved alongside the cleaned text
 - **Streaming** -- `SanitizeReader` processes `io.Reader` line by line; supports lines up to 1 MiB
 - **JSON-aware** -- `SanitizeJSON` cleans string values only; preserves keys, numbers, booleans, null, and numeric precision
@@ -202,7 +202,7 @@ Full signatures and doc comments are on
 | `ReplaceCount(text, repl) (string, int)` | Replace and return substitution count |
 | `FindAll(text) []string` | Distinct emoji sequences in text |
 | `FindAllMapped(text, repl) []string` | Mapped keys found in text |
-| `DefaultReplacements() map[string]string` | Built-in ~137-entry emoji-to-text map ([full list](docs/replacements.md)) |
+| `DefaultReplacements() map[string]string` | Built-in ~280-entry emoji-to-text map ([full list](docs/replacements.md)) |
 
 ### Scanner
 
@@ -217,15 +217,6 @@ Full signatures and doc comments are on
 | `ScanConfig` / `DefaultScanConfig()` | Scanner configuration (root, skip dirs, extensions, etc.) |
 | `Finding` | Path, HasEmoji, Original, Cleaned, Matches |
 | `Match` | Sequence, Replacement, Line, Column, Context |
-
-### Line limit configuration
-
-| Symbol | Purpose |
-|--------|---------|
-| `LimitConfig` | Per-file line limit struct: `Default` int + `Files` map override |
-| `DefaultLimitConfig() LimitConfig` | Returns a pre-populated config (500-line default; `.claude/CLAUDE.md` capped at 50) |
-| `DefaultLineLimit` | Fallback constant (500) when `LimitConfig.Default` is zero |
-| `ResolveLimit(cfg LimitConfig, path string) int` | Returns the effective line limit for path (file override → Default → DefaultLineLimit) |
 
 ### Options
 
@@ -265,9 +256,10 @@ Full range table: [docs/unicode-coverage.md](docs/unicode-coverage.md).
 | Document | Contents |
 |----------|----------|
 | [docs/design.md](docs/design.md) | Architecture rationale: zero-dependency policy, pipeline order, error handling, atomic writes |
-| [docs/replacements.md](docs/replacements.md) | Full `DefaultReplacements()` reference: all ~137 entries organized by category |
+| [docs/replacements.md](docs/replacements.md) | Full `DefaultReplacements()` reference: all ~280 entries organized by category |
 | [docs/unicode-coverage.md](docs/unicode-coverage.md) | `emojiRE` ranges, intentional exclusions (copyright, trademark, math arrows), substitution vs. stripping |
 | [docs/cli.md](docs/cli.md) | `cmd/demojify` CLI reference: flags, exit codes, output format, examples |
+| [docs/ci.md](docs/ci.md) | CI pipeline integration: GitHub Actions, GitLab CI, test-based gates, JSON tooling |
 | [docs/git-hooks.md](docs/git-hooks.md) | Pre-commit hook integration: shell and Go examples, auto-fix, substitution |
 
 ## License
