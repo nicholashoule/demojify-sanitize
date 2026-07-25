@@ -259,6 +259,7 @@ Full range table: [docs/unicode-coverage.md](docs/unicode-coverage.md).
 | [docs/replacements.md](docs/replacements.md) | Full `DefaultReplacements()` reference: all ~280 entries organized by category |
 | [docs/unicode-coverage.md](docs/unicode-coverage.md) | `emojiRE` ranges, intentional exclusions (copyright, trademark, math arrows), substitution vs. stripping |
 | [docs/cli.md](docs/cli.md) | `cmd/demojify` CLI reference: flags, exit codes, output format, examples |
+| [docs/ci.md](docs/ci.md) | CI pipeline integration: GitHub Actions, GitLab CI, test-based gates, JSON tooling |
 | [docs/git-hooks.md](docs/git-hooks.md) | Pre-commit hook integration: shell and Go examples, auto-fix, substitution |
 
 ## License

@@ -94,6 +94,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the line-limit configuration section
 - `sanitize.go` (`SanitizeReader`): documented that output never ends with a
   trailing newline, even when `NormalizeWhitespace` is false
+- `docs/cli.md`: restructured into a full CLI reference -- Installation,
+  Synopsis, Flags, per-mode sections (Audit / Fix / Substitute / Normalize /
+  Version) with worked examples and notes, Exit Codes (including exit 2),
+  a JSON schema example, one consolidated Examples block, and See Also
+  links -- matching the reference style used across sibling module docs
+- `docs/ci.md` (new): CI pipeline integration guide -- GitHub Actions and
+  GitLab CI gate workflows, the audit-then-diff auto-fix pattern, the
+  embedded `go test` gate (the pattern `repo_test.go` dogfoods), and
+  JSON-output tooling including GitHub error annotations
 - Removed stray dangling comments at the end of `replace_test.go` and
   `sanitize_io_test.go` that described functions living in other files
 
