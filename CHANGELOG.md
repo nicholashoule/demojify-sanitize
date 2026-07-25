@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-07-25
+
 ### Fixed
 
 - `scan.go` (`scanDirCounted`): the light whitespace cleanup that runs when
@@ -66,6 +68,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scan.go`: dropped the internal `strings.Replacer` construction; the
   directory walk now shares the same position-aware substitution scanner as
   `Replace`
+- `replace.go`: the substitution scan decodes non-ASCII, non-emoji runes
+  once and copies them whole, so the emoji regex and key probes run once
+  per rune rather than once per byte on multi-byte text (PR review
+  feedback)
 - `.github/workflows/ci.yml`: the "ASCII preservation regression" spotlight
   step also runs `TestReplacePreservesLiteralTokenRuns`, and a new
   "Whitespace alignment preservation regression" step runs
@@ -210,6 +216,7 @@ reachable from the compare links below.
 
 [GitHub releases]: https://github.com/nicholashoule/demojify-sanitize/releases
 
-[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.3...v0.8.0
