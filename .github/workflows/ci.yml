@@ -75,7 +75,11 @@ jobs:
 
       - name: "ASCII preservation regression"
         if: matrix.go-version == '1.23'
-        run: go test -v -race -run "TestReplaceDefaultReplacementsPreservesASCII|TestReplaceLongTokensStillCollapse" github.com/nicholashoule/demojify-sanitize
+        run: go test -v -race -run "TestReplaceDefaultReplacementsPreservesASCII|TestReplaceLongTokensStillCollapse|TestReplacePreservesLiteralTokenRuns" github.com/nicholashoule/demojify-sanitize
+
+      - name: "Whitespace alignment preservation regression"
+        if: matrix.go-version == '1.23'
+        run: go test -v -race -run "TestScanDirPreservesAlignmentOnUntouchedLines" github.com/nicholashoule/demojify-sanitize
 
       - name: Upload coverage
         if: matrix.go-version == '1.23' && matrix.os == 'ubuntu-latest'

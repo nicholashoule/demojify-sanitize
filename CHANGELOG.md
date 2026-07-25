@@ -7,6 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `scan.go` (`scanDirCounted`): the light whitespace cleanup that runs when
+  `NormalizeWhitespace` is false is now scoped to the lines that emoji
+  removal or substitution actually changed. Previously one emoji anywhere in
+  a file caused `collapseInlineSpaces` to run over the whole file, collapsing
+  gofmt alignment tabs and column-aligned comments on untouched lines --
+  a fix pass left Go files failing `gofmt -l`. Untouched lines are now
+  preserved byte for byte (`tidyChangedLines` in `normalize.go`; regression
+  test `TestScanDirPreservesAlignmentOnUntouchedLines`)
+- `replace.go` (`Replace`, `ReplaceCount`, `ReplaceFile`, `ScanDir`
+  replacement path): rewritten as a single position-aware scan that tracks
+  which output spans came from substitution. Runs of literal input text that
+  happen to equal a replacement token (e.g. documentation showing
+  `[WARNING] [WARNING]` as example output) are no longer collapsed -- the old
+  whole-output collapse altered emoji-free files, so `-sub` could rewrite and
+  corrupt documents containing no emoji at all (regression test
+  `TestReplacePreservesLiteralTokenRuns`). Adjacent repeated emoji still
+  collapse to a single token
+- `replace.go`: replacement values are now emitted verbatim instead of being
+  re-scanned by the residual `Demojify` pass, so identity mappings
+  (key == value) preserve their codepoints exactly -- the behavior the
+  `ScanConfig.Replacements` documentation always promised but the old
+  pipeline did not deliver (regression test
+  `TestReplaceIdentityValuesPreserved`)
+- `demojify.go` (`buildPlaceholders`): a sentinel noncharacter is now
+  rejected when its bare rune appears anywhere in the input, not only when a
+  full placeholder string does. Previously an input containing a stray
+  U+FDD0 next to a digit could assemble a spurious placeholder after
+  substitution, and the `AllowedEmojis` restore phase swapped the allowed
+  emoji and the noncharacter (regression test
+  `TestSanitizeAllowedEmojisBareNoncharacterInput`)
+- `sanitize.go` (`SanitizeJSON`): the EOF probe now decodes into
+  `json.RawMessage`, so every input holding a second well-formed top-level
+  JSON value returns `ErrMultipleJSONValues` regardless of the value's type.
+  Previously `{"a":1} 5` surfaced an unrelated unmarshal-type error while
+  `{"a":1}{"b":2}` hit the sentinel (regression test
+  `TestSanitizeJSONMultipleValuesSentinel`)
+- `scan.go`: the pure-CRLF detection used to restore Windows line endings now
+  also rejects files containing a stray bare `\r`, so a mixed-ending file can
+  no longer have its bare CR silently promoted to `\r\n` (regression test
+  `TestScanDirMixedCRLFWithBareCRStaysLF`)
+
+### Removed
+
+- **Breaking:** `LimitConfig`, `DefaultLimitConfig`, `ResolveLimit`, and
+  `DefaultLineLimit` (`config.go`). The line-limit API was never consumed by
+  any scanner code path in this module and duplicated governance
+  functionality that belongs in dedicated repo-governance tooling. No known
+  consumer imports it
+
+### Changed
+
+- `cmd/demojify/main.go`: `DefaultReplacements()` is only built when `-sub`
+  is set instead of on every run; `-quiet` flag help and docs now state that
+  write errors still print to stderr (the existing behavior)
+- `scan.go`: dropped the internal `strings.Replacer` construction; the
+  directory walk now shares the same position-aware substitution scanner as
+  `Replace`
+- `.github/workflows/ci.yml`: the "ASCII preservation regression" spotlight
+  step also runs `TestReplacePreservesLiteralTokenRuns`, and a new
+  "Whitespace alignment preservation regression" step runs
+  `TestScanDirPreservesAlignmentOnUntouchedLines`
+
+### Documentation
+
+- Corrected the `DefaultReplacements` size to ~280 entries in `README.md`,
+  `doc.go`, and `replacements.go` (previously stated as ~137 or ~290)
+- `docs/design.md`: rewrote the substitution-pipeline rationale for the
+  position-aware scan, documented the changed-line scoping of the
+  non-normalize cleanup, updated the JSON EOF-probe description, and removed
+  the line-limit configuration section
+- `sanitize.go` (`SanitizeReader`): documented that output never ends with a
+  trailing newline, even when `NormalizeWhitespace` is false
+- Removed stray dangling comments at the end of `replace_test.go` and
+  `sanitize_io_test.go` that described functions living in other files
+
 ## [0.9.0] - 2026-05-16
 
 ### Added

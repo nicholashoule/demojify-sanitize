@@ -8,17 +8,6 @@ import (
 	"strings"
 )
 
-// buildReplacer constructs a *strings.Replacer from pre-sorted keys and the
-// replacements map. Called once before a directory walk to avoid rebuilding
-// the replacer for every file.
-func buildReplacer(keys []string, replacements map[string]string) *strings.Replacer {
-	args := make([]string, 0, len(keys)*2)
-	for _, k := range keys {
-		args = append(args, k, replacements[k])
-	}
-	return strings.NewReplacer(args...)
-}
-
 // ScanConfig configures how [ScanDir] walks and checks files in a directory
 // tree. Use [DefaultScanConfig] for sensible defaults.
 type ScanConfig struct {
@@ -82,12 +71,12 @@ type ScanConfig struct {
 	//
 	// NOTE: When Replacements is non-empty, [Options.RemoveEmojis],
 	// [Options.AllowedRanges], and [Options.AllowedEmojis] are ignored
-	// because [Replace] always strips residual emoji via [Demojify]. Only
+	// because [Replace] always strips residual unmapped emoji. Only
 	// [Options.NormalizeWhitespace] is honored after substitution; when
-	// enabled it runs unconditionally on every scanned file. To
-	// preserve specific Unicode ranges during replacement-based scans, add
-	// those codepoints to the Replacements map with identity values
-	// (key == value).
+	// enabled it runs unconditionally on every scanned file. Replacement
+	// values are emitted verbatim, so to preserve specific codepoints
+	// during replacement-based scans, add them to the Replacements map
+	// with identity values (key == value).
 	Replacements map[string]string
 
 	// CollectMatches controls whether [ScanDir] populates [Finding.Matches] for
@@ -231,13 +220,19 @@ type Finding struct {
 // ScanDir walks the directory tree rooted at cfg.Root and returns a [Finding]
 // for every file whose content would change after cleaning. When
 // [ScanConfig.Replacements] is non-empty, each file is cleaned with [Replace]
-// (mapped-sequence substitution followed by residual-emoji stripping via
-// [Demojify]); otherwise emoji removal is applied per cfg.Options.
+// (mapped-sequence substitution plus stripping of residual unmapped emoji);
+// otherwise emoji removal is applied per cfg.Options.
 //
 // When [Options.NormalizeWhitespace] is enabled, whitespace normalization
 // is applied unconditionally to every scanned file, regardless of whether
 // emoji were found or replaced. This guarantees that redundant whitespace
 // is always cleaned in a single pass.
+//
+// When [Options.NormalizeWhitespace] is disabled, a lighter cleanup still
+// runs on files that changed: inline whitespace runs are collapsed and
+// trailing whitespace trimmed, but only on the lines that emoji removal or
+// substitution actually touched. Untouched lines keep their exact
+// whitespace, so column alignment elsewhere in the file is preserved.
 //
 // Files matching ExemptFiles, ExemptSuffixes, SkipExtensions, or outside the
 // Extensions filter are skipped. Directories matching SkipDirs are not entered.
@@ -279,15 +274,11 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 		trimmedSkips[i] = strings.TrimSuffix(s, "/")
 	}
 
-	// Pre-sort replacement keys and build the replacer once so the walk
-	// callback does not re-sort and re-allocate for every file.
+	// Pre-sort replacement keys once so the walk callback does not re-sort
+	// for every file.
 	var replKeys []string
-	var replacer *strings.Replacer
-	var replVals []string
 	if len(cfg.Replacements) > 0 {
 		replKeys = sortedKeys(cfg.Replacements)
-		replacer = buildReplacer(replKeys, cfg.Replacements)
-		replVals = distinctValues(cfg.Replacements)
 	}
 
 	var findings []Finding
@@ -419,9 +410,8 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 		// runs unconditionally on the result.
 		var cleaned string
 		//nolint:gocritic // ifElseChain: switch would require nesting a second switch for AllowedEmojis/AllowedRanges
-		if replacer != nil {
-			cleaned = Demojify(replacer.Replace(original))
-			cleaned = collapseRepeatedTokens(cleaned, replVals)
+		if len(replKeys) > 0 {
+			cleaned = applyReplacer(original, cfg.Replacements, replKeys)
 		} else if cfg.Options.RemoveEmojis {
 			switch {
 			case len(cfg.Options.AllowedEmojis) > 0:
@@ -438,26 +428,27 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 		if cfg.Options.NormalizeWhitespace {
 			cleaned = Normalize(cleaned)
 		} else if cleaned != original {
-			// When full normalization is not requested, still collapse any
-			// runs of inline spaces and tabs that were left behind as
-			// artifacts of emoji removal or substitution (e.g. two spaces
-			// where an emoji used to sit). Trailing whitespace on each line
-			// and at the very end of the file is also trimmed so callers do
-			// not need -normalize just to get a clean result.
-			// Normalize CRLF/CR to LF so regex-based whitespace cleanup is
-			// consistent across platforms, then restore the original line-ending
+			// When full normalization is not requested, still collapse runs
+			// of inline spaces and tabs left behind as artifacts of emoji
+			// removal or substitution (e.g. two spaces where an emoji used to
+			// sit), and trim trailing whitespace those artifacts create.
+			// This cleanup is scoped to the lines that emoji removal actually
+			// changed: untouched lines keep their exact whitespace, so
+			// column-aligned comments and gofmt tab alignment elsewhere in
+			// the file survive a fix pass (see tidyChangedLines).
+			// Normalize CRLF/CR to LF so line-based comparison is consistent
+			// across platforms, then restore the original line-ending
 			// convention. This prevents emoji removal from silently changing
 			// \r\n → \n for every CRLF file touched, which would create noisy
 			// git diffs unrelated to the emoji changes.
-			// Only treat the file as pure-CRLF (and restore \r\n) when all
-			// line endings are \r\n; mixed or bare-LF files are left with LF
-			// so we do not spread \r\n further than the file's own convention.
+			// Only treat the file as pure-CRLF (and restore \r\n) when every
+			// line break is \r\n -- no bare \n and no bare \r; mixed files
+			// are left with LF so we do not spread \r\n further than the
+			// file's own convention.
+			withoutCRLF := strings.ReplaceAll(original, "\r\n", "")
 			hasCRLF := strings.Contains(original, "\r\n") &&
-				!strings.Contains(strings.ReplaceAll(original, "\r\n", ""), "\n")
-			cleaned = crlfReplacer.Replace(cleaned)
-			cleaned = collapseInlineSpaces(cleaned)
-			cleaned = trailingSpaceRE.ReplaceAllString(cleaned, "\n")
-			cleaned = strings.TrimRight(cleaned, " \t")
+				!strings.ContainsAny(withoutCRLF, "\r\n")
+			cleaned = tidyChangedLines(crlfReplacer.Replace(original), crlfReplacer.Replace(cleaned))
 			// Restore Windows line endings when the original used them and the
 			// caller did not request full whitespace normalization. At this
 			// point all line endings in cleaned are bare \n (crlfReplacer ran

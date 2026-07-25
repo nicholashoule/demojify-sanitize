@@ -474,6 +474,77 @@ func TestReplaceLongTokensStillCollapse(t *testing.T) {
 	}
 }
 
-// TestReplaceConcurrent verifies that Replace and ReplaceCount are safe for
-// concurrent use from multiple goroutines sharing the same replacements map
-// (read-only). The race detector (go test -race) will catch any data races.
+// TestReplacePreservesLiteralTokenRuns is a regression test for the bug where
+// collapseRepeatedTokens ran as a position-blind find-and-replace over the
+// whole output, so literal input text that happened to equal a replacement
+// token was collapsed even when the input contained no emoji at all -- e.g.
+// documentation showing example CLI output like "[WARNING] [WARNING]" lost a
+// marker. Runs of literal token text must always survive untouched; only runs
+// produced by substitution are collapsed.
+func TestReplacePreservesLiteralTokenRuns(t *testing.T) {
+	repl := demojify.DefaultReplacements()
+
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "literal token pair with no emoji is untouched",
+			input: "Legit text: [WARNING] [WARNING] are two separate literal markers.",
+			want:  "Legit text: [WARNING] [WARNING] are two separate literal markers.",
+		},
+		{
+			name:  "adjacent literal token pair is untouched",
+			input: "[PASS][PASS] literally doubled on purpose",
+			want:  "[PASS][PASS] literally doubled on purpose",
+		},
+		{
+			name:  "literal pair elsewhere survives while emoji is substituted",
+			input: "[FAIL] [FAIL] stays; ✅ becomes a token",
+			want:  "[FAIL] [FAIL] stays; [PASS] becomes a token",
+		},
+		{
+			name:  "literal token followed by same-token emoji collapses to one",
+			input: "note [WARNING] ⚠ end",
+			want:  "note [WARNING] end",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := demojify.Replace(tt.input, repl)
+			if got != tt.want {
+				t.Errorf("Replace(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestReplaceIdentityValuesPreserved verifies the documented contract that
+// replacement values are emitted verbatim: an identity mapping (key == value)
+// preserves a codepoint that plain emoji removal would strip. Before the
+// position-aware rewrite, a whole-output Demojify pass ran after substitution
+// and stripped identity-mapped emoji despite the documentation promising
+// otherwise.
+func TestReplaceIdentityValuesPreserved(t *testing.T) {
+	// U+2B06 (upwards black arrow) is inside the emoji regex ranges and is
+	// stripped by Demojify; an identity mapping must preserve it.
+	repl := map[string]string{"⬆": "⬆"}
+
+	got := demojify.Replace("go ⬆ up, drop \U0001F600 face", repl)
+	want := "go ⬆ up, drop  face"
+	if got != want {
+		t.Errorf("Replace with identity mapping = %q, want %q", got, want)
+	}
+
+	// The same contract holds for ScanDir's replacement path via ReplaceCount.
+	gotText, gotCount := demojify.ReplaceCount("keep ⬆", repl)
+	if gotText != "keep ⬆" {
+		t.Errorf("ReplaceCount identity text = %q, want %q", gotText, "keep ⬆")
+	}
+	if gotCount != 0 {
+		// The identity substitution leaves the text unchanged, so no write
+		// is needed and the reported count is zero.
+		t.Errorf("ReplaceCount identity count = %d, want 0", gotCount)
+	}
+}

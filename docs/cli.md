@@ -22,7 +22,7 @@ go build -o demojify ./cmd/demojify
 | `-fix` | false | Rewrite affected files in place after reporting |
 | `-sub` | false | Substitute emoji with text tokens instead of stripping; implies `-fix` |
 | `-normalize` | false | Collapse redundant whitespace in all scanned files; implies `-fix` |
-| `-quiet` | false | Suppress all output; exit code only (0 = clean, 1 = findings/errors) |
+| `-quiet` | false | Suppress all output except write errors (stderr); exit code only (0 = clean, 1 = findings/errors) |
 | `-json` | false | Output findings as JSON to stdout (overrides `-quiet`) |
 | `-skip <dirs>` | none | Comma-separated directory names to skip in addition to defaults; trailing slash auto-appended |
 | `-version` | false | Print the module version and exit 0 |

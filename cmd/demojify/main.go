@@ -43,7 +43,8 @@
 //	                 implies -fix
 //	-normalize       collapse redundant whitespace in all scanned files;
 //	                 implies -fix
-//	-quiet           suppress all output; exit code only (0 = clean, 1 = findings/errors)
+//	-quiet           suppress all output except write errors; exit code only
+//	                 (0 = clean, 1 = findings/errors)
 //	-json            output findings as JSON to stdout (overrides -quiet)
 //	-exts <.go,.md>  comma-separated extensions to scan (default: all files);
 //	                 a leading dot is added automatically if omitted
@@ -158,7 +159,7 @@ func main() {
 	fix := flag.Bool("fix", false, "rewrite affected files in place")
 	sub := flag.Bool("sub", false, "substitute emoji with text tokens (implies -fix)")
 	normalize := flag.Bool("normalize", false, "collapse redundant whitespace in all scanned files (implies -fix)")
-	quiet := flag.Bool("quiet", false, "suppress all output; exit code only (0 = clean, 1 = findings/errors)")
+	quiet := flag.Bool("quiet", false, "suppress all output except write errors; exit code only (0 = clean, 1 = findings/errors)")
 	exts := flag.String("exts", "", "comma-separated extensions to scan, e.g. .go,.md (default: all)")
 	skip := flag.String("skip", "", "comma-separated directory names to skip in addition to defaults, e.g. dist,build")
 	jsonOut := flag.Bool("json", false, "output findings as JSON (overrides -quiet)")
@@ -218,9 +219,8 @@ func main() {
 		}
 	}
 
-	repl := demojify.DefaultReplacements()
 	if *sub {
-		cfg.Replacements = repl
+		cfg.Replacements = demojify.DefaultReplacements()
 	}
 
 	findings, err := demojify.ScanDir(cfg)
@@ -275,14 +275,12 @@ func main() {
 			// f.Path is relative to cfg.Root with forward slashes;
 			// join it back to the root for filesystem operations.
 			absPath := filepath.Join(*root, filepath.FromSlash(f.Path))
-			var n int
-			var werr error
 			// Always write the fully-cleaned content from the Finding.
 			// f.Cleaned has emoji stripped/substituted with inline spaces
 			// already collapsed; len(f.Matches) equals the total number of
 			// emoji occurrences (substitutions plus removals).
-			var changed bool
-			changed, werr = demojify.WriteFinding(absPath, f)
+			changed, werr := demojify.WriteFinding(absPath, f)
+			var n int
 			if changed {
 				n = len(f.Matches)
 			}
