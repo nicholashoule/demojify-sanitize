@@ -310,7 +310,7 @@ func TestSanitizeReader(t *testing.T) {
 
 	t.Run("line at 1MiB limit succeeds", func(t *testing.T) {
 		maxLine := strings.Repeat("a", 1024*1024)
-		for _, input := range []string{maxLine, maxLine + "\n"} {
+		for _, input := range []string{maxLine, maxLine + "\n", maxLine + "\r\n"} {
 			var buf bytes.Buffer
 			if err := demojify.SanitizeReader(strings.NewReader(input), &buf, demojify.Options{}); err != nil {
 				t.Fatalf("unexpected error for 1 MiB line: %v", err)
