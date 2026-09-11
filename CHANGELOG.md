@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   longer lines still return `bufio.ErrTooLong`. Rely on `bufio.ScanLines` to
   remove one CRLF terminator while preserving additional trailing CR data
 - `scan.go` (`buildMatches`): match context for CRLF files no longer includes
-  the trailing `\r`; byte-based column offsets remain unchanged
+  the delimiter `\r`, while a terminal bare `\r` remains part of the full line
 - Tooling: restored valid POSIX hook invocation and pinned the CI lint job to
   Go 1.26 so its Go 1.26-built linter does not analyze Go 1.27 library files
 
