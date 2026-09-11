@@ -128,9 +128,9 @@ Print the version string and exit.
 demojify -version
 ```
 
-The version is read from the Go build info. A semver tag (e.g. `v0.10.0`)
+The version is read from the Go build info. A semver tag (e.g. `v0.10.1`)
 is embedded only when the binary is installed from a published tagged
-release (`go install ...@v0.10.0`). Builds from local source -- whether via
+release (`go install ...@v0.10.1`). Builds from local source -- whether via
 `go run`, `go build`, or `go install` without a version suffix -- report
 `(devel)`.
 

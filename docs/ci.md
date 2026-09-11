@@ -40,13 +40,13 @@ jobs:
 
       - name: Audit for emoji
         run: >
-          go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.10.0
+          go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.10.1
           -root . -exts .go,.md,.txt,.yaml,.yml,.json
 ```
 
 Two deliberate choices in that step:
 
-- **Pin the version** (`@v0.10.0`, not `@latest`) so the gate's behavior only
+- **Pin the version** (`@v0.10.1`, not `@latest`) so the gate's behavior only
   changes when you choose to upgrade it.
 - **Scope with `-exts`** to the text file types your repository authors.
   Compressed and binary assets are already skipped by the built-in
@@ -61,7 +61,7 @@ emoji-gate:
   image: golang:1.24
   script:
     - >
-      go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.10.0
+      go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.10.1
       -root . -exts .go,.md -quiet
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -77,7 +77,7 @@ Every CI system that can run a shell command can run the gate; only the exit
 code matters (`0` clean, `1` findings, `2` usage error):
 
 ```sh
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.10.0 -root . -exts .go,.md
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.10.1 -root . -exts .go,.md
 ```
 
 To auto-correct instead of failing, substitute emoji with text tokens and let
@@ -148,7 +148,7 @@ Example: turn findings into GitHub Actions error annotations, which surface
 inline on the pull request diff:
 
 ```sh
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.10.0 -root . -json |
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.10.1 -root . -json |
   jq -r '.findings[] | .path as $p | .matches[] |
     "::error file=\($p),line=\(.line),col=\(.column)::emoji found (replace with \(.replacement // "removal"))"'
 ```
