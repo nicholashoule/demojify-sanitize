@@ -113,11 +113,14 @@ func TestHookDemojifyUsesExtensionFilter(t *testing.T) {
 		t.Fatalf("read pre-commit hook: %v", err)
 	}
 	s := string(data)
-	if !strings.Contains(s, "demojify_exts=") {
-		t.Fatal("scripts/hooks/pre-commit must define demojify_exts for filtered scanning")
+	if !strings.Contains(s, "demojify_exts=") || !strings.Contains(s, "demojify_filters=") {
+		t.Fatal("scripts/hooks/pre-commit must define demojify_exts and demojify_filters for filtered scanning")
 	}
 	if !strings.Contains(s, "-exts \"$demojify_exts\"") {
 		t.Fatal("scripts/hooks/pre-commit must pass -exts \"$demojify_exts\" to demojify")
+	}
+	if !strings.Contains(s, "$demojify_filters") {
+		t.Fatal("scripts/hooks/pre-commit must pass $demojify_filters to demojify")
 	}
 }
 

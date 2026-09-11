@@ -359,7 +359,9 @@ func TestSanitizeBuildPlaceholderCollisionFallback(t *testing.T) {
 	var collision strings.Builder
 	for _, s := range sentinels {
 		prefix := string(s)
-		collision.WriteString(prefix + "0" + prefix)
+		collision.WriteString(prefix)
+		collision.WriteString("0")
+		collision.WriteString(prefix)
 	}
 
 	// The allowed emoji must survive; the grinning face must be stripped.

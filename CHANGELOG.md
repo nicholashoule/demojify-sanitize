@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-09-11
+
+### Fixed
+
+- `sanitize.go` (`SanitizeReader`): lines exactly 1 MiB long are now accepted;
+  longer lines still return `bufio.ErrTooLong`. Rely on `bufio.ScanLines` to
+  remove one CRLF terminator while preserving additional trailing CR data
+- `scan.go` (`buildMatches`): match context for CRLF files no longer includes
+  the delimiter `\r`, while a terminal bare `\r` remains part of the full line
+- Tooling: restored valid POSIX hook invocation and pinned the CI lint job to
+  Go 1.26 so its Go 1.26-built linter does not analyze Go 1.27 library files
+
+### Changed
+
+- `replace.go` and `scan.go`: bucket replacement keys by first byte and advance
+  unmatched Unicode text by rune, reducing unnecessary prefix checks
+- `scripts/hooks/pre-commit`: expanded text scanning to Go, Markdown, HTML,
+  YAML, JSON, text, environment, and TOML files while skipping `build/`; bumped
+  governance pins from `repogov@v0.7.0` to `v0.8.0` and (dogfooding)
+  `demojify-sanitize@v0.8.0` to `v0.10.0`
+
 ## [0.10.0] - 2026-07-25
 
 ### Fixed
@@ -225,7 +246,8 @@ reachable from the compare links below.
 
 [GitHub releases]: https://github.com/nicholashoule/demojify-sanitize/releases
 
-[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.10.1...HEAD
+[0.10.1]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.3...v0.8.0

@@ -228,6 +228,11 @@ func TestFindAllMapped(t *testing.T) {
 			input: "\u26a0\ufe0f critical",
 			want:  []string{"\u26a0\ufe0f"},
 		},
+		{
+			name:  "mapped key after non-ASCII text",
+			input: "\u4e2d\u6587 \u2705 passed",
+			want:  []string{"\u2705"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

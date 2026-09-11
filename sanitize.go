@@ -163,16 +163,17 @@ const sanitizeReaderMaxTokenSize = 1024 * 1024 // 1 MiB per line
 // SanitizeReader returns an error for any I/O failure or scanner error.
 func SanitizeReader(r io.Reader, w io.Writer, opts Options) error {
 	scanner := bufio.NewScanner(r)
-	scanner.Buffer(make([]byte, 0, 64*1024), sanitizeReaderMaxTokenSize)
+	// Scanner needs room beyond the content limit to observe an LF or CRLF
+	// delimiter. The explicit length check below enforces the content limit.
+	scanner.Buffer(make([]byte, 0, 64*1024), sanitizeReaderMaxTokenSize+2)
 	wroteAny := false
 	pendingBlanks := 0
 
 	for scanner.Scan() {
+		if len(scanner.Bytes()) > sanitizeReaderMaxTokenSize {
+			return bufio.ErrTooLong
+		}
 		line := scanner.Text()
-
-		// Normalize CRLF: strip a single trailing CR so that Windows
-		// line endings (CR+LF) are treated identically to Unix (LF).
-		line = strings.TrimRight(line, "\r")
 
 		// Step 1: emoji removal.
 		if opts.RemoveEmojis {
