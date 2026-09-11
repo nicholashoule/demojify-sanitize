@@ -499,8 +499,12 @@ func buildMatches(text string, replacements map[string]string, keys []string) []
 	}
 
 	var matches []Match
-	for lineIdx, line := range strings.Split(text, "\n") {
-		context := strings.TrimSuffix(line, "\r")
+	lines := strings.Split(text, "\n")
+	for lineIdx, line := range lines {
+		context := line
+		if lineIdx < len(lines)-1 {
+			context = strings.TrimSuffix(context, "\r")
+		}
 		for i := 0; i < len(line); {
 			// Try each replacement key longest-first so variation-selector
 			// sequences (e.g., U+26A0 U+FE0F) are attributed to the combined key.

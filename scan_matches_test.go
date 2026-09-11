@@ -530,6 +530,22 @@ func TestFindMatchesInFile(t *testing.T) {
 		}
 	})
 
+	t.Run("terminal bare CR remains in context", func(t *testing.T) {
+		dir := t.TempDir()
+		path := writeTempFile(t, dir, "bare-cr.txt", "\u2705 done\r")
+
+		matches, err := demojify.FindMatchesInFile(path, repl)
+		if err != nil {
+			t.Fatalf("FindMatchesInFile: %v", err)
+		}
+		if len(matches) != 1 {
+			t.Fatalf("got %d matches, want 1", len(matches))
+		}
+		if got, want := matches[0].Context, "\u2705 done\r"; got != want {
+			t.Errorf("Context = %q, want %q", got, want)
+		}
+	})
+
 	t.Run("nonexistent file returns error", func(t *testing.T) {
 		missing := filepath.Join(t.TempDir(), "no-such-dir", "no-file.txt")
 		_, err := demojify.FindMatchesInFile(missing, repl)
