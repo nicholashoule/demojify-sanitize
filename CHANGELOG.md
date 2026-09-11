@@ -16,8 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   remove one CRLF terminator while preserving additional trailing CR data
 - `scan.go` (`buildMatches`): match context for CRLF files no longer includes
   the trailing `\r`; byte-based column offsets remain unchanged
-- `scripts/hooks/pre-commit`: restored valid POSIX invocation of pinned Go
-  tools and aligned the extension-filter contract test with the hook
+- Tooling: restored valid POSIX hook invocation and pinned the CI lint job to
+  Go 1.26 so its Go 1.26-built linter does not analyze Go 1.27 library files
 
 ### Changed
 
@@ -25,8 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unmatched Unicode text by rune, reducing unnecessary prefix checks
 - `scripts/hooks/pre-commit`: expanded text scanning to Go, Markdown, HTML,
   YAML, JSON, text, environment, and TOML files while skipping `build/`; bumped
-  the governance pins to the current
-  releases: `repogov@v0.7.0` to `v0.8.0` and (dogfooding)
+  governance pins from `repogov@v0.7.0` to `v0.8.0` and (dogfooding)
   `demojify-sanitize@v0.8.0` to `v0.10.0`
 
 ## [0.10.0] - 2026-07-25
