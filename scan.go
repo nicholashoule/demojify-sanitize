@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 )
 
 // ScanConfig configures how [ScanDir] walks and checks files in a directory
@@ -492,13 +493,19 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 // byte length (longest first). Callers that have already sorted keys (e.g.,
 // [ScanDir]) pass them directly to avoid re-sorting per file.
 func buildMatches(text string, replacements map[string]string, keys []string) []Match {
+	var byFirst [256][]string
+	for _, k := range keys {
+		byFirst[k[0]] = append(byFirst[k[0]], k)
+	}
+
 	var matches []Match
 	for lineIdx, line := range strings.Split(text, "\n") {
+		context := strings.TrimSuffix(line, "\r")
 		for i := 0; i < len(line); {
 			// Try each replacement key longest-first so variation-selector
 			// sequences (e.g., U+26A0 U+FE0F) are attributed to the combined key.
 			matched := false
-			for _, k := range keys {
+			for _, k := range byFirst[line[i]] {
 				if strings.HasPrefix(line[i:], k) {
 					matches = append(matches, Match{
 						Sequence: k,
@@ -506,7 +513,7 @@ func buildMatches(text string, replacements map[string]string, keys []string) []
 						Replacement: replacements[k],
 						Line:        lineIdx + 1,
 						Column:      i,
-						Context:     line,
+						Context:     context,
 					})
 					i += len(k)
 					matched = true
@@ -525,11 +532,12 @@ func buildMatches(text string, replacements map[string]string, keys []string) []
 					Replacement: "",
 					Line:        lineIdx + 1,
 					Column:      i,
-					Context:     line,
+					Context:     context,
 				})
 				i += loc[1]
 			} else {
-				i++
+				_, size := utf8.DecodeRuneInString(line[i:])
+				i += size
 			}
 		}
 	}

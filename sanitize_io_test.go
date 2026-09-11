@@ -308,6 +308,29 @@ func TestSanitizeReader(t *testing.T) {
 		}
 	})
 
+	t.Run("line at 1MiB limit succeeds", func(t *testing.T) {
+		maxLine := strings.Repeat("a", 1024*1024)
+		for _, input := range []string{maxLine, maxLine + "\n"} {
+			var buf bytes.Buffer
+			if err := demojify.SanitizeReader(strings.NewReader(input), &buf, demojify.Options{}); err != nil {
+				t.Fatalf("unexpected error for 1 MiB line: %v", err)
+			}
+			if buf.String() != maxLine {
+				t.Errorf("1 MiB line length = %d, want %d", buf.Len(), len(maxLine))
+			}
+		}
+	})
+
+	t.Run("only one trailing CR is normalized", func(t *testing.T) {
+		var buf bytes.Buffer
+		if err := demojify.SanitizeReader(strings.NewReader("line\r\r\n"), &buf, demojify.Options{}); err != nil {
+			t.Fatalf("SanitizeReader error: %v", err)
+		}
+		if got, want := buf.String(), "line\r"; got != want {
+			t.Errorf("SanitizeReader = %q, want %q", got, want)
+		}
+	})
+
 	// Lines exceeding sanitizeReaderMaxTokenSize (1 MiB) must return bufio.ErrTooLong.
 	t.Run("line exceeding 1MiB returns ErrTooLong", func(t *testing.T) {
 		tooBig := strings.Repeat("b", 1024*1024+1) // 1 MiB + 1 byte

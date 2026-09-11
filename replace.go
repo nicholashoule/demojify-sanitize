@@ -209,11 +209,15 @@ func FindAllMapped(text string, replacements map[string]string) []string {
 	// applyReplacer, so variation-selector sequences are attributed to the
 	// longer key rather than the bare codepoint.
 	keys := sortedKeys(replacements) // longest first
+	var byFirst [256][]string
+	for _, k := range keys {
+		byFirst[k[0]] = append(byFirst[k[0]], k)
+	}
 	seen := make(map[string]struct{})
 	var result []string
 	for i := 0; i < len(text); {
 		matched := false
-		for _, k := range keys {
+		for _, k := range byFirst[text[i]] {
 			if strings.HasPrefix(text[i:], k) {
 				if _, ok := seen[k]; !ok {
 					seen[k] = struct{}{}
@@ -225,7 +229,8 @@ func FindAllMapped(text string, replacements map[string]string) []string {
 			}
 		}
 		if !matched {
-			i++
+			_, size := utf8.DecodeRuneInString(text[i:])
+			i += size
 		}
 	}
 	if len(result) == 0 {

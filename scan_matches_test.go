@@ -511,6 +511,25 @@ func TestFindMatchesInFile(t *testing.T) {
 		}
 	})
 
+	t.Run("non-ASCII prefix preserves byte column and CRLF context", func(t *testing.T) {
+		dir := t.TempDir()
+		path := writeTempFile(t, dir, "unicode.txt", "\u4e2d\u6587 \u2705 done\r\n")
+
+		matches, err := demojify.FindMatchesInFile(path, repl)
+		if err != nil {
+			t.Fatalf("FindMatchesInFile: %v", err)
+		}
+		if len(matches) != 1 {
+			t.Fatalf("got %d matches, want 1", len(matches))
+		}
+		if got, want := matches[0].Column, 7; got != want {
+			t.Errorf("Column = %d, want byte offset %d", got, want)
+		}
+		if got, want := matches[0].Context, "\u4e2d\u6587 \u2705 done"; got != want {
+			t.Errorf("Context = %q, want %q", got, want)
+		}
+	})
+
 	t.Run("nonexistent file returns error", func(t *testing.T) {
 		missing := filepath.Join(t.TempDir(), "no-such-dir", "no-file.txt")
 		_, err := demojify.FindMatchesInFile(missing, repl)
