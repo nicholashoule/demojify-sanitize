@@ -19,6 +19,7 @@ package demojify_test
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -100,6 +101,10 @@ func TestRepoProductionFilesIdempotent(t *testing.T) {
 	}
 }
 
+// hookPinRE matches the demojify_ref assignment in scripts/hooks/pre-commit
+// when it pins a tagged release of the CLI.
+var hookPinRE = regexp.MustCompile(`(?m)^demojify_ref="github\.com/nicholashoule/demojify-sanitize/cmd/demojify@v\d+\.\d+\.\d+"$`)
+
 // TestHookDemojifyUsesExtensionFilter ensures the shipped pre-commit hook limits
 // demojify scanning to known text file types so compressed binary assets do not
 // produce false-positive emoji matches.
@@ -118,9 +123,13 @@ func TestHookDemojifyUsesExtensionFilter(t *testing.T) {
 	if !strings.Contains(s, "$demojify_filters") {
 		t.Fatal("scripts/hooks/pre-commit must pass $demojify_filters to demojify")
 	}
-	const demojifyRef = "github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.10.1"
-	if !strings.Contains(s, `demojify_ref="`+demojifyRef+`"`) {
-		t.Fatalf("scripts/hooks/pre-commit must pin demojify_ref to %s", demojifyRef)
+	// The hook must run a pinned, tagged release of the CLI, never @latest or
+	// a branch, so its behavior changes only when the pin is bumped. The exact
+	// version is deliberately not asserted: a pin can only move to a new tag
+	// after that tag is published, so it is bumped in the first commit after
+	// each release rather than in the release commit itself.
+	if !hookPinRE.MatchString(s) {
+		t.Fatal("scripts/hooks/pre-commit must pin demojify_ref to a tagged release (cmd/demojify@vX.Y.Z)")
 	}
 }
 
