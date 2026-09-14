@@ -1,3 +1,8 @@
+// Internal helpers shared across files: isBinary (NUL sniff), sortByLenDesc
+// and sortedKeys (longest-first key ordering for the substitution scan), and
+// statAndWrite/atomicWrite (same-directory temp file, fsync, chmod, rename).
+// sortedKeys drops empty keys; an empty key would match at every position.
+
 package demojify
 
 import (
@@ -48,9 +53,9 @@ func sortedKeys(m map[string]string) []string {
 	return keys
 }
 
-// statAndWrite writes cleaned to path atomically, preserving the file's
-// current permissions. It is used by file-modifying functions after they
-// have already determined that a write is necessary (cleaned != original).
+// statAndWrite writes cleaned through a same-directory temp file and rename,
+// preserving the file's current permissions. It is used by file-modifying
+// functions after they have determined that a write is necessary.
 func statAndWrite(path, cleaned string) error {
 	info, err := os.Stat(path)
 	if err != nil {

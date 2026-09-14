@@ -1,3 +1,5 @@
+// Shared test helpers: writeTempFile, writeTempDir, and isWindows.
+
 package demojify_test
 
 import (

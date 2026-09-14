@@ -1,7 +1,7 @@
 # Emoji Substitution Audit
 
-**Last reviewed**: 2026-03-23
-**Map version**: `DefaultReplacements()` ~234 entries, 20 categories
+**Last reviewed**: 2026-09-14
+**Map version**: `DefaultReplacements()` 280 entries, 24 source categories
 **Source**: [`replacements.go`](../../replacements.go)
 
 ---
@@ -22,32 +22,36 @@ on how commonly an emoji appears in practice and by what generates it.
 
 ## Category Summary
 
-Categories are listed in priority order within each tier. The "Source" column
-names the primary origin: `agent` (AI agent output), `gitmoji` (gitmoji.dev
-convention), `readme` (human-authored README/badge style), `decoration`.
+Category numbers identify the source-map sections. The "Source" column names
+the primary origin: `agent` (AI output), `gitmoji` (gitmoji.dev convention),
+`readme` (README/badge style), or `decoration`.
 
 | # | Category | Tier | Entries | Token labels | Source |
 |---|----------|------|---------|--------------|--------|
 | 1 | Warning and Alerts | P0 | 2 | `[WARNING]` | agent |
 | 2 | Status Symbols | P0 | 18 | `[PASS]` `[FAIL]` `[ALERT]` `[?]` | agent |
 | 3 | Information | P0 | 2 | `[INFO]` | agent |
-| 4 | CI/CD Workflow | P0 | 16 | `[DEPLOY]` `[PACKAGE]` `[SUCCESS]` `[NEW]` `[DONE]` `[FIX]` `[TOOLS]` `[RECYCLE]` `[SAVE]` `[HOT]` `[100]` `[ALERT]` `[PATCH]` | agent, gitmoji |
+| 4 | CI/CD Workflow | P0 | 15 | `[DEPLOY]` `[PACKAGE]` `[SUCCESS]` `[NEW]` `[DONE]` `[FIX]` `[TOOLS]` `[RECYCLE]` `[SAVE]` `[HOT]` `[100]` `[ALERT]` `[PATCH]` | agent, gitmoji |
 | 5 | Favorites and Highlights | P0 | 9 | `[FEATURED]` `[TIP]` `[NOTIFICATION]` `[PINNED]` `[KEY]` `[LOCKED]` `[UNLOCKED]` | agent |
 | 6 | Cloud and Deployment | P0 | 26 | `[CLOUD]` `[REPORT]` `[GROWTH]` `[DECLINE]` `[DOCS]` `[GUIDE]` `[NOTE]` `[DIR]` `[FOLDER]` `[SEARCH]` `[SECURITY]` `[CONFIG]` `[SETTINGS]` `[BUILD]` `[TARGET]` `[DESIGN]` `[CODE]` `[SERVER]` `[NETWORK]` `[GLOBAL]` `[MAP]` `[SEE]` | agent |
 | 7 | Project and Issue Tracking | P1 | 29 | `[BUG]` `[BREAKING]` `[CONSTRUCTION]` `[TEST]` `[RELEASE]` `[TAG]` `[CLEANUP]` `[LINK]` `[COMMENT]` `[ANNOUNCE]` `[APPROVED]` `[REJECTED]` `[PLUGIN]` `[AWARD]` `[CLIPBOARD]` `[TRASH]` `[ATTACHMENT]` `[GIFT]` `[GEM]` | gitmoji |
-| 8 | Community and Contributors | P1 | 26 | `[HOTFIX]` `[MERGE]` `[RETRY]` `[UPGRADE]` `[DOWNGRADE]` `[PROTECTED]` `[BOT]` `[CONTRIB]` `[USER]` `[USERS]` `[THANKS]` `[FILE]` `[EMAIL]` `[SPONSOR]` `[GLOBAL]` `[BACK]` `[FORWARD]` `[MUTE]` | readme, gitmoji |
+| 8 | Community and Contributors | P1 | 32 | `[HOTFIX]` `[MERGE]` `[RETRY]` `[UPGRADE]` `[DOWNGRADE]` `[PROTECTED]` `[BOT]` `[CONTRIB]` `[USER]` `[USERS]` `[THANKS]` `[FILE]` `[EMAIL]` `[SPONSOR]` `[GLOBAL]` `[BACK]` `[FORWARD]` `[MUTE]` `[SEE]` `[STATUS]` | readme, gitmoji |
 | 9 | Status Indicators | P1 | 15 | `[PENDING]` `[TIMER]` `[REFRESH]` `[LOADING]` `[UP]` `[DOWN]` `[NEXT]` `[PREV]` `[SEE]` `[FROM]` `[SELECTED]` | readme |
 | 10 | Severity (colored circles) | P2 | 7 | `[ERROR]` `[WARNING]` `[CAUTION]` `[OK]` `[INFO]` `[INACTIVE]` | readme, agent |
 | 11 | Stop and Prohibition | P2 | 3 | `[STOP]` `[NO ENTRY]` `[PROHIBITED]` | readme |
-| 12 | Platform and Language Indicators | P2 | 6 | `[DOCKER]` `[LINUX]` `[PYTHON]` `[RUST]` `[GO]` | readme |
+| 12 | Platform and Language Indicators | P2 | 8 | `[DOCKER]` `[LINUX]` `[PYTHON]` `[RUST]` `[GO]` `[MACOS]` `[WINDOWS]` | readme |
 | 13 | Colored Squares | P2 | 8 | `[ERROR]` `[OK]` `[CAUTION]` `[INFO]` `[WARNING]` `[INACTIVE]` | readme |
 | 14 | Arrows | P2 | 12 | `->` `<-` `^` `v` `=>` `<=` `^^` `vv` | readme |
-| 15 | Media Controls | P3 | 8 | `[PAUSED]` `[STOPPED]` `[RECORDING]` `[NEXT]` `[PREV]` | readme |
+| 15 | Media Controls | P3 | 12 | `[PAUSED]` `[STOPPED]` `[RECORDING]` `[NEXT]` `[PREV]` `[SKIP]` | readme |
 | 16 | Heart Variants | P3 | 15 | `[HEART]` | decoration |
 | 17 | Math Operators | P3 | 7 | `x` `+` `-` `/` `[INFINITY]` | readme |
 | 18 | Geometric Shapes | P3 | 12 | `*` `o` `[]` `^` `v` `<>` | decoration |
 | 19 | Checkboxes | P3 | 3 | `[x]` `[ ]` | readme |
 | 20 | Common Dingbats | P3 | 10 | `<3` `<>` `*` `>` `o` | decoration |
+| 21 | Calendar and Date Indicators | P2 | 4 | `[DATE]` `[CALENDAR]` | agent, readme |
+| 22 | Scissors / Removed | P1 | 2 | `[REMOVED]` | gitmoji |
+| 23 | Deprecated | P1 | 2 | `[DEPRECATED]` | agent, changelog |
+| 24 | Flags | P2 | 27 | `[FLAG]` | gitmoji, readme |
 
 ---
 
@@ -59,8 +63,7 @@ and structured responses -- with no custom instructions or packages.
 
 ### P0 — Emitted by default (substitution is critical)
 
-These appear in AI-generated content currently in the wild and will be
-encountered in any Go codebase that pipes AI output through this library.
+These are commonly observed in AI-generated technical content.
 
 | Sequence | Codepoint | Common context | Token | Coverage |
 |----------|-----------|----------------|-------|----------|
@@ -93,17 +96,11 @@ encountered in any Go codebase that pipes AI output through this library.
 | open file folder | U+1F4C2 | open folder | `[FOLDER]` | covered |
 | chart with upwards trend | U+1F4C8 | growth/improvement | `[GROWTH]` | covered |
 
-### Not yet covered (known P0 gaps)
-
-| Sequence | Codepoint | Common context | Proposed token | Priority |
-|----------|-----------|----------------|----------------|----------|
-| keycap 1, 2, 3... | digit + U+FE0F + U+20E3 | numbered steps in Copilot/Claude responses | `1.` `2.` etc. | High -- keycap sequences; requires multi-codepoint handler |
-
 ### P1 — Generated by tooling or strong convention
 
 These appear when AI agents produce gitmoji-style changelogs or follow
-established project conventions. The full set is covered in Project/Issue
-Tracking and Community categories.
+established project conventions. A curated set is covered in the Project and
+Issue Tracking and Community categories.
 
 | Sequence | Codepoint | Gitmoji label | Token | Coverage |
 |----------|-----------|---------------|-------|----------|
@@ -130,8 +127,8 @@ Tracking and Community categories.
    new additions. Each release of gitmoji adds emoji that AI agents will start
    generating. Map the Unicode codepoint of any new entry.
 
-3. **Unicode CLDR / Emoji Charts** — Use
-   `https://unicode.org/emoji/charts/full-emoji-list.html` to look up a
+3. **Unicode CLDR / Emoji Charts** — Use the
+   [Unicode emoji charts](https://unicode.org/emoji/charts/full-emoji-list.html) to look up a
    codepoint. Any emoji in block U+1F000–U+1FAFF not yet in the map is
    stripped silently -- add it to the P2/P3 backlog.
 
@@ -154,16 +151,15 @@ fmt.Printf("substituted=%v token=%q stripped=%v\n", substituted, token, stripped
 3. Add the codepoint row to the matching section in `docs/replacements.md`.
 4. Update the **Category Summary** and **AI Agent Inventory** tables in this
    file: increment entry count, add any new token label, confirm coverage.
-5. Update the **Map version** header at the top and the **Last reviewed** date.
+5. Update the exact map count and the **Last reviewed** date.
 6. Run `go test ./...` -- the repo tests enforce that no doc file contains
    live emoji.
 
 ### How to update this audit after a batch addition
 
 ```
-go test ./... -run TestDefaultReplacements  # confirm new entries are tested
-go test ./... -run TestRepo                 # confirm docs are emoji-clean
-git diff replacements.go | grep '^\+' | grep -oP '"[^"]+"' | sort  # list added keys
+go test -run TestDefaultReplacements ./...  # confirm map entries and count
+go test -run TestRepo ./...                 # confirm docs are emoji-clean
 ```
 Then update the entry counts in Category Summary and this file's header.
 
@@ -179,7 +175,7 @@ Then update the entry counts in Category Summary and this file's header.
 | CI/CD Workflow | P0 | yes | Added U+1F6A8 `[ALERT]` and U+1FA79 `[PATCH]` as of 2026-03-23 |
 | Favorites and Highlights | P0 | yes | Star, fire, lightning, bookmark star |
 | Cloud and Deployment | P0 | yes | Added U+1F449 `[SEE]` as of 2026-03-23 |
-| Project and Issue Tracking | P1 | yes | Full gitmoji convention set |
+| Project and Issue Tracking | P1 | yes | Curated gitmoji-oriented symbols |
 | Community and Contributors | P1 | yes | CONTRIBUTING, bot, handshake, globe, nav hooks |
 | Status Indicators | P1 | yes | Pending/loading/directional status flags |
 | Severity (colored circles) | P2 | yes | Full 7-entry set (red/orange/yellow/green/blue/black/white) |
@@ -187,12 +183,16 @@ Then update the entry counts in Category Summary and this file's header.
 | Platform and Language Indicators | P2 | yes | Whale/penguin/snake/crab/hamster |
 | Colored Squares | P2 | yes | Large colored squares as status badges |
 | Arrows | P2 | yes | Basic 4-direction + diagonal; ASCII text tokens |
-| Media Controls | P3 | yes | Pause/stop/record/next/prev buttons |
+| Media Controls | P3 | yes | Pause/stop/record/next/previous/skip buttons |
 | Heart Variants | P3 | yes | 15 colored/decorative hearts; all map to `[HEART]` |
 | Math Operators | P3 | yes | Inequality and approximation symbols |
 | Geometric Shapes | P3 | yes | Small/medium squares, diamonds, circles |
 | Checkboxes | P3 | yes | Markdown-task-list style tokens |
 | Common Dingbats | P3 | yes | Heart suit, bullets, diamond suit |
+| Calendar and Date Indicators | P2 | yes | Calendar and date tokens |
+| Scissors / Removed | P1 | yes | Bare and FE0F scissors forms |
+| Deprecated | P1 | yes | Headstone and name-badge forms |
+| Flags | P2 | partial | 27 common, ZWJ, subdivision, and regional-indicator sequences |
 
 ---
 
@@ -200,10 +200,10 @@ Then update the entry counts in Category Summary and this file's header.
 
 | Issue | Codepoints | Priority | Detail |
 |-------|-----------|----------|--------|
-| Keycap sequences | digit + U+FE0F + U+20E3 | **High** | `1` + VS16 + U+20E3 sequences generated by Copilot/Claude in numbered step lists; stripped codepoint-by-codepoint but no `1.` substitution. Requires multi-codepoint lookahead in the replace pass. |
+| Keycap substitution | digit + U+FE0F + U+20E3 | **High** | Keycaps are detected and stripped; adding sequence mappings would preserve their numeric meaning as `1.`, `2.`, and so on. |
 | Code fence passthrough | any | Low | Emoji inside Markdown fenced code blocks are not distinguished from prose; no Markdown-aware mode. Acceptable by design; use a preprocessor if needed. |
 | Skin-tone modifier sequences | U+1F3FB–U+1F3FF | Low | ZWJ+skin-tone combos are stripped codepoint-by-codepoint; no substitution token. Rare in technical documentation. |
-| Flag sequences | U+1F1E0–U+1F1FF pairs; U+1F3F4+tags | Low | Regional indicator and subdivision tag sequences are fully stripped; no substitution defined. Out of scope for text sanitization. |
+| Unmapped flag sequences | U+1F1E0–U+1F1FF pairs | Low | The map substitutes 17 country pairs plus common and subdivision flags; other regional-indicator pairs are stripped. |
 | Emoji 17.0+ additions | various | Low | Add on demand when observed in generated content. |
 
 ---
@@ -223,7 +223,7 @@ Then update the entry counts in Category Summary and this file's header.
 
 After any addition to `DefaultReplacements()`:
 
-1. Update the entry count in the **Map version** header above.
+1. Update the exact entry count in the **Map version** header above.
 2. Update the **Category Summary** row for the affected category.
 3. Add new token labels to the **Token labels** column.
 4. Update the **Known Gaps** table if the addition resolves a gap.

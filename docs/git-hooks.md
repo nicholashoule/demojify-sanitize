@@ -12,17 +12,17 @@ this repository so the hook never fetches remote code:
 go build -o .git/hooks/demojify ./cmd/demojify
 ```
 
-Or install a pinned release (replace `vX.Y.Z` with a specific tag):
+Or install a pinned release:
 
 ```sh
-go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@vX.Y.Z
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0
 # then copy or symlink the installed binary into .git/hooks/
 ```
 
 To also enforce line-length and layout governance, pair with
 [repogov](https://github.com/nicholashoule/repogov) (see the cross-platform
-examples at the bottom of this file). The hook skips repogov gracefully when
-the sibling directory is absent, so it is safe to add unconditionally.
+examples at the bottom of this file). Both tools run from their published
+module versions, so no local clone of either repository is required.
 
 Audit-only hook (blocks the commit if emoji are found):
 
@@ -85,8 +85,10 @@ for full API usage patterns.
 
 ## Cross-platform lightweight examples
 
-These minimal hooks mirror the pattern used in `scripts/hooks/pre-commit` and
-run both tools from their published module versions -- no local clone required.
+These minimal hooks mirror `scripts/hooks/pre-commit` in this repository and
+run both tools from their published module versions -- no local clone
+required. (The in-repo hook itself runs demojify from its working tree,
+since this repository is the CLI's source.)
 
 ### macOS and Linux (`sh`)
 
@@ -96,10 +98,10 @@ run both tools from their published module versions -- no local clone required.
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
-go run github.com/nicholashoule/repogov/cmd/repogov@v0.7.0 -root "$root" -agent copilot
+go run github.com/nicholashoule/repogov/cmd/repogov@v0.8.0 -root "$root" -agent copilot
 repogov_exit=$?
 
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.8.0 -root "$root" -exts .go,.md
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0 -root "$root" -exts .go,.md
 demojify_exit=$?
 
 exit $((repogov_exit | demojify_exit))
@@ -112,10 +114,10 @@ exit $((repogov_exit | demojify_exit))
 $root = git rev-parse --show-toplevel
 Set-Location $root
 
-go run github.com/nicholashoule/repogov/cmd/repogov@v0.7.0 -root $root -agent copilot
+go run github.com/nicholashoule/repogov/cmd/repogov@v0.8.0 -root $root -agent copilot
 $repogov_exit = $LASTEXITCODE
 
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.8.0 -root $root -exts .go,.md
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0 -root $root -exts .go,.md
 $demojify_exit = $LASTEXITCODE
 
 exit ($repogov_exit -bor $demojify_exit)

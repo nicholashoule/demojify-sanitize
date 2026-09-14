@@ -1,3 +1,8 @@
+// Tests for ScanDir with Replacements and CollectMatches, plus
+// FindMatchesInFile: unconditional normalization, unmapped-emoji stripping,
+// match positions and metadata, variation-selector attribution, non-emoji
+// keys, extension filtering, and scan-then-WriteFinding round trips.
+
 package demojify_test
 
 import (

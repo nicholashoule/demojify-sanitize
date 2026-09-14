@@ -1,3 +1,6 @@
+// Tests for FixDir: fixed and clean counts, replacement mode, symlink and
+// path-traversal rejection, and partial-failure error joining.
+
 package demojify_test
 
 import (

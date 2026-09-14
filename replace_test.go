@@ -1,3 +1,7 @@
+// Tests for Replace, ReplaceCount, FindAll, and FindAllMapped: longest-key
+// matching, empty and nil maps, counting, token-run collapsing limited to
+// substituted output, identity mappings, and ASCII preservation.
+
 package demojify_test
 
 import (

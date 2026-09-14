@@ -2,7 +2,8 @@
 # pre-commit hook -- runs repogov checks via the CLI.
 # Works on Linux, macOS, and Windows (via Git for Windows' bundled sh.exe).
 #
-# Install once with: make hooks
+# Install with: make hooks. The installed hook is a copy, so re-run it
+# whenever this file changes.
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
@@ -16,10 +17,13 @@ if [ "$repogov_exit" -ne 0 ]; then
   echo "  go run \"$repogov_ref\" -root \"$root\" -agent copilot"
 fi
 
-# Run demojify-sanitize. If emoji are found, substitute them automatically,
-# re-stage the modified files, and abort the commit so the user can review
-# the substitutions before re-committing.
-demojify_ref="github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.10.0"
+# Run demojify-sanitize from this working tree: this repository is the CLI's
+# source, so the hook dogfoods the current code instead of a published
+# release (downstream hooks should pin a tag; see docs/git-hooks.md). If
+# emoji are found, substitute them automatically, re-stage the modified
+# files, and abort the commit so the user can review the substitutions
+# before re-committing.
+demojify_ref="./cmd/demojify"
 demojify_exts=".go,.md,.html,.yaml,.yml,.json,.txt,.env,.toml"
 demojify_filters="-skip build"
 # demojify_filters is a fixed, trusted argument list maintained in this hook.

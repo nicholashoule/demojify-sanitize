@@ -30,7 +30,7 @@ func main() {
 		fmt.Printf("  ContainsEmoji(%q) = %v\n", s, demojify.ContainsEmoji(s))
 	}
 
-	// ---- 2. Strip all emoji ----
+	// ---- 2. Strip recognized emoji ----
 	fmt.Println("\n=== Demojify ===")
 	raw := "\U0001F680 Deploy complete! Check \U0001F4CA for details."
 	fmt.Printf("  before: %q\n", raw)
@@ -107,7 +107,7 @@ func main() {
 		}
 	}
 
-	// ---- 10. WriteFinding -- atomic write-back ----
+	// ---- 10. WriteFinding -- temp-file write-back ----
 	fmt.Println("\n=== WriteFinding ===")
 	for _, f := range findings {
 		absPath := filepath.Join(tmpDir, filepath.FromSlash(f.Path))
@@ -200,7 +200,7 @@ func main() {
 		fmt.Printf("  %s\n", pretty.String())
 	}
 
-	// ---- 18. SanitizeFile -- atomic single-file sanitization ----
+	// ---- 18. SanitizeFile -- safe single-file sanitization ----
 	fmt.Println("\n=== SanitizeFile ===")
 	sfDir, err := os.MkdirTemp("", "demojify-sf-*")
 	if err != nil {

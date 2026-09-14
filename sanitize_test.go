@@ -1,3 +1,6 @@
+// Tests for Sanitize and DefaultOptions: option combinations, AllowedRanges
+// and AllowedEmojis, an agent-output remediation scenario, and concurrent use.
+
 package demojify_test
 
 import (

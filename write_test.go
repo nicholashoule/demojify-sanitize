@@ -1,3 +1,6 @@
+// Tests for WriteFinding: no-op when Cleaned equals Original, content
+// write-back, and permission preservation.
+
 package demojify_test
 
 import (

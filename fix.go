@@ -1,3 +1,7 @@
+// FixDir: scan a tree with scanDirCounted and write back every changed file,
+// rejecting any target that resolves outside the root (isInsideDir) after
+// symlink evaluation. Per-file failures are joined with errors.Join.
+
 package demojify
 
 import (

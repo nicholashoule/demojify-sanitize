@@ -1,3 +1,13 @@
+// Emoji substitution: Replace, ReplaceFile, ReplaceCount, FindAll, and
+// FindAllMapped, all built on the single left-to-right scan in applyReplacer.
+//
+// Keys must arrive sorted longest-first (sortedKeys in helpers.go) so
+// variation-selector sequences win over their bare codepoint. Mapped keys are
+// substituted, unmapped emoji are stripped in the same pass, and replacement
+// values are emitted verbatim. Run collapsing (emitToken) applies only to
+// substituted tokens of minCollapseLen or more bytes, never to literal input.
+// Rationale: docs/design.md, "Substitution pipeline".
+
 package demojify
 
 import (
@@ -21,7 +31,7 @@ const minCollapseLen = 4
 // Replacement values are emitted verbatim: a value is never re-scanned for
 // emoji, so identity mappings (key == value) preserve the mapped codepoints
 // exactly. Runs of adjacent emoji that substitute to the same token of
-// [minCollapseLen] or more bytes are collapsed to a single occurrence;
+// minCollapseLen (4) or more bytes are collapsed to a single occurrence;
 // literal text that happens to equal a replacement token is never collapsed.
 //
 // Replace with a nil or empty replacements map behaves identically to [Demojify].

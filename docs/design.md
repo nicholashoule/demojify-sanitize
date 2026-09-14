@@ -7,8 +7,8 @@ audits, detects, and fixes content issues before they reach production.
 
 ## Zero-dependency policy
 
-The library imports only the Go standard library (`os`, `path/filepath`,
-`regexp`, `strings`, `unicode`, `unicode/utf8`).
+The library imports only Go standard-library packages. It has no third-party
+runtime dependencies.
 
 **Why:** Every dependency in a shared library becomes a transitive dependency
 for every project that imports it. In enterprise environments this creates
@@ -31,18 +31,22 @@ error-returning `Compile`) is safe here because the patterns are literals known
 at compile time; a panic at init is preferable to silently carrying a nil regex
 into production.
 
-## No returned errors
+## Error model
 
-The primary functions have the signature `func(string) string` or
-`func(string) bool`; `Sanitize` additionally accepts an `Options` value.
-None return `error`.
+The pure string functions have signatures such as `func(string) string` or
+`func(string) bool`; `Sanitize` additionally accepts an `Options` value. They
+do not return errors because their in-memory transformations cannot fail.
 
-**Why:** The operations performed — regex replacement, string trimming — cannot
+**Why:** The operations performed -- regex replacement and string trimming -- cannot
 fail on valid UTF-8 input, and Go strings are always valid sequences of bytes
 (even if not valid UTF-8, the regex engine handles the worst case gracefully).
 Forcing callers to check an error that can never occur adds noise with no
 benefit. If a regex were malformed, `MustCompile` panics at init, catching the
 defect at development time rather than silently degrading at runtime.
+
+APIs that perform file, stream, JSON, or directory operations return errors:
+`SanitizeFile`, `SanitizeReader`, `SanitizeJSON`, `ReplaceFile`, `ScanDir`,
+`ScanDirContext`, `ScanFile`, `FindMatchesInFile`, `WriteFinding`, and `FixDir`.
 
 ## Pipeline order in `Sanitize`
 
@@ -78,9 +82,10 @@ left alone.
 
 ## File scanner and error handling
 
-`ScanDir` and `ScanFile` are the only public functions that return an `error`.
-The text-processing functions (`Demojify`, `Normalize`, `Sanitize`) cannot fail
-on string input, so they omit errors entirely (see "No returned errors" above).
+The text-processing functions (`Demojify`, `Normalize`, `Sanitize`, and
+`Replace`) cannot fail on string input, so they omit errors. I/O and parsing
+APIs return errors to expose filesystem, stream, cancellation, and invalid-JSON
+failures (see "Error model" above).
 
 The scanner performs file I/O -- reading files, walking directory trees -- which
 can fail for reasons outside the library's control (permissions, missing paths,
@@ -88,8 +93,9 @@ filesystem errors). Returning an error from these functions is the idiomatic Go
 approach and does not weaken the library's error-handling contract.
 
 `ScanConfig` provides three exemption axes -- directories (`SkipDirs`), files
-(`ExemptFiles`), and suffixes (`ExemptSuffixes`) -- plus an extension filter
-(`Extensions`), an optional `Replacements` map (uses `Replace` instead of
+(`ExemptFiles`), and suffixes (`ExemptSuffixes`) -- plus a binary/minified
+denylist (`SkipExtensions`), an extension allowlist (`Extensions`), a size
+guard (`MaxFileBytes`), an optional `Replacements` map (uses `Replace` instead of
 `Sanitize` per file when set), and a `CollectMatches` flag (populates
 `Finding.Matches` with per-occurrence detail). `DefaultScanConfig` returns
 safe defaults for a typical Go module repo. The scanner reuses the same
@@ -161,7 +167,7 @@ atomically.
 **Why `DefaultReplacements()` returns a copy:**
 A shared global map is not safe for concurrent mutation. Returning a fresh
 copy on every call lets each caller add, remove, or override entries without
-affecting other goroutines or call sites. The copy cost is negligible (~280
+affecting other goroutines or call sites. The copy cost is negligible (280
 entries) compared to the I/O in `ReplaceFile` or the regex in `Demojify`.
 
 **Why run collapsing skips tokens shorter than 4 characters:**
@@ -220,9 +226,9 @@ complete, structurally valid JSON document.
 
 `FixDir(root string, cfg ScanConfig) (fixed, clean int, err error)` is the
 write-side complement to `ScanDir`. It walks the directory tree at `root`,
-applies the sanitization or replacement pipeline from `cfg`, and atomically
-writes back every file whose content changed. It returns counts of fixed and
-already-clean files. Path-traversal protection (via `filepath.EvalSymlinks`
+applies the sanitization or replacement pipeline from `cfg`, and writes back
+every changed file through the temp-file strategy described above. It returns
+counts of fixed and already-clean files. Path-traversal protection (via `filepath.EvalSymlinks`
 and `isInsideDir`) ensures no write target can escape `root` through `..`
 components or symlinks.
 

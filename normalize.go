@@ -1,3 +1,13 @@
+// Whitespace normalization: Normalize and the per-line helpers
+// (collapseLineSpaces, collapseInlineSpaces, tidyLine, tidyChangedLines)
+// shared by sanitize.go and scan.go.
+//
+// Leading indentation is always preserved; only runs after the first
+// non-whitespace byte collapse. Normalize converts CRLF and bare CR to LF and
+// operates on the whole text. tidyChangedLines is the lighter cleanup ScanDir
+// uses when NormalizeWhitespace is off: both inputs must be LF-only, and only
+// lines that differ from the original are touched.
+
 package demojify
 
 import (

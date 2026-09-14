@@ -1,3 +1,6 @@
+// Tests for ReplaceFile: write-back, no-op on clean files, permission
+// preservation, binary skipping, and concurrent use.
+
 package demojify_test
 
 import (

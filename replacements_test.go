@@ -1,3 +1,6 @@
+// Tests for DefaultReplacements: exact entry count, every documented entry
+// and category, copy isolation between callers, and end-to-end Replace.
+
 package demojify_test
 
 import (
@@ -12,8 +15,8 @@ func TestDefaultReplacements(t *testing.T) {
 		if m == nil {
 			t.Fatal("DefaultReplacements() returned nil")
 		}
-		if len(m) == 0 {
-			t.Fatal("DefaultReplacements() returned empty map")
+		if got, want := len(m), 280; got != want {
+			t.Fatalf("len(DefaultReplacements()) = %d, want %d", got, want)
 		}
 	})
 

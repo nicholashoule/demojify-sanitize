@@ -1,3 +1,6 @@
+// CLI integration tests for -json: clean and non-clean envelopes, fixed
+// results for -fix and -sub, precedence over -quiet, and no text leakage.
+
 package main_test
 
 import (

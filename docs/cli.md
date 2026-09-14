@@ -17,13 +17,13 @@ go build -o demojify ./cmd/demojify/
 Or install directly:
 
 ```sh
-go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0
 ```
 
 Or run without installing:
 
 ```sh
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest [flags]
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0 [flags]
 ```
 
 ## Synopsis
@@ -34,7 +34,7 @@ demojify [flags]
 
 `demojify` has no subcommands; the operational mode is selected by flags.
 Modes may be combined -- for example, `-sub -normalize` applies both
-substitution and whitespace normalization in a single pass.
+substitution and whitespace normalization in the same run.
 
 ## Flags
 
@@ -76,8 +76,9 @@ demojify -root . -fix
 demojify -root . -exts .go,.md -fix
 ```
 
-Rewrites each affected file atomically (temp file + rename, original
-permissions preserved), removing all emoji codepoints.
+Rewrites each affected file through a same-directory temp file and rename,
+preserving its permissions and removing recognized emoji-related codepoints.
+The replacement is atomic on POSIX and best effort on Windows.
 
 > **Note:** whitespace artifacts left by emoji removal (a double space where
 > an emoji sat, trailing spaces at line end) are tidied only on the lines the
@@ -128,9 +129,9 @@ Print the version string and exit.
 demojify -version
 ```
 
-The version is read from the Go build info. A semver tag (e.g. `v0.10.1`)
+The version is read from the Go build info. A semver tag (e.g. `v1.0.0`)
 is embedded only when the binary is installed from a published tagged
-release (`go install ...@v0.10.1`). Builds from local source -- whether via
+release (`go install ...@v1.0.0`). Builds from local source -- whether via
 `go run`, `go build`, or `go install` without a version suffix -- report
 `(devel)`.
 
@@ -138,7 +139,7 @@ release (`go install ...@v0.10.1`). Builds from local source -- whether via
 
 | Code | Meaning |
 |------|---------|
-| `0` | No emoji found, or all findings fixed successfully |
+| `0` | No findings, or all findings fixed successfully |
 | `1` | Emoji found without `-fix`, a write error occurred, or `-root` does not exist / is not a directory |
 | `2` | Unknown flag (flag parse error) |
 
@@ -180,7 +181,7 @@ Each finding is printed to stdout:
 When no findings exist:
 
 ```
-[PASS] no emoji found
+[PASS] no findings
 ```
 
 Write errors go to stderr (even with `-quiet`):

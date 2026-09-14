@@ -1,3 +1,18 @@
+// Directory and single-file scanning: ScanConfig, Finding, Match, and the
+// WalkDir pipeline shared by ScanDir, ScanDirContext, ScanFile, and FixDir.
+//
+// Invariants other files rely on:
+//   - Replacement keys are sorted longest-first once per walk and passed to
+//     applyReplacer and buildMatches; never re-sort per file.
+//   - When NormalizeWhitespace is off, cleanup touches only changed lines
+//     (tidyChangedLines) and CRLF is restored only for pure-CRLF files.
+//   - SkipExtensions and MaxFileBytes are checked before the file is opened;
+//     binary detection is a NUL sniff of the first 512 bytes (isBinary).
+//   - Finding.Path is slash-separated and relative to Root for ScanDir but
+//     is the path argument as given for ScanFile.
+//
+// Rationale: docs/design.md, "File scanner and error handling".
+
 package demojify
 
 import (
@@ -206,8 +221,8 @@ type Finding struct {
 	// Original is the file's content before sanitization.
 	Original string
 
-	// Cleaned is the file's content after applying [Sanitize] with the
-	// configured [Options].
+	// Cleaned is the file content after applying the configured sanitization
+	// or replacement pipeline.
 	Cleaned string
 
 	// Matches holds per-occurrence detail for every matched codepoint sequence
