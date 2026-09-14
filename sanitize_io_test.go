@@ -1,3 +1,8 @@
+// Tests for the I/O entry points: SanitizeFile (including whitespace-only
+// changes and binary skipping), SanitizeReport metrics, SanitizeReader
+// streaming and the 1 MiB line cap, and SanitizeJSON including the
+// ErrMultipleJSONValues sentinel.
+
 package demojify_test
 
 import (

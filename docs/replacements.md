@@ -1,6 +1,6 @@
 # Supported Emoji and Replacements
 
-This file documents every entry in `DefaultReplacements()` (`replacements.go`).
+This file documents all 280 entries in `DefaultReplacements()` (`replacements.go`).
 All entries are keyed by Unicode codepoint sequence; FE0F (variation selector-16)
 variants are listed alongside their bare equivalents.
 
@@ -344,6 +344,10 @@ Used in CI dashboards and status tables alongside the colored circle set.
 | U+23FA U+FE0F | Record button (emoji) | `[RECORDING]` |
 | U+23E9 | Fast-forward button | `[NEXT]` |
 | U+23EA | Fast-reverse button | `[PREV]` |
+| U+23ED | Next track / skip chapter | `[SKIP]` |
+| U+23ED U+FE0F | Next track / skip chapter (emoji) | `[SKIP]` |
+| U+23EE | Previous track | `[PREV]` |
+| U+23EE U+FE0F | Previous track (emoji) | `[PREV]` |
 
 ---
 
@@ -378,6 +382,13 @@ Common in CONTRIBUTING.md, acknowledgement sections, and bot-generated content.
 | U+21AA U+FE0F | Rightwards arrow with hook (emoji) | `[FORWARD]` |
 | U+1F507 | Speaker with cancellation stroke | `[MUTE]` |
 | U+1F515 | Bell with cancellation stroke | `[MUTE]` |
+| U+1F53C | Up-pointing small triangle | `[UP]` |
+| U+1F53D | Down-pointing small triangle | `[DOWN]` |
+| U+1F446 | Backhand index pointing up | `[SEE]` |
+| U+1F447 | Backhand index pointing down | `[SEE]` |
+| U+1F448 | Backhand index pointing left | `[SEE]` |
+| U+1F6A5 | Horizontal traffic light | `[STATUS]` |
+| U+1F6A6 | Vertical traffic light | `[STATUS]` |
 
 ---
 
@@ -393,7 +404,73 @@ Used in README badges, setup sections, and toolchain documentation.
 | U+1F40D | Snake | `[PYTHON]` |
 | U+1F980 | Crab | `[RUST]` |
 | U+1F439 | Hamster | `[GO]` |
-| U+2219 | Bullet operator | `*` |
+| U+1F34E | Red apple | `[MACOS]` |
+| U+1FA9F | Window | `[WINDOWS]` |
+
+---
+
+## Calendar and Date Indicators
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+1F4C5 | Calendar | `[DATE]` |
+| U+1F4C6 | Tear-off calendar | `[DATE]` |
+| U+1F5D3 | Spiral calendar | `[CALENDAR]` |
+| U+1F5D3 U+FE0F | Spiral calendar (emoji) | `[CALENDAR]` |
+
+---
+
+## Scissors and Removal
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+2702 | Scissors | `[REMOVED]` |
+| U+2702 U+FE0F | Scissors (emoji) | `[REMOVED]` |
+
+---
+
+## Deprecated
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+1FAA6 | Headstone | `[DEPRECATED]` |
+| U+1F4DB | Name badge | `[DEPRECATED]` |
+
+---
+
+## Flags
+
+All supported flag sequences use the neutral `[FLAG]` token.
+
+| Codepoint | Sequence | Replacement |
+|-----------|----------|-------------|
+| U+1F6A9 | Triangular flag | `[FLAG]` |
+| U+1F3F3 | White flag | `[FLAG]` |
+| U+1F3F3 U+FE0F | White flag (emoji) | `[FLAG]` |
+| U+1F3F4 | Black flag | `[FLAG]` |
+| U+1F38C | Crossed flags | `[FLAG]` |
+| U+1F3F3 U+FE0F U+200D U+1F308 | Rainbow flag | `[FLAG]` |
+| U+1F3F3 U+FE0F U+200D U+26A7 U+FE0F | Transgender flag | `[FLAG]` |
+| U+1F3F4 + tag sequence `gb-eng` | England subdivision flag | `[FLAG]` |
+| U+1F3F4 + tag sequence `gb-sct` | Scotland subdivision flag | `[FLAG]` |
+| U+1F3F4 + tag sequence `gb-wls` | Wales subdivision flag | `[FLAG]` |
+| U+1F1FA U+1F1F8 | United States flag | `[FLAG]` |
+| U+1F1EC U+1F1E7 | United Kingdom flag | `[FLAG]` |
+| U+1F1E9 U+1F1EA | Germany flag | `[FLAG]` |
+| U+1F1EB U+1F1F7 | France flag | `[FLAG]` |
+| U+1F1EF U+1F1F5 | Japan flag | `[FLAG]` |
+| U+1F1E8 U+1F1E6 | Canada flag | `[FLAG]` |
+| U+1F1E6 U+1F1FA | Australia flag | `[FLAG]` |
+| U+1F1E7 U+1F1F7 | Brazil flag | `[FLAG]` |
+| U+1F1EE U+1F1F3 | India flag | `[FLAG]` |
+| U+1F1E8 U+1F1F3 | China flag | `[FLAG]` |
+| U+1F1F7 U+1F1FA | Russia flag | `[FLAG]` |
+| U+1F1F0 U+1F1F7 | South Korea flag | `[FLAG]` |
+| U+1F1F2 U+1F1FD | Mexico flag | `[FLAG]` |
+| U+1F1F3 U+1F1EC | Nigeria flag | `[FLAG]` |
+| U+1F1FF U+1F1E6 | South Africa flag | `[FLAG]` |
+| U+1F1F8 U+1F1E6 | Saudi Arabia flag | `[FLAG]` |
+| U+1F1E6 U+1F1EA | United Arab Emirates flag | `[FLAG]` |
 
 ---
 ## Adding Custom Replacements
@@ -413,36 +490,5 @@ cleaned := demojify.Replace(text, repl)
 Any emoji that has no entry in the map is stripped by `Demojify` after
 substitution, so unmapped codepoints never reach output.
 
----
-## Unicode Ranges Removed by Demojify
-
-`Demojify` removes codepoints regardless of the replacements map. The regex
-covers:
-
-| Range | Description |
-|-------|-------------|
-| U+2139 | Information source |
-| U+231A–U+231B | Watch, hourglass |
-| U+23CF | Eject symbol |
-| U+23E9–U+23F3 | Media controls, hourglasses |
-| U+23F8–U+23FA | Pause, stop, record |
-| U+24C2 | Circled M |
-| U+25AA–U+25AB | Small squares |
-| U+25B6 | Play button |
-| U+25C0 | Reverse button |
-| U+25FB–U+25FE | Medium squares |
-| U+2600–U+27BF | Miscellaneous symbols, dingbats, arrows |
-| U+2934–U+2935 | Curved arrows |
-| U+2B05–U+2B07 | Directional arrows |
-| U+2B1B–U+2B1C | Large squares |
-| U+2B50 | White medium star |
-| U+2B55 | Heavy large circle |
-| U+3030 | Wavy dash |
-| U+303D | Part alternation mark |
-| U+3297 | Circled ideograph congratulation |
-| U+3299 | Circled ideograph secret |
-| U+1F000–U+1FAFF | Mahjong tiles through symbols and pictographs (includes all Emoji 17.0 additions) |
-| U+200D | Zero width joiner (used in sequences) |
-| U+20E3 | Combining enclosing keycap |
-| U+E0020–U+E007F | Tags block (subdivision flags: England, Scotland, Wales) |
-| U+FE00–U+FE0F | Variation selectors |
+For removal coverage and intentional exclusions, see
+[Unicode emoji coverage](unicode-coverage.md).

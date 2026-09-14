@@ -1,3 +1,6 @@
+// Tests for ScanFile: findings, missing files, binary skipping, whitespace
+// normalization, and empty files.
+
 package demojify_test
 
 import (

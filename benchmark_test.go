@@ -1,3 +1,6 @@
+// Benchmarks for every public entry point on small inputs and on generated
+// Markdown of several sizes (largeSizes) to catch throughput regressions.
+
 package demojify_test
 
 import (

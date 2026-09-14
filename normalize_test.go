@@ -1,3 +1,6 @@
+// Tests for Normalize: inline collapse after indentation, trailing-space
+// trimming, blank-line limits, and CRLF conversion.
+
 package demojify_test
 
 import (

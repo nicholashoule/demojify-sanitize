@@ -1,3 +1,6 @@
+// Shared CLI test harness: TestMain builds the demojify binary once, and
+// runCLI executes it as a real process so tests observe true exit codes.
+
 package main_test
 
 import (

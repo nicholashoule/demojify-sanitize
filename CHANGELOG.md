@@ -1,253 +1,57 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Notable changes are documented following [Keep a Changelog] and
+[Semantic Versioning].
 
 ## [Unreleased]
+
+## [1.0.0] - 2026-09-14
+
+First stable release. The public Go API, the CLI flags and exit codes, and the
+`-json` output schema are now covered by semantic versioning: no breaking
+changes without a major version bump. The human-readable text output, the set
+of Unicode ranges treated as emoji (which tracks new Unicode releases), and the
+contents of `DefaultReplacements()` may still grow or change in minor releases.
+
+### Changed
+
+- Library behavior is identical to v0.10.1. The module path is unchanged (no
+  `/v1` suffix), so upgrading requires no code changes.
+- CLI: the clean-tree message is now `[PASS] no findings` (previously
+  `[PASS] no emoji found`), since `-normalize` runs can report whitespace-only
+  findings. Scripts should rely on the exit code or `-json`, not this text.
+- Documentation: install and CI examples pin `@v1.0.0`; package, CLI, and
+  design docs now describe file replacement as atomic on POSIX and best-effort
+  on Windows, and clarify Unicode coverage and error behavior.
 
 ## [0.10.1] - 2026-09-11
 
 ### Fixed
 
-- `sanitize.go` (`SanitizeReader`): lines exactly 1 MiB long are now accepted;
-  longer lines still return `bufio.ErrTooLong`. Rely on `bufio.ScanLines` to
-  remove one CRLF terminator while preserving additional trailing CR data
-- `scan.go` (`buildMatches`): match context for CRLF files no longer includes
-  the delimiter `\r`, while a terminal bare `\r` remains part of the full line
-- Tooling: restored valid POSIX hook invocation and pinned the CI lint job to
-  Go 1.26 so its Go 1.26-built linter does not analyze Go 1.27 library files
+- `SanitizeReader` accepts lines of exactly 1 MiB; longer lines still return
+  `bufio.ErrTooLong`.
+- Match context for CRLF files no longer includes the trailing `\r`.
+- Restored a valid POSIX pre-commit invocation and pinned the CI lint job's
+  Go version to match its linter build.
 
 ### Changed
 
-- `replace.go` and `scan.go`: bucket replacement keys by first byte and advance
-  unmatched Unicode text by rune, reducing unnecessary prefix checks
-- `scripts/hooks/pre-commit`: expanded text scanning to Go, Markdown, HTML,
-  YAML, JSON, text, environment, and TOML files while skipping `build/`; bumped
-  governance pins from `repogov@v0.7.0` to `v0.8.0` and (dogfooding)
-  `demojify-sanitize@v0.8.0` to `v0.10.0`
+- Replacement scanning buckets keys by first byte and advances unmatched text
+  by rune, reducing prefix checks.
+- The repository pre-commit hook scans more text file types and skips
+  `build/`.
 
-## [0.10.0] - 2026-07-25
+## Older Releases
 
-### Fixed
+Notes for earlier versions are in this file's git history and in these tag
+comparisons: [0.10.0], [0.9.0], [0.8.0], and [0.7.3 and earlier].
 
-- `scan.go` (`scanDirCounted`): the light whitespace cleanup that runs when
-  `NormalizeWhitespace` is false is now scoped to the lines that emoji
-  removal or substitution actually changed. Previously one emoji anywhere in
-  a file caused `collapseInlineSpaces` to run over the whole file, collapsing
-  gofmt alignment tabs and column-aligned comments on untouched lines --
-  a fix pass left Go files failing `gofmt -l`. Untouched lines are now
-  preserved byte for byte (`tidyChangedLines` in `normalize.go`; regression
-  test `TestScanDirPreservesAlignmentOnUntouchedLines`)
-- `replace.go` (`Replace`, `ReplaceCount`, `ReplaceFile`, `ScanDir`
-  replacement path): rewritten as a single position-aware scan that tracks
-  which output spans came from substitution. Runs of literal input text that
-  happen to equal a replacement token (e.g. documentation showing
-  `[WARNING] [WARNING]` as example output) are no longer collapsed -- the old
-  whole-output collapse altered emoji-free files, so `-sub` could rewrite and
-  corrupt documents containing no emoji at all (regression test
-  `TestReplacePreservesLiteralTokenRuns`). Adjacent repeated emoji still
-  collapse to a single token
-- `replace.go`: replacement values are now emitted verbatim instead of being
-  re-scanned by the residual `Demojify` pass, so identity mappings
-  (key == value) preserve their codepoints exactly -- the behavior the
-  `ScanConfig.Replacements` documentation always promised but the old
-  pipeline did not deliver (regression test
-  `TestReplaceIdentityValuesPreserved`)
-- `demojify.go` (`buildPlaceholders`): a sentinel noncharacter is now
-  rejected when its bare rune appears anywhere in the input, not only when a
-  full placeholder string does. Previously an input containing a stray
-  U+FDD0 next to a digit could assemble a spurious placeholder after
-  substitution, and the `AllowedEmojis` restore phase swapped the allowed
-  emoji and the noncharacter (regression test
-  `TestSanitizeAllowedEmojisBareNoncharacterInput`)
-- `sanitize.go` (`SanitizeJSON`): the EOF probe now decodes into
-  `json.RawMessage`, so every input holding a second well-formed top-level
-  JSON value returns `ErrMultipleJSONValues` regardless of the value's type.
-  Previously `{"a":1} 5` surfaced an unrelated unmarshal-type error while
-  `{"a":1}{"b":2}` hit the sentinel (regression test
-  `TestSanitizeJSONMultipleValuesSentinel`)
-- `scan.go`: the pure-CRLF detection used to restore Windows line endings now
-  also rejects files containing a stray bare `\r`, so a mixed-ending file can
-  no longer have its bare CR silently promoted to `\r\n` (regression test
-  `TestScanDirMixedCRLFWithBareCRStaysLF`)
-
-### Removed
-
-- **Breaking:** `LimitConfig`, `DefaultLimitConfig`, `ResolveLimit`, and
-  `DefaultLineLimit` (`config.go`). The line-limit API was never consumed by
-  any scanner code path in this module and duplicated governance
-  functionality that belongs in dedicated repo-governance tooling. No known
-  consumer imports it
-
-### Changed
-
-- `cmd/demojify/main.go`: `DefaultReplacements()` is only built when `-sub`
-  is set instead of on every run; `-quiet` flag help and docs now state that
-  write errors still print to stderr (the existing behavior)
-- `scan.go`: dropped the internal `strings.Replacer` construction; the
-  directory walk now shares the same position-aware substitution scanner as
-  `Replace`
-- `replace.go`: the substitution scan decodes non-ASCII, non-emoji runes
-  once and copies them whole, so the emoji regex and key probes run once
-  per rune rather than once per byte on multi-byte text (PR review
-  feedback)
-- `.github/workflows/ci.yml`: the "ASCII preservation regression" spotlight
-  step also runs `TestReplacePreservesLiteralTokenRuns`, and a new
-  "Whitespace alignment preservation regression" step runs
-  `TestScanDirPreservesAlignmentOnUntouchedLines`
-- `.github/workflows/ci.yml`: Go matrix refreshed to
-  `1.21 / 1.23 / stable`, with the `(1.21, macos-latest)` cell excluded --
-  Go 1.21 test binaries lack an `LC_UUID` load command and are aborted by
-  dyld on macOS 15 runners under `-race` (golang/go#68678; 1.21 is EOL and
-  never received the linker backport). The 1.21 floor stays covered on
-  ubuntu and windows; spotlight steps, coverage upload, and the lint job now
-  key on `stable` instead of a pinned minor version
-
-### Documentation
-
-- Corrected the `DefaultReplacements` size to ~280 entries in `README.md`,
-  `doc.go`, and `replacements.go` (previously stated as ~137 or ~290)
-- `docs/design.md`: rewrote the substitution-pipeline rationale for the
-  position-aware scan, documented the changed-line scoping of the
-  non-normalize cleanup, updated the JSON EOF-probe description, and removed
-  the line-limit configuration section
-- `sanitize.go` (`SanitizeReader`): documented that output never ends with a
-  trailing newline, even when `NormalizeWhitespace` is false
-- `docs/cli.md`: restructured into a full CLI reference -- Installation,
-  Synopsis, Flags, per-mode sections (Audit / Fix / Substitute / Normalize /
-  Version) with worked examples and notes, Exit Codes (including exit 2),
-  a JSON schema example, one consolidated Examples block, and See Also
-  links -- matching the reference style used across sibling module docs
-- `docs/ci.md` (new): CI pipeline integration guide -- GitHub Actions and
-  GitLab CI gate workflows, the audit-then-diff auto-fix pattern, the
-  embedded `go test` gate (the pattern `repo_test.go` dogfoods), and
-  JSON-output tooling including GitHub error annotations
-- Removed stray dangling comments at the end of `replace_test.go` and
-  `sanitize_io_test.go` that described functions living in other files
-
-## [0.9.0] - 2026-05-16
-
-### Added
-
-- `scan.go` (`ScanConfig.SkipExtensions`, `DefaultScanConfig`): new
-  `SkipExtensions` field listing binary, minified, compressed, and media
-  file suffixes that are never scanned or rewritten. `DefaultScanConfig`
-  pre-populates it with a comprehensive set — `.min.js`, `.min.css`,
-  `.js.map`, `.css.map`; `.gz`/`.tgz`/`.bz`/`.bz2`/`.xz`/`.zst`/`.zip`/
-  `.tar`/`.7z`/`.br`; common image/font/media suffixes; and
-  `.pdf`/`.exe`/`.dll`/`.so`/`.dylib`/`.wasm`/`.class`/`.jar`. Matched
-  files are skipped before the file is opened, eliminating false positives
-  in minified web assets and avoiding I/O the audit can never act on. The
-  field is independent of `ExemptSuffixes`, so clearing `ExemptSuffixes`
-  to scan `*_test.go` files retains binary/minified protection
-- `cmd/demojify/main.go`: custom `flag.Usage` so `demojify -h` prints a
-  synopsis, the flag-selected operational modes, exit codes, and worked
-  examples instead of the bare flag dump (which also leaked the absolute
-  binary path on Windows)
-- `cmd/demojify/main.go`: package doc gained `# CLI Exit Codes` and
-  `# CLI JSON Output` sections so the pkg.go.dev page is the full CLI
-  reference the library `doc.go` cross-reference already promised
-- `Makefile`: `help` target (lists every target) and `pre-commit` target.
-  `pre-commit` invokes the canonical cross-platform gate
-  (`go run scripts/hooks/pre-commit.go`: gofmt, vet, golangci-lint, full
-  test suite) directly, so it works whether `make` runs recipes via `sh`
-  or `cmd.exe` — unlike the POSIX-shell `fmt-check` target, which fails
-  under a `cmd.exe`-based `make` on Windows
-
-### Changed
-
-- Pinned tool versions are now consistent across the operative hook and
-  every example. `scripts/hooks/pre-commit` and the README / `docs/git-hooks.md`
-  hook snippets all reference `demojify-sanitize/cmd/demojify@v0.8.0` (was a
-  mix of `@v0.7.1`/`@v0.7.3`) and `repogov/cmd/repogov@v0.7.0` (docs were a
-  stale `@v0.3.0`); `.github/rules/emoji-prevention.md` install example
-  bumped `@v0.7.0` → `@v0.8.0`
-- `docs/git-hooks.md`: the Windows PowerShell hook example now passes
-  `-exts .go,.md` to `demojify`, matching the `sh` examples so all hook
-  snippets share the binary-false-positive scoping introduced in #28
-- `Makefile`: the `fmt-check`, `hooks`, and `clean` targets now delegate to
-  cross-platform Go helpers (`scripts/fmtcheck.go`, `scripts/installhooks.go`,
-  `scripts/clean.go`) instead of POSIX `gofmt`/`cp`/`chmod`/`rm` shell
-  recipes, so they work whether `make` runs recipes via `sh` or `cmd.exe`
-  on Windows. `fmt-check` remains report-only (never runs `gofmt -w`).
-  `scripts/installhooks.go` resolves the hooks directory through Git
-  (`git rev-parse --git-path hooks`, honoring `core.hooksPath` and linked
-  worktrees / a `.git` file) and fails if not inside a work tree, rather
-  than hard-coding and creating `.git/hooks`
-
-### Fixed
-
-- `demojify_test.go` (`TestDemojifyPreservesNonLatinScripts`): added regression
-  test asserting that codepoints from non-Latin Unicode scripts — Devanagari
-  (`राज`, U+0930/U+093E/U+091C and full sentences), Arabic, Hebrew, CJK, Cyrillic,
-  Thai, and extended Latin with diacritics — pass through `Demojify` unchanged
-  and that `ContainsEmoji` returns `false` for each. Addresses the false-positive
-  report in issue #26: investigation confirmed the library was already correct
-  (these scripts do not overlap any range in `emojiRE`); the test guards against
-  future regressions if the covered Unicode ranges are ever extended
-- `scan_dir_test.go` (`TestDefaultScanConfigSkipsBinaryAndMinified`,
-  `TestDefaultScanConfig`): added a brotli regression guard. A `tailwind.css.br`
-  blob whose bytes have no early NUL (so the binary NUL-sniff would not skip it)
-  yet decode `U+27A2` (a rightwards-arrowhead glyph inside `emojiRE`'s
-  U+2600–U+27BF range) is asserted to be skipped, and `.br` is now a
-  required member of the spot-checked default skip set. Addresses a
-  downstream false-positive report where an unfiltered scan of a
-  precompressed asset produced a bogus match: before v0.9.0
-  `DefaultScanConfig` had no extension denylist and would read such blobs
-  (only `-exts` scoping avoided it); the new `SkipExtensions` `.br` default
-  entry (see Added) now skips them before the file is opened, and this
-  guard prevents that protection from regressing
-
-## [0.8.0] - 2026-03-23
-
-### Added
-
-- `replacements.go` (`DefaultReplacements`): expanded from ~230 entries and 18
-  categories to ~290 entries and 20 categories; doc comment updated accordingly.
-  New and extended entries:
-  - **Calendar** (new category): `\U0001F4C5`/`\U0001F4C6` → `[DATE]`;
-    `\U0001F5D3`/`\U0001F5D3\uFE0F` → `[CALENDAR]`
-  - **Scissors** (new category): `\u2702`/`\u2702\uFE0F` → `[REMOVED]`
-  - **Deprecated** (new category): `\U0001FAA6` → `[DEPRECATED]`;
-    `\U0001F4DB` → `[DEPRECATED]`
-  - **Flags** (new category, 27 entries): single-codepoint flag emoji
-    (`\U0001F6A9`, `\U0001F3F3`, `\U0001F3F4`, `\U0001F38C`) and VS-16 variants
-    → `[FLAG]`; ZWJ sequences for flag → `[FLAG]`; tag-sequence flags for England, Scotland, and Wales → `[FLAG]`;
-    17 regional-indicator pairs (US, GB, DE, FR, JP, CA, AU, BR, IN, CN, RU,
-    KR, MX, NG, ZA, SA, AE) → `[FLAG]`
-  - **Media controls**: `\u23ED`/`\u23ED\uFE0F` → `[SKIP]`;
-    `\u23EE`/`\u23EE\uFE0F` → `[PREV]`
-  - **Community/status**: `\U0001F53C` → `[UP]`; `\U0001F53D` → `[DOWN]`;
-    `\U0001F446`/`\U0001F447`/`\U0001F448` → `[SEE]`;
-    `\U0001F6A5`/`\U0001F6A6` → `[STATUS]`
-  - **Platform**: `\U0001F34E` → `[MACOS]`; `\U0001FA9F` → `[WINDOWS]`
-- Expanded demojify end-to-end fixtures: comprehensive emoji test corpus
-  (~870 lines, 34,249 bytes) covering all `DefaultReplacements` entries, ZWJ
-  sequences, variation selectors, skin tones, keycap sequences, subdivision
-  flags, regional indicators, and Unicode 14/15/16 additions; verified
-  against both `-sub` (2,044 substitutions) and `-fix -normalize` (2,135
-  occurrences stripped) passes
-
-### Fixed
-
-- `repo_test.go` (`TestRepoAllDocsEmojiClean`, `TestRepoProductionFilesIdempotent`):
-  added `"tmp/"` to `cfg.SkipDirs` to exempt `cmd/demojify/tmp/` from the
-  repo-wide emoji hygiene scans; `tmp/` holds intentional emoji-laden test
-  fixtures analogous to the existing `_test.go` suffix exemption
-
-## Older releases
-
-Entries for v0.7.3 and earlier were trimmed to keep this file within the
-repository's documentation line limits. The complete history is preserved
-in the per-tag [GitHub releases] and in `git log`; each version's diff is
-reachable from the compare links below.
-
-[GitHub releases]: https://github.com/nicholashoule/demojify-sanitize/releases
-
-[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.10.1...HEAD
+[Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
+[Semantic Versioning]: https://semver.org/spec/v2.0.0.html
+[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.10.1...v1.0.0
 [0.10.1]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.7.3...v0.8.0
+[0.7.3 and earlier]: https://github.com/nicholashoule/demojify-sanitize/releases/tag/v0.7.3

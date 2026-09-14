@@ -4,8 +4,8 @@
 
 | Version | Supported |
 |---------|-----------|
-| latest (`main`) | Yes |
-| older releases | No |
+| 1.x | Yes |
+| 0.x and older | No |
 
 ## Scope
 
@@ -34,7 +34,8 @@ each target are resolved through `filepath.EvalSymlinks` before comparison.
 and `ReplaceFile` write to the exact path provided by the caller -- callers
 processing untrusted input should validate paths before passing them to these
 functions. All write-back functions preserve original file permissions and use
-an atomic temp-file-plus-rename strategy.
+a same-directory temp-file-plus-rename strategy (atomic on POSIX and
+best-effort replacement on Windows).
 
 Shared security properties:
 

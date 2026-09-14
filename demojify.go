@@ -1,3 +1,15 @@
+// Emoji detection and removal: the emojiRE character class, Demojify,
+// ContainsEmoji, CountEmoji, BytesSaved, and TechnicalSymbolRanges.
+//
+// emojiRE is the single source of truth for what counts as emoji; every other
+// file (sanitize.go, replace.go, scan.go) matches through it rather than
+// defining ranges of its own. It matches one codepoint at a time, so ZWJ
+// sequences and variation selectors are stripped piecewise. demojifyAllowed
+// and demojifyPreserving implement Options.AllowedRanges and
+// Options.AllowedEmojis; the latter uses Unicode noncharacter placeholders
+// (buildPlaceholders) chosen so they never collide with input text.
+// Range rationale: docs/unicode-coverage.md.
+
 package demojify
 
 import (
@@ -71,9 +83,8 @@ var emojiRE = regexp.MustCompile(
 		`\x{FE00}-\x{FE0F}]`,
 )
 
-// Demojify removes emoji and Unicode pictographic characters from text,
-// replacing each matched code point with an empty string. Surrounding
-// ASCII and non-emoji Unicode text is left unchanged.
+// Demojify removes emoji-related codepoints recognized by the package.
+// Surrounding ASCII and non-emoji Unicode text is left unchanged.
 func Demojify(text string) string {
 	return emojiRE.ReplaceAllString(text, "")
 }
@@ -92,8 +103,8 @@ func CountEmoji(text string) int {
 	return len(emojiRE.FindAllString(text, -1))
 }
 
-// BytesSaved returns the number of bytes that would be saved by removing
-// all emoji codepoints from text via [Demojify]. It is equivalent to
+// BytesSaved returns the number of bytes that [Demojify] would remove from
+// text. It is equivalent to
 // len(text) - len([Demojify](text)).
 // BytesSaved is safe for concurrent use.
 func BytesSaved(text string) int {

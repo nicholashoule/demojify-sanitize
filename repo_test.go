@@ -1,24 +1,20 @@
-package demojify_test
+// Repository hygiene tests that run the scanner against this checkout.
+//
+// These tests are non-hermetic: they walk the real working directory. Go
+// excludes *_test.go files from downstream consumers, so they run only for
+// developers who cloned the repository.
+//
+// Policy enforced:
+//   - Non-test Go source and all Markdown must be emoji-free, and Sanitize
+//     must be a no-op on them.
+//   - *_test.go files are exempt; they are the intended source of literal
+//     emoji test input, and one test asserts that at least one contains some.
+//   - scripts/hooks/pre-commit must filter by extension and pin the CLI.
+//
+// Enforcement dogfoods ScanDir rather than reimplementing the walk, proving
+// the scanner works on a real repository.
 
-// repo_test.go enforces repository hygiene using the module's own public API.
-// These tests walk the real working directory and are therefore non-hermetic.
-//
-// Go modules exclude *_test.go files when consumed as a dependency (via
-// go get or go mod vendor), so these tests only run for developers who
-// have cloned this repository -- never for downstream consumers.
-//
-// Design intent:
-//
-//   *_test.go files are INTENTIONAL emoji sources. They contain literal emoji
-//   as input data that exercises the module's detection and removal logic.
-//   These files are EXEMPT from hygiene enforcement.
-//
-//   Non-test Go source files and all Markdown documentation MUST be
-//   emoji-free. If an AI agent writes emoji into any of these files, the
-//   tests below will catch it and identify the file and the fix.
-//
-// Enforcement dogfoods [ScanDir] and [ScanFile] rather than reimplementing
-// directory walking, proving the scanner API works on a real repository.
+package demojify_test
 
 import (
 	"os"
@@ -121,6 +117,10 @@ func TestHookDemojifyUsesExtensionFilter(t *testing.T) {
 	}
 	if !strings.Contains(s, "$demojify_filters") {
 		t.Fatal("scripts/hooks/pre-commit must pass $demojify_filters to demojify")
+	}
+	const demojifyRef = "github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.10.1"
+	if !strings.Contains(s, `demojify_ref="`+demojifyRef+`"`) {
+		t.Fatalf("scripts/hooks/pre-commit must pin demojify_ref to %s", demojifyRef)
 	}
 }
 

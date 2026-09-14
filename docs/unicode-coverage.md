@@ -96,36 +96,41 @@ not removed.
 
 ## Substitution vs. stripping
 
-`Demojify` always strips. To preserve meaning, use `DefaultReplacements()` with
-`Replace` or `ReplaceFile` before calling `Demojify` -- or use `Sanitize` with
-`DefaultOptions()`, which runs the replacement step first.
+`Demojify` and `Sanitize` always strip; neither consults a replacement map.
+To preserve meaning, use `DefaultReplacements()` with `Replace`, `ReplaceFile`,
+or `ScanConfig.Replacements`. Each substitutes mapped sequences and then strips
+any residual unmapped emoji in the same pass, so no separate `Demojify` call is
+needed.
 
 The `-sub` flag in the CLI does exactly this: substitutes known emoji with text
-equivalents, then `Demojify` removes any residual unmapped codepoints.
+tokens, then removes any residual unmapped codepoints.
 
-`DefaultReplacements()` covers approximately 230 codepoint sequences across
-eighteen categories:
+`DefaultReplacements()` covers 280 codepoint sequences across 24 categories:
 
 1. Warning and Alerts
 2. Status Symbols
 3. Information
-4. Severity (colored circles)
-5. Stop and Prohibition
-6. Favorites and Highlights
-7. Cloud and Deployment
-8. CI/CD Workflow
+4. CI/CD Workflow
+5. Favorites and Highlights
+6. Cloud and Deployment
+7. Project and Issue Tracking
+8. Community and Contributors
 9. Status Indicators
-10. Arrows
-11. Math Operators
-12. Geometric Shapes
-13. Checkboxes
-14. Common Dingbats
-15. Heart Variants
-16. Project and Issue Tracking
-17. Colored Squares
-18. Media Controls
-19. Community and Contributors
-20. Platform and Language Indicators
+10. Severity (colored circles)
+11. Stop and Prohibition
+12. Platform and Language Indicators
+13. Colored Squares
+14. Arrows
+15. Media Controls
+16. Heart Variants
+17. Math Operators
+18. Geometric Shapes
+19. Checkboxes
+20. Common Dingbats
+21. Calendar and Date Indicators
+22. Scissors / Removed
+23. Deprecated
+24. Flags
 
 See [replacements.md](replacements.md) for the full substitution table.
 

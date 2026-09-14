@@ -1,3 +1,6 @@
+// Runnable godoc examples for the public API. Examples with an Output comment
+// are verified by go test; file-based examples use temp directories.
+
 package demojify_test
 
 import (
@@ -82,28 +85,6 @@ func ExampleSanitize_httpHandler() {
 		_, _ = fmt.Fprint(w, clean)
 	})
 	_ = handler
-}
-
-// ExampleSanitize_markdownFiles shows how to sanitize a known set of files
-// using the Sanitize API directly -- useful when callers manage the file list
-// themselves (e.g., only staged files from git diff --name-only).
-// For whole-directory sanitization in one call, prefer ExampleFixDir.
-// This example is executed but not output-verified (no Output comment).
-func ExampleSanitize_markdownFiles() {
-	paths := []string{"README.md", "CHANGELOG.md", "CONTRIBUTING.md"}
-	opts := demojify.DefaultOptions()
-
-	for _, p := range paths {
-		data, err := os.ReadFile(p)
-		if err != nil {
-			log.Printf("read %s: %v", p, err)
-			continue
-		}
-		clean := demojify.Sanitize(string(data), opts)
-		if err := os.WriteFile(p, []byte(clean), 0o644); err != nil {
-			log.Printf("write %s: %v", p, err)
-		}
-	}
 }
 
 func ExampleDefaultOptions() {
@@ -250,17 +231,29 @@ func ExampleScanDir() {
 }
 
 func ExampleScanFile() {
-	f, err := demojify.ScanFile("README.md", demojify.DefaultOptions())
+	dir, err := os.MkdirTemp("", "example-scanfile-*")
 	if err != nil {
 		fmt.Println("error:", err)
 		return
 	}
-	if f == nil {
-		fmt.Println("clean")
-	} else {
-		fmt.Println("needs sanitization")
+	defer os.RemoveAll(dir)
+
+	path := filepath.Join(dir, "status.txt")
+	if err := os.WriteFile(path, []byte("ready \u2705\n"), 0o644); err != nil {
+		fmt.Println("error:", err)
+		return
 	}
-	// (output depends on README.md content)
+
+	f, err := demojify.ScanFile(path, demojify.DefaultOptions())
+	if err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+	if f != nil {
+		fmt.Printf("emoji=%t cleaned=%q\n", f.HasEmoji, f.Cleaned)
+	}
+	// Output:
+	// emoji=true cleaned="ready"
 }
 
 // ExampleSanitizeFile shows how to sanitize a single file in place.
@@ -385,26 +378,26 @@ func ExampleSanitizeReport() {
 func ExampleSanitizeReader() {
 	input := strings.NewReader("Hello \U0001F680 World\nLine 2 \u2705")
 	var buf bytes.Buffer
-	if err := demojify.SanitizeReader(input, &buf, demojify.Options{RemoveEmojis: true}); err != nil {
+	if err := demojify.SanitizeReader(input, &buf, demojify.DefaultOptions()); err != nil {
 		fmt.Println("error:", err)
 		return
 	}
 	fmt.Println(buf.String())
 	// Output:
-	// Hello  World
+	// Hello World
 	// Line 2
 }
 
 func ExampleSanitizeJSON() {
 	data := []byte(`{"status":"done \u2705","count":42}`)
-	clean, err := demojify.SanitizeJSON(data, demojify.Options{RemoveEmojis: true})
+	clean, err := demojify.SanitizeJSON(data, demojify.DefaultOptions())
 	if err != nil {
 		fmt.Println("error:", err)
 		return
 	}
 	fmt.Println(string(clean))
 	// Output:
-	// {"count":42,"status":"done "}
+	// {"count":42,"status":"done"}
 }
 
 func ExampleScanDirContext() {

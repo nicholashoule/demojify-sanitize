@@ -1,3 +1,6 @@
+// CLI integration tests for the audit, -fix, -sub, -normalize, -quiet, and
+// -version modes: exit codes, status output, root validation, and idempotence.
+
 package main_test
 
 import (
@@ -16,8 +19,8 @@ func TestCleanDirectoryExitZero(t *testing.T) {
 	if code != 0 {
 		t.Errorf("exit code = %d, want 0 for clean directory", code)
 	}
-	if !strings.Contains(stdout, "[PASS]") {
-		t.Errorf("stdout = %q, want [PASS] message", stdout)
+	if !strings.Contains(stdout, "[PASS] no findings") {
+		t.Errorf("stdout = %q, want [PASS] no findings", stdout)
 	}
 }
 

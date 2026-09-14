@@ -1,3 +1,6 @@
+// CLI integration tests that -fix and -sub leave no doubled or trailing
+// spaces where emoji were removed, and that a second run is a no-op.
+
 package main_test
 
 import (

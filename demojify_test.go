@@ -1,3 +1,7 @@
+// Tests for Demojify, ContainsEmoji, CountEmoji, BytesSaved, and
+// TechnicalSymbolRanges: keycap and ZWJ handling, non-Latin and legal-symbol
+// preservation, placeholder collision fallback, and concurrent use.
+
 package demojify_test
 
 import (

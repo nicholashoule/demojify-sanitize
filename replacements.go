@@ -1,3 +1,7 @@
+// DefaultReplacements: the built-in 280-entry emoji-to-text map, grouped by
+// category. Each entry needs a test row in replacements_test.go and a doc row
+// in docs/replacements.md; docs/compliance/EMOJI_AUDIT.md tracks the count.
+
 package demojify
 
 // DefaultReplacements returns a copy of the built-in emoji-to-text substitution
@@ -5,7 +9,7 @@ package demojify
 // Because a fresh copy is returned on every call, callers can add, remove, or
 // override entries without affecting other callers.
 //
-// The map covers ~280 codepoint sequences across twenty categories:
+// The map contains 280 codepoint sequences grouped by purpose, including:
 //
 //   - Warning and alert symbols (U+26A0, U+203C, ...)
 //   - Status symbols: pass/fail/alert/info indicators
@@ -26,6 +30,7 @@ package demojify
 //   - Community and contributors: bots, thanks, sponsors, contact
 //   - Platform and language indicators: Docker, Linux, Python, Rust, Go, macOS, Windows
 //   - Calendar and date indicators
+//   - Removal (scissors) and deprecation markers
 //   - Flags: country (regional-indicator pairs), subdivision (tag sequences), and ZWJ flags
 //
 // Variation-selector suffixed sequences (e.g., U+26A0 U+FE0F) are listed

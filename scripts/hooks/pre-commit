@@ -19,7 +19,7 @@ fi
 # Run demojify-sanitize. If emoji are found, substitute them automatically,
 # re-stage the modified files, and abort the commit so the user can review
 # the substitutions before re-committing.
-demojify_ref="github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.10.0"
+demojify_ref="github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.10.1"
 demojify_exts=".go,.md,.html,.yaml,.yml,.json,.txt,.env,.toml"
 demojify_filters="-skip build"
 # demojify_filters is a fixed, trusted argument list maintained in this hook.

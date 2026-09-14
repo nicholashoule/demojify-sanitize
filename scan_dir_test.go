@@ -1,3 +1,8 @@
+// Tests for ScanDir and DefaultScanConfig: default skips, extension and
+// suffix filters, MaxFileBytes boundaries, binary detection, bad and
+// unreadable roots, symlinks, context cancellation, concurrency, CRLF
+// preservation, and changed-line-only whitespace cleanup.
+
 package demojify_test
 
 import (

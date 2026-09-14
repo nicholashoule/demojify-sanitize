@@ -1,8 +1,11 @@
+// WriteFinding: permission-preserving write-back of a Finding via statAndWrite.
+
 package demojify
 
-// WriteFinding writes f.Cleaned back to the file at path atomically.
-// No write occurs when f.Cleaned equals f.Original (the file is already
-// clean). Original file permissions are preserved.
+// WriteFinding writes f.Cleaned back through a same-directory temp file and
+// rename (atomic on POSIX, best-effort replacement on Windows). No write
+// occurs when f.Cleaned equals f.Original (the file is already clean).
+// Original file permissions are preserved.
 //
 // WriteFinding returns true when the file was modified and false when it
 // was already clean. It returns an error for any filesystem failure.

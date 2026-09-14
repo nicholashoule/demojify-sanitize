@@ -1,3 +1,12 @@
+// The Sanitize pipeline and its entry points: Options, DefaultOptions,
+// Sanitize, SanitizeFile, SanitizeReport, SanitizeReader, and SanitizeJSON.
+//
+// Order is fixed: emoji removal (honoring AllowedEmojis, then AllowedRanges)
+// followed by whitespace normalization. SanitizeReader applies the same steps
+// per line with a 1 MiB line cap; SanitizeJSON applies them to string values
+// only and rejects multi-value input with ErrMultipleJSONValues.
+// Replacement maps are not consulted here; see replace.go and scan.go.
+
 package demojify
 
 import (
@@ -73,8 +82,8 @@ func Sanitize(text string, opts Options) string {
 
 // SanitizeFile reads the file at path, applies [Sanitize] with opts, and
 // writes the result back only if changes were made. The original file
-// permissions are preserved and a temp-file-plus-rename strategy is used
-// for safe writes (see [ReplaceFile] for platform details).
+// permissions are preserved and a same-directory temp-file-plus-rename
+// strategy is used (atomic on POSIX, best-effort replacement on Windows).
 //
 // Binary files (detected by a NUL byte in the first 512 bytes) are silently
 // skipped and return (false, nil), matching the behavior of [ScanDir] and
@@ -106,8 +115,8 @@ type SanitizeResult struct {
 	// Cleaned is the sanitized text.
 	Cleaned string
 
-	// EmojiRemoved is the number of emoji codepoint occurrences that were
-	// removed or replaced during sanitization. Zero when
+	// EmojiRemoved is the number of recognized emoji-related codepoint
+	// occurrences removed during sanitization. Zero when
 	// [Options.RemoveEmojis] is false.
 	EmojiRemoved int
 
@@ -152,7 +161,7 @@ const sanitizeReaderMaxTokenSize = 1024 * 1024 // 1 MiB per line
 // [Normalize]. Unlike [Normalize], bare CR (\r) mid-line is not converted
 // because [bufio.Scanner] only splits on \n (bare CR is rare in practice).
 //
-// Lines up to [sanitizeReaderMaxTokenSize] bytes are supported. Longer
+// Lines up to 1 MiB (sanitizeReaderMaxTokenSize) are supported. Longer
 // lines cause [bufio.ErrTooLong] to be returned.
 //
 // The output never ends with a newline: lines are written separated by

@@ -5,11 +5,11 @@
 //
 // Install demojify:
 //
-//	go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest
+//	go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0
 //
 // Or run without installing:
 //
-//	go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest [flags]
+//	go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0 [flags]
 //
 // # CLI Subcommands
 //
@@ -28,7 +28,7 @@
 //
 // Human-readable output uses bracketed status tokens at the start of each line:
 //
-//   - [PASS]: no emoji found, or all occurrences fixed successfully.
+//   - [PASS]: no findings, or all findings fixed successfully.
 //   - [WARN]: emoji detected in a file; reported with per-occurrence detail.
 //   - [FAIL]: a write error occurred while applying a fix.
 //
@@ -55,7 +55,7 @@
 //
 // # CLI Exit Codes
 //
-//	0  no emoji found, or all findings fixed successfully
+//	0  no findings, or all findings fixed successfully
 //	1  emoji found and -fix not set, a write error occurred, or -root
 //	   does not exist / is not a directory
 //	2  an unknown flag was passed (flag package parse error)
@@ -129,7 +129,7 @@ Flags:
 // a few worked examples, mirroring docs/cli.md.
 const usageFooter = `
 Exit codes:
-  0   no emoji found, or all findings fixed successfully
+  0   no findings, or all findings fixed successfully
   1   emoji found without -fix, a write error, or invalid -root
   2   unknown flag (flag parse error)
 
@@ -232,7 +232,7 @@ func main() {
 		if *jsonOut {
 			writeJSON(jsonResult{Findings: []jsonFinding{}})
 		} else if !*quiet {
-			fmt.Println("[PASS] no emoji found")
+			fmt.Println("[PASS] no findings")
 		}
 		return
 	}
@@ -319,8 +319,8 @@ func main() {
 }
 
 // cliVersion returns the module version reported by the Go build system.
-// A semver tag (e.g. "v0.2.1") is embedded only when the binary is installed
-// from a published tagged release (e.g. "go install ...@v0.2.1"). Builds from
+// A semver tag (e.g. "v1.0.0") is embedded only when the binary is installed
+// from a published tagged release (e.g. "go install ...@v1.0.0"). Builds from
 // local source -- whether via "go run", "go build", or "go install" without a
 // version suffix -- have the version set to "(devel)" by the Go toolchain.
 // The empty-string fallback is a defensive guard for unusual non-module build

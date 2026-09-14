@@ -1,3 +1,6 @@
+// CLI integration tests for -exts (with and without the leading dot), -skip
+// (with and without the trailing slash), and forward-slash paths in output.
+
 package main_test
 
 import (

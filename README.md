@@ -6,39 +6,41 @@
 [![License](https://img.shields.io/github/license/nicholashoule/demojify-sanitize)](LICENSE)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)](go.mod)
 
-A dependency-free Go module for auditing, detecting, removing, and substituting emoji clutter and redundant whitespace in text content before it reaches production. Use it as a post-processing step after AI agent output, as a content gate in your request pipeline, or as a CI quality gate -- one call to `Sanitize` strips and normalizes in a single pass, `Replace` maps emoji to meaningful text equivalents, `ScanDir` audits entire directory trees (it calls `ContainsEmoji` internally per file), and `ContainsEmoji` is available directly for ad-hoc single-string detection.
+A dependency-free Go library for auditing and detecting emoji clutter, removing or substituting it, and normalizing unnecessary whitespace in text content. It is built for post-processing AI agent output, sanitizing AI or user-submitted content, and functioning as a CI quality gate. `Sanitize` runs removal and normalization as one pipeline, `Replace` substitutes mapped emoji with text equivalents and strips the rest, `ScanDir` audits directory trees, and `ContainsEmoji` provides direct single-string detection.
 
 ## Features
 
-- **Emoji removal** -- strips all emoji and pictographic codepoints using compiled Unicode range tables; ZWJ sequences, variation selectors, and tag characters handled correctly
+- **Emoji removal** -- strips emoji-related codepoints in the documented Unicode ranges; ZWJ, variation-selector, keycap, and tag codepoints are handled
 - **Whitespace normalization** -- collapses redundant inline spaces and blank lines while preserving leading indentation
 - **Configurable pipeline** -- `Sanitize` runs removal and normalization in one call; `AllowedRanges` and `AllowedEmojis` let callers preserve specific codepoints
-- **Substitution** -- `Replace` maps ~280 built-in emoji to readable text equivalents (e.g., `[PASS]`, `[FAIL]`); custom maps supported
+- **Substitution** -- `Replace` maps 280 built-in emoji to readable text equivalents (e.g., `[PASS]`, `[FAIL]`); custom maps supported
 - **Metrics** -- `SanitizeReport` returns emoji count removed and bytes saved alongside the cleaned text
 - **Streaming** -- `SanitizeReader` processes `io.Reader` line by line; supports lines up to 1 MiB
 - **JSON-aware** -- `SanitizeJSON` cleans string values only; preserves keys, numbers, booleans, null, and numeric precision
 - **Directory scanner** -- `ScanDir` / `ScanDirContext` walk an entire tree and return per-file findings; cancellation supported
-- **Atomic writes** -- `SanitizeFile`, `ReplaceFile`, `WriteFinding`, and `FixDir` write through a temp file and rename; partial writes cannot corrupt the original
+- **Safer writes** -- `SanitizeFile`, `ReplaceFile`, `WriteFinding`, and `FixDir` use a same-directory temp file and rename while preserving permissions; replacement is atomic on POSIX and best-effort on Windows
 - **CLI** -- `cmd/demojify` supports audit, strip (`-fix`), substitute (`-sub`), normalize, quiet mode, extension filter, and directory skip
 - **Zero external dependencies** -- pure stdlib; no `go.sum` required
 
 ## Installation
 
 ```bash
-go get github.com/nicholashoule/demojify-sanitize
+go get github.com/nicholashoule/demojify-sanitize@v1.0.0
 ```
 
 ### CLI
 
 ```bash
-go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0
 ```
 
 ```bash
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@latest -sub
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0 -sub
 ```
 
 ### Quick start
+
+The v1 module keeps the existing import path; no `/v1` suffix is required.
 
 ```go
 import demojify "github.com/nicholashoule/demojify-sanitize"
@@ -71,7 +73,7 @@ clean := demojify.Sanitize(aiResponse, demojify.DefaultOptions())
 
 ```go
 if demojify.ContainsEmoji(userInput) {
- userInput = demojify.Sanitize(userInput, demojify.DefaultOptions())
+	userInput = demojify.Sanitize(userInput, demojify.DefaultOptions())
 }
 ```
 
@@ -81,7 +83,7 @@ if demojify.ContainsEmoji(userInput) {
 cfg := demojify.DefaultScanConfig()
 findings, _ := demojify.ScanDir(cfg)
 for _, f := range findings {
- fmt.Printf("%s: has_emoji=%v\n", f.Path, f.HasEmoji)
+	fmt.Printf("%s: has_emoji=%v\n", f.Path, f.HasEmoji)
 }
 ```
 
@@ -128,10 +130,10 @@ Both tools run from their published module versions -- no local clone required.
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
-go run github.com/nicholashoule/repogov/cmd/repogov@v0.7.0 -root "$root" -agent copilot
+go run github.com/nicholashoule/repogov/cmd/repogov@v0.8.0 -root "$root" -agent copilot
 repogov_exit=$?
 
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v0.8.0 -root "$root" -exts .go,.md
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0 -root "$root" -exts .go,.md
 demojify_exit=$?
 
 exit $((repogov_exit | demojify_exit))
@@ -161,7 +163,8 @@ clean, err := demojify.SanitizeJSON(jsonBytes, demojify.DefaultOptions())
 ```
 
 Returns an error for invalid JSON and for input with trailing non-whitespace
-content after the first value (e.g., `{"a":1} trailing`).
+content after the first value (e.g., `{"a":1} trailing`). A second complete
+JSON value returns `ErrMultipleJSONValues`.
 
 See [example_test.go](example_test.go) for additional runnable patterns
 (HTTP handler, pre-commit/CI, file write-back, per-occurrence matching).
@@ -176,8 +179,8 @@ Full signatures and doc comments are on
 | Function | Purpose |
 |----------|---------|
 | `Sanitize(text, opts) string` | Configurable pipeline: emoji removal then whitespace normalization |
-| `SanitizeFile(path, opts) (bool, error)` | Sanitize a file atomically; no write when clean |
-| `Demojify(text) string` | Strip all emoji / pictographic codepoints |
+| `SanitizeFile(path, opts) (bool, error)` | Sanitize through temp-file replacement; no write when clean |
+| `Demojify(text) string` | Strip recognized emoji-related codepoints |
 | `ContainsEmoji(text) bool` | Detect emoji presence |
 | `CountEmoji(text) int` | Count emoji codepoint occurrences |
 | `BytesSaved(text) int` | Bytes freed by emoji removal |
@@ -198,11 +201,11 @@ Full signatures and doc comments are on
 | Function | Purpose |
 |----------|---------|
 | `Replace(text, repl) string` | Map emoji to text equivalents; strip unmapped remainder |
-| `ReplaceFile(path, repl) (int, error)` | Atomic in-place replacement; no write when clean |
+| `ReplaceFile(path, repl) (int, error)` | Temp-file replacement; no write when clean |
 | `ReplaceCount(text, repl) (string, int)` | Replace and return substitution count |
 | `FindAll(text) []string` | Distinct emoji sequences in text |
 | `FindAllMapped(text, repl) []string` | Mapped keys found in text |
-| `DefaultReplacements() map[string]string` | Built-in ~280-entry emoji-to-text map ([full list](docs/replacements.md)) |
+| `DefaultReplacements() map[string]string` | Built-in 280-entry emoji-to-text map ([full list](docs/replacements.md)) |
 
 ### Scanner
 
@@ -212,7 +215,7 @@ Full signatures and doc comments are on
 | `ScanDirContext(ctx, cfg) ([]Finding, error)` | Context-aware scan with cancellation support |
 | `ScanFile(path, opts) (*Finding, error)` | Check a single file |
 | `FindMatchesInFile(path, repl) ([]Match, error)` | Per-occurrence match detail (line, column, context) |
-| `WriteFinding(path, f) (bool, error)` | Atomic write-back without re-reading |
+| `WriteFinding(path, f) (bool, error)` | Temp-file write-back without re-reading |
 | `FixDir(root, cfg) (fixed, clean int, err error)` | Scan and fix an entire directory tree in one call |
 | `ScanConfig` / `DefaultScanConfig()` | Scanner configuration (root, skip dirs, extensions, etc.) |
 | `Finding` | Path, HasEmoji, Original, Cleaned, Matches |
@@ -222,10 +225,10 @@ Full signatures and doc comments are on
 
 ```go
 type Options struct {
- RemoveEmojis        bool               // strip emoji / pictographic characters
- NormalizeWhitespace bool               // collapse redundant spaces and blank lines
- AllowedRanges       []*unicode.RangeTable // preserve emoji in these Unicode ranges
- AllowedEmojis       []string           // preserve specific emoji strings (exact match)
+	RemoveEmojis        bool               // strip emoji / pictographic characters
+	NormalizeWhitespace bool               // collapse redundant spaces and blank lines
+	AllowedRanges       []*unicode.RangeTable // preserve emoji in these Unicode ranges
+	AllowedEmojis       []string           // preserve specific emoji strings (exact match)
 }
 
 func DefaultOptions() Options // RemoveEmojis + NormalizeWhitespace = true
@@ -235,10 +238,10 @@ func DefaultOptions() Options // RemoveEmojis + NormalizeWhitespace = true
 `AllowedEmojis` and empty keys in replacement maps are silently skipped.
 
 ```go
-// Remove all emoji except rocket and thumbs-up.
+// Remove recognized emoji except rocket and thumbs-up.
 clean := demojify.Sanitize(text, demojify.Options{
- RemoveEmojis:  true,
- AllowedEmojis: []string{"\U0001F680", "\U0001F44D"},
+	RemoveEmojis:  true,
+	AllowedEmojis: []string{"\U0001F680", "\U0001F44D"},
 })
 ```
 
@@ -255,8 +258,8 @@ Full range table: [docs/unicode-coverage.md](docs/unicode-coverage.md).
 
 | Document | Contents |
 |----------|----------|
-| [docs/design.md](docs/design.md) | Architecture rationale: zero-dependency policy, pipeline order, error handling, atomic writes |
-| [docs/replacements.md](docs/replacements.md) | Full `DefaultReplacements()` reference: all ~280 entries organized by category |
+| [docs/design.md](docs/design.md) | Architecture rationale: zero-dependency policy, pipeline order, error handling, temp-file write strategy |
+| [docs/replacements.md](docs/replacements.md) | Full `DefaultReplacements()` reference: all 280 entries organized by category |
 | [docs/unicode-coverage.md](docs/unicode-coverage.md) | `emojiRE` ranges, intentional exclusions (copyright, trademark, math arrows), substitution vs. stripping |
 | [docs/cli.md](docs/cli.md) | `cmd/demojify` CLI reference: flags, exit codes, output format, examples |
 | [docs/ci.md](docs/ci.md) | CI pipeline integration: GitHub Actions, GitLab CI, test-based gates, JSON tooling |
