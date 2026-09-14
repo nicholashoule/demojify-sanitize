@@ -85,8 +85,10 @@ for full API usage patterns.
 
 ## Cross-platform lightweight examples
 
-These minimal hooks mirror the pattern used in `scripts/hooks/pre-commit` and
-run both tools from their published module versions -- no local clone required.
+These minimal hooks mirror `scripts/hooks/pre-commit` in this repository and
+run both tools from their published module versions -- no local clone
+required. (The in-repo hook itself runs demojify from its working tree,
+since this repository is the CLI's source.)
 
 ### macOS and Linux (`sh`)
 

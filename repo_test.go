@@ -9,7 +9,8 @@
 //     must be a no-op on them.
 //   - *_test.go files are exempt; they are the intended source of literal
 //     emoji test input, and one test asserts that at least one contains some.
-//   - scripts/hooks/pre-commit must filter by extension and pin the CLI.
+//   - scripts/hooks/pre-commit must filter by extension and run the CLI
+//     from this working tree.
 //
 // Enforcement dogfoods ScanDir rather than reimplementing the walk, proving
 // the scanner works on a real repository.
@@ -19,7 +20,6 @@ package demojify_test
 import (
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -101,10 +101,6 @@ func TestRepoProductionFilesIdempotent(t *testing.T) {
 	}
 }
 
-// hookPinRE matches the demojify_ref assignment in scripts/hooks/pre-commit
-// when it pins a tagged release of the CLI.
-var hookPinRE = regexp.MustCompile(`(?m)^demojify_ref="github\.com/nicholashoule/demojify-sanitize/cmd/demojify@v\d+\.\d+\.\d+"$`)
-
 // TestHookDemojifyUsesExtensionFilter ensures the shipped pre-commit hook limits
 // demojify scanning to known text file types so compressed binary assets do not
 // produce false-positive emoji matches.
@@ -123,13 +119,12 @@ func TestHookDemojifyUsesExtensionFilter(t *testing.T) {
 	if !strings.Contains(s, "$demojify_filters") {
 		t.Fatal("scripts/hooks/pre-commit must pass $demojify_filters to demojify")
 	}
-	// The hook must run a pinned, tagged release of the CLI, never @latest or
-	// a branch, so its behavior changes only when the pin is bumped. The exact
-	// version is deliberately not asserted: a pin can only move to a new tag
-	// after that tag is published, so it is bumped in the first commit after
-	// each release rather than in the release commit itself.
-	if !hookPinRE.MatchString(s) {
-		t.Fatal("scripts/hooks/pre-commit must pin demojify_ref to a tagged release (cmd/demojify@vX.Y.Z)")
+	// The hook runs the CLI from this working tree rather than a published
+	// release: this repository is the CLI's source, so the hook dogfoods the
+	// current code and never lags a release. Downstream hooks pin a tag; see
+	// docs/git-hooks.md.
+	if !strings.Contains(s, `demojify_ref="./cmd/demojify"`) {
+		t.Fatal(`scripts/hooks/pre-commit must set demojify_ref="./cmd/demojify" to run the CLI from the working tree`)
 	}
 }
 

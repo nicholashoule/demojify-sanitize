@@ -20,6 +20,8 @@ contents of `DefaultReplacements()` may still grow or change in minor releases.
 - CLI: the clean-tree message is now `[PASS] no findings` (previously
   `[PASS] no emoji found`), since `-normalize` runs can report whitespace-only
   findings. Scripts should rely on the exit code or `-json`, not this text.
+- The repository's own pre-commit hook runs the CLI from the working tree
+  instead of a published release, so it always exercises the current code.
 - Documentation: install and CI examples pin `@v1.0.0`; package, CLI, and
   design docs now describe file replacement as atomic on POSIX and best-effort
   on Windows, and clarify Unicode coverage and error behavior.

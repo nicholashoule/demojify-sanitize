@@ -120,9 +120,11 @@ root="$(git rev-parse --show-toplevel)"
 
 **Option B -- `go run` with repogov governance (recommended for in-repo hooks):**
 
-This is the pattern used in `scripts/hooks/pre-commit` in this repository.
-Repogov enforces line limits and layout rules; demojify blocks emoji.
-Both tools run from their published module versions -- no local clone required.
+This mirrors `scripts/hooks/pre-commit` in this repository, which runs
+demojify from its own working tree because it is the CLI's source. Repogov
+enforces line limits and layout rules; demojify blocks emoji. Downstream
+hooks run both tools from their published module versions -- no local clone
+required.
 
 ```sh
 #!/bin/sh
