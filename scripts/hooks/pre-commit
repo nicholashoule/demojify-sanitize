@@ -2,7 +2,8 @@
 # pre-commit hook -- runs repogov checks via the CLI.
 # Works on Linux, macOS, and Windows (via Git for Windows' bundled sh.exe).
 #
-# Install once with: make hooks
+# Install with: make hooks. The installed hook is a copy, so re-run it
+# whenever this file changes.
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
