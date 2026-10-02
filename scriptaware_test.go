@@ -204,3 +204,68 @@ func TestScriptAwareThroughThePipeline(t *testing.T) {
 		t.Errorf("ScanDir(ScriptAware) = %d findings, %v; want only mixed.md", len(findings), err)
 	}
 }
+
+// A joiner or a selector beside an allowed emoji is classified by the
+// emoji itself, not by the placeholder demojifyPreserving hides it behind
+// (PR review of v1.1.0): the rule is the same with or without the
+// allowed list.
+func TestScriptAwareAllowedEmojiBoundaries(t *testing.T) {
+	t.Parallel()
+	rocket := cp(0x1F680)
+	heart := cp(0x2764, tVS16)
+	family := cp(0x1F468, tZWJ, 0x1F469)
+	indic := cp(0x0915, 0x094D, tZWJ, 0x0937)
+	for _, tc := range []struct {
+		name    string
+		in      string
+		allowed []string
+		want    string
+	}{
+		{"joiner after an allowed emoji", rocket + cp(tZWJ) + "abc", []string{rocket}, rocket + "abc"},
+		{"joiner before an allowed emoji", "abc" + cp(tZWJ) + rocket, []string{rocket}, "abc" + rocket},
+		{"selector after an allowed emoji", rocket + cp(tVS1), []string{rocket}, rocket},
+		{"joiner after an allowed emoji in emoji form", heart + cp(tZWJ) + "x", []string{heart}, heart + "x"},
+		{"Indic word beside an allowed emoji", indic + " " + rocket, []string{rocket}, indic + " " + rocket},
+		{"allowed sequence kept whole", family + " " + cp(0x1F600), []string{family}, family + " "},
+		{"empty entries ignored", indic + cp(0x1F600), []string{""}, indic},
+	} {
+		opts := Options{RemoveEmojis: true, ScriptAware: true, AllowedEmojis: tc.allowed}
+		if got := Sanitize(tc.in, opts); got != tc.want {
+			t.Errorf("%s: Sanitize = %q, want %q", tc.name, got, tc.want)
+		}
+		if got, want := ContainsEmojiWith(tc.in, opts), tc.want != tc.in; got != want {
+			t.Errorf("%s: ContainsEmojiWith = %v, want %v", tc.name, got, want)
+		}
+	}
+}
+
+// With an allowed list, ScriptAware still differs from the default only by
+// the joiners and selectors it keeps: the default (placeholder) removal
+// applied to its output gives the default's output, and detection agrees
+// with removal.
+func TestScriptAwareWithAllowedEmojisMatchesTheDefault(t *testing.T) {
+	t.Parallel()
+	sets := [][]string{
+		{cp(0x1F600)},
+		{cp(0x2764, tVS16)},
+		{cp(0x1F468, tZWJ, 0x1F600)},
+		{"", cp(0x2713)},
+		{cp(0x1F600), cp(0x1F468, 0x1F3FD)},
+	}
+	r := rand.New(rand.NewSource(2))
+	for i := 0; i < 20000; i++ {
+		text := randomText(r)
+		for _, allowed := range sets {
+			plain := Options{RemoveEmojis: true, AllowedEmojis: allowed}
+			aware := Options{RemoveEmojis: true, ScriptAware: true, AllowedEmojis: allowed}
+			out := Sanitize(text, aware)
+			if Sanitize(out, plain) != Sanitize(text, plain) {
+				t.Fatalf("%q allowed %q: ScriptAware gave %q, which the default does not reduce to %q",
+					text, allowed, out, Sanitize(text, plain))
+			}
+			if ContainsEmojiWith(text, aware) != (out != text) {
+				t.Fatalf("%q allowed %q: ContainsEmojiWith disagrees with Sanitize", text, allowed)
+			}
+		}
+	}
+}

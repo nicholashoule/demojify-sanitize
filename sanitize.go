@@ -62,7 +62,8 @@ type Options struct {
 	// ([SanitizeReport], [SanitizeReader], [SanitizeJSON], [SanitizeFile],
 	// the scanner's Options) and to [ContainsEmojiWith]. [Demojify],
 	// [ContainsEmoji], [CountEmoji] and the [Replace] family are unchanged.
-	// Has no effect when RemoveEmojis is false. Added in v1.1.0; off by
+	// For sanitization, has no effect when RemoveEmojis is false;
+	// [ContainsEmojiWith] honors it regardless. Added in v1.1.0; off by
 	// default.
 	ScriptAware bool
 }

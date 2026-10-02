@@ -46,13 +46,15 @@ func ContainsEmojiWith(text string, opts Options) bool {
 	return removeEmoji(text, opts) != text
 }
 
-// removeEmoji is the emoji-removal step of [Sanitize].
+// removeEmoji is the emoji-removal step of [Sanitize]. Without ScriptAware
+// it takes exactly the v1.0.0 path: [demojifyPreserving] for
+// AllowedEmojis, then [demojifyAllowed], then [Demojify].
 func removeEmoji(text string, opts Options) string {
 	switch {
-	case len(opts.AllowedEmojis) > 0:
-		return demojifyPreserving(text, opts.AllowedEmojis, opts.AllowedRanges, opts.ScriptAware)
 	case opts.ScriptAware:
-		return demojifyScriptAware(text, opts.AllowedRanges)
+		return demojifyScriptAware(text, opts.AllowedRanges, allowedSpans(text, opts.AllowedEmojis))
+	case len(opts.AllowedEmojis) > 0:
+		return demojifyPreserving(text, opts.AllowedEmojis, opts.AllowedRanges)
 	case len(opts.AllowedRanges) > 0:
 		return demojifyAllowed(text, opts.AllowedRanges)
 	default:
@@ -61,9 +63,15 @@ func removeEmoji(text string, opts Options) string {
 }
 
 // demojifyScriptAware removes emoji codepoints from text, keeping a ZWJ or
-// a variation selector that is not part of an emoji sequence, and any rune
-// in allowed (as [demojifyAllowed] does).
-func demojifyScriptAware(text string, allowed []*unicode.RangeTable) string {
+// a variation selector that is not part of an emoji sequence, any rune in
+// allowed (as [demojifyAllowed] does), and every byte protected marks (the
+// allowed emoji, from [allowedSpans]; nil protects nothing).
+//
+// It reads the text as written, protected bytes included, so a joiner or a
+// selector beside an allowed emoji is classified by the emoji itself. (The
+// placeholders [demojifyPreserving] swaps in would hide it: a joiner after
+// an allowed emoji would look like a joiner after ordinary text, and stay.)
+func demojifyScriptAware(text string, allowed []*unicode.RangeTable, protected []bool) string {
 	locs := emojiRE.FindAllStringIndex(text, -1)
 	if len(locs) == 0 {
 		return text
@@ -72,6 +80,9 @@ func demojifyScriptAware(text string, allowed []*unicode.RangeTable) string {
 	b.Grow(len(text))
 	last := 0
 	for _, l := range locs {
+		if l[0] < len(protected) && protected[l[0]] {
+			continue
+		}
 		r, _ := utf8.DecodeRuneInString(text[l[0]:l[1]])
 		if len(allowed) > 0 && unicode.IsOneOf(allowed, r) {
 			continue
@@ -173,4 +184,57 @@ func findingHasEmoji(text string, opts Options) bool {
 		return ContainsEmojiWith(text, Options{ScriptAware: true})
 	}
 	return ContainsEmoji(text)
+}
+
+// allowedSpans marks the bytes of text inside an occurrence of an allowed
+// emoji, chosen the way [demojifyPreserving]'s placeholders choose them:
+// longest strings first, and for each, every leftmost occurrence that does
+// not overlap one already marked. It returns nil when there is nothing to
+// protect (no non-empty entries, or none occurs). Empty entries are
+// ignored, as Sanitize ignores them.
+func allowedSpans(text string, allowedEmojis []string) []bool {
+	sorted := make([]string, 0, len(allowedEmojis))
+	for _, e := range allowedEmojis {
+		if e != "" {
+			sorted = append(sorted, e)
+		}
+	}
+	if len(sorted) == 0 {
+		return nil
+	}
+	sortByLenDesc(sorted)
+	var mask []bool
+	for _, e := range sorted {
+		for i := 0; i <= len(text)-len(e); {
+			j := strings.Index(text[i:], e)
+			if j < 0 {
+				break
+			}
+			start, end := i+j, i+j+len(e)
+			if mask != nil && marked(mask[start:end]) {
+				// It overlaps an occurrence already protected, so the
+				// placeholder pass would not see it either.
+				i = start + 1
+				continue
+			}
+			if mask == nil {
+				mask = make([]bool, len(text))
+			}
+			for k := start; k < end; k++ {
+				mask[k] = true
+			}
+			i = end
+		}
+	}
+	return mask
+}
+
+// marked reports whether any byte in m is marked.
+func marked(m []bool) bool {
+	for _, v := range m {
+		if v {
+			return true
+		}
+	}
+	return false
 }

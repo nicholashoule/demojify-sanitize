@@ -70,7 +70,7 @@ func statAndWrite(path, cleaned string) error {
 // temp file is removed.
 //
 // On POSIX systems rename(2) is atomic and replaces the destination in a
-// single filesystem operation. On Windows, Go 1.21+ implements os.Rename via
+// single filesystem operation. On Windows, Go (1.24+, the module minimum) implements os.Rename via
 // MoveFileEx with MOVEFILE_REPLACE_EXISTING, which replaces the destination
 // but is not guaranteed atomic by the kernel. In practice this is safe for
 // same-volume replace-in-place (the temp file is always created in the same

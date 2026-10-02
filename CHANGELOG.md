@@ -25,6 +25,8 @@ v1.0.0 returned. A differential test against v1.0.0 found no difference over
   Each is still removed inside an emoji sequence (a joiner with an emoji on
   either side, a selector after an emoji). The presentation selectors
   U+FE0E and U+FE0F, and every other emoji codepoint, are removed as before.
+  An emoji kept by `AllowedEmojis` still counts as an emoji for its
+  neighbors, so a joiner or selector beside it is removed.
   The option applies to `Sanitize` and everything built on it
   (`SanitizeReport`, `SanitizeReader`, `SanitizeJSON`, `SanitizeFile`, and
   the scanner through `ScanConfig.Options`). See

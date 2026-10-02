@@ -171,9 +171,7 @@ func demojifyAllowed(text string, allowed []*unicode.RangeTable) string {
 // Empty strings in allowedEmojis are silently ignored because
 // [strings.ReplaceAll] with an empty old-string inserts the replacement
 // between every rune, causing unbounded memory growth.
-//
-// scriptAware applies [Options.ScriptAware] to the removal step.
-func demojifyPreserving(text string, allowedEmojis []string, allowedRanges []*unicode.RangeTable, scriptAware bool) string {
+func demojifyPreserving(text string, allowedEmojis []string, allowedRanges []*unicode.RangeTable) string {
 	// Filter out empty strings (DoS prevention) and sort allowed emojis
 	// by descending byte length so longer sequences (e.g., ZWJ family
 	// emoji) are matched before their sub-sequences.
@@ -185,9 +183,6 @@ func demojifyPreserving(text string, allowedEmojis []string, allowedRanges []*un
 	}
 	if len(sorted) == 0 {
 		// All entries were empty; fall back to standard removal.
-		if scriptAware {
-			return demojifyScriptAware(text, allowedRanges)
-		}
 		if len(allowedRanges) > 0 {
 			return demojifyAllowed(text, allowedRanges)
 		}
@@ -210,12 +205,9 @@ func demojifyPreserving(text string, allowedEmojis []string, allowedRanges []*un
 
 	// Phase 2: Strip remaining emoji.
 	var cleaned string
-	switch {
-	case scriptAware:
-		cleaned = demojifyScriptAware(protected, allowedRanges)
-	case len(allowedRanges) > 0:
+	if len(allowedRanges) > 0 {
 		cleaned = demojifyAllowed(protected, allowedRanges)
-	default:
+	} else {
 		cleaned = Demojify(protected)
 	}
 
