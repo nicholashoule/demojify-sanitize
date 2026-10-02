@@ -426,3 +426,36 @@ func ExampleScanDirContext() {
 	// Output:
 	// found 1 file(s) with emoji
 }
+
+// ExampleSanitize_scriptAware keeps the Zero Width Joiner that Hindi uses
+// for a half form while still removing the emoji. Without ScriptAware the
+// joiner is removed too, which changes how the word renders.
+func ExampleSanitize_scriptAware() {
+	// "ksha" written with a Zero Width Joiner (U+200D) for its half form.
+	hindi := "\u0915\u094D\u200D\u0937"
+	text := hindi + " \U0001F600"
+
+	plain := demojify.Sanitize(text, demojify.Options{RemoveEmojis: true})
+	aware := demojify.Sanitize(text, demojify.Options{RemoveEmojis: true, ScriptAware: true})
+	fmt.Println(plain == hindi+" ", aware == hindi+" ")
+	// Output:
+	// false true
+}
+
+// ExampleContainsEmojiWith asks the question ContainsEmoji asks, under the
+// same options Sanitize would use: an input gate that accepts Indic text
+// but refuses an emoji.
+func ExampleContainsEmojiWith() {
+	gate := demojify.Options{ScriptAware: true}
+	hindi := "\u0915\u094D\u200D\u0937"
+
+	fmt.Println(demojify.ContainsEmoji(hindi))
+	fmt.Println(demojify.ContainsEmojiWith(hindi, gate))
+	fmt.Println(demojify.ContainsEmojiWith(hindi+" \U0001F600", gate))
+	fmt.Println(demojify.ContainsEmojiWith("\u2705 done", demojify.Options{AllowedEmojis: []string{"\u2705"}}))
+	// Output:
+	// true
+	// false
+	// true
+	// false
+}

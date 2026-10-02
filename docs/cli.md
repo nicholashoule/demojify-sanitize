@@ -17,13 +17,13 @@ go build -o demojify ./cmd/demojify/
 Or install directly:
 
 ```sh
-go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0
 ```
 
 Or run without installing:
 
 ```sh
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0 [flags]
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0 [flags]
 ```
 
 ## Synopsis
@@ -131,7 +131,7 @@ demojify -version
 
 The version is read from the Go build info. A semver tag (e.g. `v1.0.0`)
 is embedded only when the binary is installed from a published tagged
-release (`go install ...@v1.0.0`). Builds from local source -- whether via
+release (`go install ...@v1.1.0`). Builds from local source -- whether via
 `go run`, `go build`, or `go install` without a version suffix -- report
 `(devel)`.
 

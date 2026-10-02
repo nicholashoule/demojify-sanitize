@@ -5,11 +5,11 @@
 //
 // Install demojify:
 //
-//	go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0
+//	go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0
 //
 // Or run without installing:
 //
-//	go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0 [flags]
+//	go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0 [flags]
 //
 // # CLI Subcommands
 //
@@ -320,7 +320,7 @@ func main() {
 
 // cliVersion returns the module version reported by the Go build system.
 // A semver tag (e.g. "v1.0.0") is embedded only when the binary is installed
-// from a published tagged release (e.g. "go install ...@v1.0.0"). Builds from
+// from a published tagged release (e.g. "go install ...@v1.1.0"). Builds from
 // local source -- whether via "go run", "go build", or "go install" without a
 // version suffix -- have the version set to "(devel)" by the Go toolchain.
 // The empty-string fallback is a defensive guard for unusual non-module build

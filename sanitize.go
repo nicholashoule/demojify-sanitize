@@ -48,6 +48,23 @@ type Options struct {
 	// Longer strings are matched before shorter sub-sequences. Has no effect
 	// when RemoveEmojis is false or the slice is nil or empty.
 	AllowedEmojis []string
+
+	// ScriptAware keeps the Zero Width Joiner (U+200D) and the standardized
+	// variation selectors (U+FE00-U+FE0D) where they are not part of an
+	// emoji sequence. Devanagari, Malayalam, Sinhala and other Indic
+	// scripts join letters with ZWJ, and CJK, Mongolian and mathematical
+	// text use standardized variation sequences; without ScriptAware those
+	// codepoints are removed wherever they appear, which changes how such
+	// text renders. Every emoji, every joiner between emoji, and the
+	// presentation selectors U+FE0E and U+FE0F are removed as before.
+	//
+	// Applies to [Sanitize] and the functions built on it
+	// ([SanitizeReport], [SanitizeReader], [SanitizeJSON], [SanitizeFile],
+	// the scanner's Options) and to [ContainsEmojiWith]. [Demojify],
+	// [ContainsEmoji], [CountEmoji] and the [Replace] family are unchanged.
+	// Has no effect when RemoveEmojis is false. Added in v1.1.0; off by
+	// default.
+	ScriptAware bool
 }
 
 // DefaultOptions returns an Options value with all sanitization steps enabled.
@@ -61,18 +78,12 @@ func DefaultOptions() Options {
 // Sanitize applies the sanitization steps defined in opts to text and returns
 // the cleaned result. Steps are applied in the following order:
 //
-//  1. Emoji removal ([Demojify]) when opts.RemoveEmojis is true.
+//  1. Emoji removal ([Demojify]) when opts.RemoveEmojis is true, honoring
+//     opts.AllowedEmojis, opts.AllowedRanges and opts.ScriptAware.
 //  2. Whitespace normalization ([Normalize]) when opts.NormalizeWhitespace is true.
 func Sanitize(text string, opts Options) string {
 	if opts.RemoveEmojis {
-		switch {
-		case len(opts.AllowedEmojis) > 0:
-			text = demojifyPreserving(text, opts.AllowedEmojis, opts.AllowedRanges)
-		case len(opts.AllowedRanges) > 0:
-			text = demojifyAllowed(text, opts.AllowedRanges)
-		default:
-			text = Demojify(text)
-		}
+		text = removeEmoji(text, opts)
 	}
 	if opts.NormalizeWhitespace {
 		text = Normalize(text)
@@ -186,14 +197,7 @@ func SanitizeReader(r io.Reader, w io.Writer, opts Options) error {
 
 		// Step 1: emoji removal.
 		if opts.RemoveEmojis {
-			switch {
-			case len(opts.AllowedEmojis) > 0:
-				line = demojifyPreserving(line, opts.AllowedEmojis, opts.AllowedRanges)
-			case len(opts.AllowedRanges) > 0:
-				line = demojifyAllowed(line, opts.AllowedRanges)
-			default:
-				line = Demojify(line)
-			}
+			line = removeEmoji(line, opts)
 		}
 
 		// Step 2: per-line whitespace normalization.

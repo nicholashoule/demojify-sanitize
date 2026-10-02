@@ -1,0 +1,176 @@
+// Script-aware emoji removal: Options.ScriptAware and ContainsEmojiWith.
+//
+// emojiRE matches one codepoint at a time, so by default the Zero Width
+// Joiner (U+200D) and the variation selectors (U+FE00-U+FE0F) are removed
+// wherever they appear. Both also belong to ordinary text: Devanagari,
+// Malayalam, Sinhala and other Indic scripts join letters with ZWJ, and
+// CJK, Mongolian and mathematical text use standardized variation
+// sequences (U+FE00-U+FE0D). ScriptAware removes those codepoints only
+// where they are part of an emoji sequence. It is opt-in; the default
+// behavior of every function is unchanged.
+package demojify
+
+import (
+	"strings"
+	"unicode"
+	"unicode/utf8"
+)
+
+// Codepoints the script-aware rules name. Written as numbers so no editor
+// or sanitizer can strip an invisible literal from the source.
+const (
+	zwj                 = rune(0x200D) // Zero Width Joiner
+	variationFirst      = rune(0xFE00) // first variation selector
+	variationLastScript = rune(0xFE0D) // FE00-FE0D: standardized variation sequences
+	presentationEmoji   = rune(0xFE0F) // VS16: emoji presentation (FE0E is text)
+	combiningKeycap     = rune(0x20E3) // Combining Enclosing Keycap
+)
+
+// ContainsEmojiWith reports whether [Sanitize] with emoji removal and
+// opts would remove at least one codepoint: the options-aware form of
+// [ContainsEmoji]. It honors opts.ScriptAware, opts.AllowedRanges and
+// opts.AllowedEmojis; opts.RemoveEmojis and opts.NormalizeWhitespace are
+// ignored, since the question is always about emoji. With a zero Options
+// it answers exactly as [ContainsEmoji].
+//
+// ContainsEmojiWith is safe for concurrent use.
+func ContainsEmojiWith(text string, opts Options) bool {
+	// The default set is a superset of what any option removes, so text
+	// it finds clean is clean under every option.
+	if !emojiRE.MatchString(text) {
+		return false
+	}
+	if !opts.ScriptAware && len(opts.AllowedRanges) == 0 && !hasNonEmpty(opts.AllowedEmojis) {
+		return true
+	}
+	return removeEmoji(text, opts) != text
+}
+
+// removeEmoji is the emoji-removal step of [Sanitize].
+func removeEmoji(text string, opts Options) string {
+	switch {
+	case len(opts.AllowedEmojis) > 0:
+		return demojifyPreserving(text, opts.AllowedEmojis, opts.AllowedRanges, opts.ScriptAware)
+	case opts.ScriptAware:
+		return demojifyScriptAware(text, opts.AllowedRanges)
+	case len(opts.AllowedRanges) > 0:
+		return demojifyAllowed(text, opts.AllowedRanges)
+	default:
+		return Demojify(text)
+	}
+}
+
+// demojifyScriptAware removes emoji codepoints from text, keeping a ZWJ or
+// a variation selector that is not part of an emoji sequence, and any rune
+// in allowed (as [demojifyAllowed] does).
+func demojifyScriptAware(text string, allowed []*unicode.RangeTable) string {
+	locs := emojiRE.FindAllStringIndex(text, -1)
+	if len(locs) == 0 {
+		return text
+	}
+	var b strings.Builder
+	b.Grow(len(text))
+	last := 0
+	for _, l := range locs {
+		r, _ := utf8.DecodeRuneInString(text[l[0]:l[1]])
+		if len(allowed) > 0 && unicode.IsOneOf(allowed, r) {
+			continue
+		}
+		if keepInScript(text, l[0], l[1], r) {
+			continue
+		}
+		b.WriteString(text[last:l[0]])
+		last = l[1]
+	}
+	b.WriteString(text[last:])
+	return b.String()
+}
+
+// keepInScript reports whether the codepoint r at text[start:end] is
+// ordinary script text rather than part of an emoji sequence:
+//
+//   - a ZWJ with no emoji on either side (skipping variation selectors,
+//     which sit between an emoji and its joiner);
+//   - a standardized variation selector (U+FE00-U+FE0D) that does not
+//     follow an emoji.
+//
+// The presentation selectors U+FE0E and U+FE0F exist only to choose text
+// or emoji presentation, so they are removed wherever they appear, as by
+// default; removing them leaves the base character (a copyright sign, a
+// keycap digit) in its plain text form. Every other emoji codepoint is
+// removed.
+func keepInScript(text string, start, end int, r rune) bool {
+	switch {
+	case r == zwj:
+		return !isEmojiBase(prevBase(text, start)) && !isEmojiBase(nextRune(text, end))
+	case r >= variationFirst && r <= variationLastScript:
+		return !isEmojiBase(prevRune(text, start))
+	}
+	return false
+}
+
+// isEmojiBase reports an emoji codepoint that is not itself a joiner, a
+// variation selector or the combining keycap: a character an emoji
+// sequence is built around.
+func isEmojiBase(r rune) bool {
+	if r == utf8.RuneError || r == zwj || r == combiningKeycap ||
+		(r >= variationFirst && r <= presentationEmoji) {
+		return false
+	}
+	var buf [utf8.UTFMax]byte
+	n := utf8.EncodeRune(buf[:], r)
+	return emojiRE.Match(buf[:n])
+}
+
+// prevRune is the rune ending at text[:i], or utf8.RuneError at the start.
+func prevRune(text string, i int) rune {
+	if i <= 0 {
+		return utf8.RuneError
+	}
+	r, _ := utf8.DecodeLastRuneInString(text[:i])
+	return r
+}
+
+// prevBase is the rune before text[:i], skipping variation selectors, so a
+// joiner after "U+2764 U+FE0F" (heart, emoji presentation) sees the heart.
+func prevBase(text string, i int) rune {
+	for i > 0 {
+		r, size := utf8.DecodeLastRuneInString(text[:i])
+		if r >= variationFirst && r <= presentationEmoji {
+			i -= size
+			continue
+		}
+		return r
+	}
+	return utf8.RuneError
+}
+
+// nextRune is the rune starting at text[i:], or utf8.RuneError at the end.
+func nextRune(text string, i int) rune {
+	if i >= len(text) {
+		return utf8.RuneError
+	}
+	r, _ := utf8.DecodeRuneInString(text[i:])
+	return r
+}
+
+// hasNonEmpty reports whether ss holds a non-empty string; empty entries
+// in Options.AllowedEmojis are ignored.
+func hasNonEmpty(ss []string) bool {
+	for _, s := range ss {
+		if s != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// findingHasEmoji is [Finding.HasEmoji]: [ContainsEmoji], or with
+// opts.ScriptAware the script-aware answer, so a file whose only matches
+// are joiners and variation selectors in ordinary text reports none.
+func findingHasEmoji(text string, opts Options) bool {
+	if opts.ScriptAware {
+		return ContainsEmojiWith(text, Options{ScriptAware: true})
+	}
+	return ContainsEmoji(text)
+}
