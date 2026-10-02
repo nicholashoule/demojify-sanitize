@@ -215,7 +215,8 @@ type Finding struct {
 	// the caller passes a root-relative path to [ScanFile].
 	Path string
 
-	// HasEmoji reports whether [ContainsEmoji] detected emoji in the file.
+	// HasEmoji reports whether [ContainsEmoji] detected emoji in the file
+	// (with [Options.ScriptAware], whether [ContainsEmojiWith] did).
 	HasEmoji bool
 
 	// Original is the file's content before sanitization.
@@ -425,19 +426,12 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 		// substitution) runs first. Whitespace normalization, when enabled,
 		// runs unconditionally on the result.
 		var cleaned string
-		//nolint:gocritic // ifElseChain: switch would require nesting a second switch for AllowedEmojis/AllowedRanges
-		if len(replKeys) > 0 {
+		switch {
+		case len(replKeys) > 0:
 			cleaned = applyReplacer(original, cfg.Replacements, replKeys)
-		} else if cfg.Options.RemoveEmojis {
-			switch {
-			case len(cfg.Options.AllowedEmojis) > 0:
-				cleaned = demojifyPreserving(original, cfg.Options.AllowedEmojis, cfg.Options.AllowedRanges)
-			case len(cfg.Options.AllowedRanges) > 0:
-				cleaned = demojifyAllowed(original, cfg.Options.AllowedRanges)
-			default:
-				cleaned = Demojify(original)
-			}
-		} else {
+		case cfg.Options.RemoveEmojis:
+			cleaned = removeEmoji(original, cfg.Options)
+		default:
 			cleaned = original
 		}
 
@@ -477,7 +471,7 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 		if cleaned != original {
 			f := Finding{
 				Path:     norm,
-				HasEmoji: ContainsEmoji(original),
+				HasEmoji: findingHasEmoji(original, cfg.Options),
 				Original: original,
 				Cleaned:  cleaned,
 			}
@@ -588,7 +582,7 @@ func ScanFile(path string, opts Options) (*Finding, error) {
 	}
 	return &Finding{
 		Path:     filepath.ToSlash(path),
-		HasEmoji: ContainsEmoji(original),
+		HasEmoji: findingHasEmoji(original, opts),
 		Original: original,
 		Cleaned:  cleaned,
 	}, nil

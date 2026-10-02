@@ -54,6 +54,35 @@ The only artifact this can leave is whitespace between the words that
 surrounded the emoji. Use `Normalize` (or `-normalize` in the CLI) to clean
 those up.
 
+### Script-aware removal (`Options.ScriptAware`, v1.1.0)
+
+Two of the matched codepoints also belong to ordinary written language:
+
+- **U+200D Zero Width Joiner.** Devanagari, Malayalam, Sinhala and other
+  Indic scripts use it to choose a half form, a chillu or a conjunct
+  (ka + virama + ZWJ + ssa is a different rendering from ka + virama + ssa).
+- **U+FE00-U+FE0D standardized variation selectors.** CJK compatibility
+  ideographs, Mongolian and mathematical symbols use them to pick a glyph.
+
+By default both are removed wherever they appear, and `ContainsEmoji`
+reports them, so Indic text with a joiner reads as containing emoji. With
+`Options.ScriptAware` (and `ContainsEmojiWith`):
+
+| Codepoint | Removed when | Kept when |
+|---|---|---|
+| U+200D ZWJ | an emoji is on either side (skipping variation selectors, so `heart + U+FE0F + ZWJ + fire` loses all of it) | it joins anything else |
+| U+FE00-U+FE0D | it follows an emoji | it follows anything else |
+| U+FE0E, U+FE0F presentation selectors | always, as by default | never: they only choose text or emoji presentation, and removing them leaves the base in its text form (the digit of a keycap, the plain copyright sign) |
+| every other matched codepoint | always, as by default | never |
+
+ScriptAware never removes anything the default keeps: its output differs from
+the default's only by joiners and variation selectors it kept, and a test
+checks that over 20,000 random strings. It is opt-in, so the default behavior
+of every function is unchanged. It applies to `Sanitize` and the functions
+built on it (including the scanner's `Options`), and to `ContainsEmojiWith`;
+`Demojify`, `ContainsEmoji`, `CountEmoji` and the `Replace` family keep the
+default rules.
+
 ## What is intentionally NOT removed
 
 The following codepoints are explicitly out of scope.
@@ -88,6 +117,9 @@ is opt-in: `Demojify` alone does not touch them.
 CJK (Chinese, Japanese, Korean), Arabic, Hebrew, Cyrillic, Latin Extended,
 Greek, Devanagari, and all other writing-system codepoints are untouched.
 The library targets decorative pictographic content, not written language.
+The exception is the joiner and the variation selectors those scripts share
+with emoji sequences: removed everywhere by default, kept in ordinary text
+with `Options.ScriptAware` (see above).
 
 ### Currency and letterlike symbols
 

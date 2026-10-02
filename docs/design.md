@@ -80,6 +80,37 @@ non-ASCII characters. The Unicode emoji specification is the authoritative
 source for which codepoints are emoji; ranges outside that specification are
 left alone.
 
+## Script-aware removal
+
+`emojiRE` matches one codepoint at a time, which is what keeps it fast and
+simple, but it cannot tell a Zero Width Joiner inside an emoji sequence from
+one inside a Hindi word, or a variation selector after an emoji from one
+after a CJK ideograph. `Options.ScriptAware` (v1.1.0) decides those two
+from their neighbors: a joiner goes only when an emoji is on either side,
+and a standardized variation selector (U+FE00-U+FE0D) only when it follows
+an emoji. The rule table is in
+[unicode-coverage.md](unicode-coverage.md#script-aware-removal-optionsscriptaware-v110).
+
+**Why opt-in:** v1 promises that default behavior does not change in a minor
+release, and a CI gate built on `ContainsEmoji` must not start passing files
+it used to flag. The option is additive; with it off, every function takes
+exactly its v1.0.0 path, and a differential test against v1.0.0 found no
+difference over 200,000 random inputs across the existing option sets.
+
+**Allowed emoji:** without the option, `AllowedEmojis` protects each allowed
+occurrence by swapping it for a placeholder, removing, then restoring. With
+it, the occurrences (chosen the same way: longest first, leftmost, never
+overlapping) are marked in place instead. A placeholder would hide the emoji
+from the neighbor checks, and a joiner after an allowed emoji would then look
+like a joiner after ordinary text and stay.
+
+**Cost:** with the option on, removal walks the match positions
+(`FindAllStringIndex`) instead of `ReplaceAllString`, and looks one rune each
+side of a joiner or selector. Text with no matches returns after one regex
+scan, as before. `ContainsEmojiWith` answers from that same scan when the
+default finds nothing, and otherwise compares the removal's result with the
+input.
+
 ## File scanner and error handling
 
 The text-processing functions (`Demojify`, `Normalize`, `Sanitize`, and
@@ -188,7 +219,7 @@ and then calling `os.Rename` means the file is either fully updated or fully
 unchanged.
 
 On POSIX systems `rename(2)` is atomic and replaces the destination in a
-single filesystem operation. On Windows, Go 1.21+ (the minimum version for
+single filesystem operation. On Windows, Go 1.24+ (the minimum version for
 this module) implements `os.Rename` via `MoveFileEx` with
 `MOVEFILE_REPLACE_EXISTING`, which replaces the destination file but is **not**
 guaranteed to be atomic by the Windows kernel -- a crash during the move could

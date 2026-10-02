@@ -13,6 +13,7 @@ A dependency-free Go library for auditing and detecting emoji clutter, removing 
 - **Emoji removal** -- strips emoji-related codepoints in the documented Unicode ranges; ZWJ, variation-selector, keycap, and tag codepoints are handled
 - **Whitespace normalization** -- collapses redundant inline spaces and blank lines while preserving leading indentation
 - **Configurable pipeline** -- `Sanitize` runs removal and normalization in one call; `AllowedRanges` and `AllowedEmojis` let callers preserve specific codepoints
+- **Script-aware** -- `ScriptAware` (opt-in, v1.1.0) keeps the Zero Width Joiner and standardized variation selectors in Indic, CJK and mathematical text while still removing every emoji; `ContainsEmojiWith` detects under the same options
 - **Substitution** -- `Replace` maps 280 built-in emoji to readable text equivalents (e.g., `[PASS]`, `[FAIL]`); custom maps supported
 - **Metrics** -- `SanitizeReport` returns emoji count removed and bytes saved alongside the cleaned text
 - **Streaming** -- `SanitizeReader` processes `io.Reader` line by line; supports lines up to 1 MiB
@@ -25,17 +26,17 @@ A dependency-free Go library for auditing and detecting emoji clutter, removing 
 ## Installation
 
 ```bash
-go get github.com/nicholashoule/demojify-sanitize@v1.0.0
+go get github.com/nicholashoule/demojify-sanitize@v1.1.0
 ```
 
 ### CLI
 
 ```bash
-go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0
 ```
 
 ```bash
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0 -sub
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0 -sub
 ```
 
 ### Quick start
@@ -135,7 +136,7 @@ cd "$root"
 go run github.com/nicholashoule/repogov/cmd/repogov@v0.8.0 -root "$root" -agent copilot
 repogov_exit=$?
 
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0 -root "$root" -exts .go,.md
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0 -root "$root" -exts .go,.md
 demojify_exit=$?
 
 exit $((repogov_exit | demojify_exit))
@@ -184,6 +185,7 @@ Full signatures and doc comments are on
 | `SanitizeFile(path, opts) (bool, error)` | Sanitize through temp-file replacement; no write when clean |
 | `Demojify(text) string` | Strip recognized emoji-related codepoints |
 | `ContainsEmoji(text) bool` | Detect emoji presence |
+| `ContainsEmojiWith(text, opts) bool` | Detect what `Sanitize` with opts would remove (honors `ScriptAware`, `AllowedRanges`, `AllowedEmojis`); a zero `Options` answers as `ContainsEmoji` |
 | `CountEmoji(text) int` | Count emoji codepoint occurrences |
 | `BytesSaved(text) int` | Bytes freed by emoji removal |
 | `Normalize(text) string` | Collapse redundant whitespace (preserves leading indentation) |
@@ -231,6 +233,7 @@ type Options struct {
 	NormalizeWhitespace bool               // collapse redundant spaces and blank lines
 	AllowedRanges       []*unicode.RangeTable // preserve emoji in these Unicode ranges
 	AllowedEmojis       []string           // preserve specific emoji strings (exact match)
+	ScriptAware         bool               // keep ZWJ and FE00-FE0D outside emoji sequences (v1.1.0)
 }
 
 func DefaultOptions() Options // RemoveEmojis + NormalizeWhitespace = true
@@ -238,6 +241,19 @@ func DefaultOptions() Options // RemoveEmojis + NormalizeWhitespace = true
 
 `AllowedRanges` and `AllowedEmojis` can be combined. Empty strings in
 `AllowedEmojis` and empty keys in replacement maps are silently skipped.
+
+`ScriptAware` is off by default, so existing callers see no change. Turn it on
+when the input may be written language other than English: Devanagari,
+Malayalam and Sinhala join letters with the Zero Width Joiner, and the
+default removes it (and `ContainsEmoji` reports it) wherever it appears.
+
+```go
+// An input gate that accepts Indic text but refuses an emoji.
+gate := demojify.Options{RemoveEmojis: true, ScriptAware: true}
+if demojify.ContainsEmojiWith(userInput, gate) {
+	userInput = demojify.Sanitize(userInput, gate)
+}
+```
 
 ```go
 // Remove recognized emoji except rocket and thumbs-up.
@@ -252,7 +268,9 @@ clean := demojify.Sanitize(text, demojify.Options{
 `Demojify` strips U+2139, U+2600-U+27BF, U+1F000-U+1FAFF, ZWJ (U+200D),
 variation selectors (U+FE00-U+FE0F), tag characters (U+E0020-U+E007F), and
 related auxiliary ranges. Intentionally **not** removed: copyright, registered,
-trademark, and basic math/technical arrows.
+trademark, and basic math/technical arrows. With `ScriptAware`, the joiner and
+the standardized variation selectors (U+FE00-U+FE0D) are removed only inside
+emoji sequences.
 
 Full range table: [docs/unicode-coverage.md](docs/unicode-coverage.md).
 

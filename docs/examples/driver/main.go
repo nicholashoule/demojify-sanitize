@@ -243,6 +243,18 @@ func main() {
 	}
 	fmt.Printf("  findings: %d\n", len(ctxFindings))
 
+	// ---- 20. ScriptAware and ContainsEmojiWith -- keep script joiners ----
+	fmt.Println("\n=== ScriptAware ===")
+	// Hindi "ksha" with a Zero Width Joiner (U+200D) for its half form,
+	// next to an emoji.
+	hindi := "\u0915\u094D\u200D\u0937"
+	mixed := hindi + " \U0001F600"
+	aware := demojify.Options{RemoveEmojis: true, ScriptAware: true}
+	fmt.Printf("  Demojify keeps the word whole:     %v\n", demojify.Demojify(mixed) == hindi+" ")
+	fmt.Printf("  ScriptAware keeps the word whole:  %v\n", demojify.Sanitize(mixed, aware) == hindi+" ")
+	fmt.Printf("  ContainsEmoji(hindi):              %v\n", demojify.ContainsEmoji(hindi))
+	fmt.Printf("  ContainsEmojiWith(hindi):          %v\n", demojify.ContainsEmojiWith(hindi, aware))
+
 	fmt.Println("\n[PASS] driver completed successfully")
 }
 

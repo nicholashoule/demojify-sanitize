@@ -5,7 +5,7 @@
 | Version | Supported |
 |---------|-----------|
 | 1.x | Yes |
-| 0.x and older | No |
+| 0.x and older (legacy releases) | No |
 
 ## Scope
 

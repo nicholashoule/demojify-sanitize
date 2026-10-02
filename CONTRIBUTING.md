@@ -18,7 +18,7 @@ make hooks    # install the repository pre-commit hook once
 make test     # confirm the baseline passes
 ```
 
-Development requires Go 1.21 or newer. `make hooks` installs the tracked hook,
+Development requires Go 1.24 or newer. `make hooks` installs the tracked hook,
 which runs repository governance, emoji auditing, formatting, vet, lint when
 available, and tests. Run the same Go quality checks without installing it via
 `make pre-commit`. The installed hook is a copy, so re-run `make hooks`

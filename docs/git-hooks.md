@@ -15,7 +15,7 @@ go build -o .git/hooks/demojify ./cmd/demojify
 Or install a pinned release:
 
 ```sh
-go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0
 # then copy or symlink the installed binary into .git/hooks/
 ```
 
@@ -101,7 +101,7 @@ cd "$root"
 go run github.com/nicholashoule/repogov/cmd/repogov@v0.8.0 -root "$root" -agent copilot
 repogov_exit=$?
 
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0 -root "$root" -exts .go,.md
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0 -root "$root" -exts .go,.md
 demojify_exit=$?
 
 exit $((repogov_exit | demojify_exit))
@@ -117,7 +117,7 @@ Set-Location $root
 go run github.com/nicholashoule/repogov/cmd/repogov@v0.8.0 -root $root -agent copilot
 $repogov_exit = $LASTEXITCODE
 
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.0.0 -root $root -exts .go,.md
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0 -root $root -exts .go,.md
 $demojify_exit = $LASTEXITCODE
 
 exit ($repogov_exit -bor $demojify_exit)

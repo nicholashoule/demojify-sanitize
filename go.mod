@@ -1,3 +1,3 @@
 module github.com/nicholashoule/demojify-sanitize
 
-go 1.21
+go 1.24
