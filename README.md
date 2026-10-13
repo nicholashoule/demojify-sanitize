@@ -27,17 +27,17 @@ A dependency-free Go library for auditing and detecting emoji clutter, removing 
 ## Installation
 
 ```bash
-go get github.com/nicholashoule/demojify-sanitize@v1.1.0
+go get github.com/nicholashoule/demojify-sanitize@v1.2.0
 ```
 
 ### CLI
 
 ```bash
-go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.2.0
 ```
 
 ```bash
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0 -sub
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.2.0 -sub
 ```
 
 ### Quick start

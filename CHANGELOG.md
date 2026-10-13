@@ -5,11 +5,13 @@ Notable changes are documented following [Keep a Changelog] and
 
 ## [Unreleased]
 
-Intended release: v1.2.0 (minor: additive API plus fixes). Nothing an
-existing caller relies on changes: every v1 default (a zero `Options`
-passing text through, `DefaultOptions`, `DefaultScanConfig` and
-`ContainsEmoji` without `ScriptAware`, `MaxFileBytes` zero meaning no
-limit) and every exported signature stays as it was.
+## [1.2.0] - 2026-10-13
+
+Minor: additive API plus fixes. Nothing an existing caller relies on
+changes: every v1 default (a zero `Options` passing text through,
+`DefaultOptions`, `DefaultScanConfig` and `ContainsEmoji` without
+`ScriptAware`, `MaxFileBytes` zero meaning no limit) and every exported
+signature stays as it was.
 
 ### Added
 
@@ -46,10 +48,10 @@ limit) and every exported signature stays as it was.
   audit could report, and `-fix` would delete, a Zero Width Joiner that
   shapes script text: `-fix` turned the Devanagari half-form (U+0915 U+094D
   U+200D U+0937) into the conjunct (U+0915 U+094D U+0937), silently changing
-  how the text renders. Emoji, and the
-  joiners inside emoji sequences, are removed exactly as before; flags and
-  exit codes are unchanged. The library's v1 defaults (`DefaultOptions`,
-  `DefaultScanConfig`) are untouched.
+  how the text renders. Emoji, and the joiners inside emoji sequences, are
+  removed exactly as before; flags and exit codes are unchanged. The
+  library's v1 defaults (`DefaultOptions`, `DefaultScanConfig`) are
+  untouched.
 - `WriteFinding` and `FixDir` (and `SanitizeFile`, `ReplaceFile`) no
   longer overwrite a file that changed after it was read: just before the
   rename the target is compared with the content that was cleaned, and a
@@ -152,7 +154,8 @@ comparisons: [0.10.0], [0.9.0], [0.8.0], and [0.7.3 and earlier].
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
-[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.10.1...v1.0.0
 [0.10.1]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.10.0...v0.10.1
