@@ -32,5 +32,10 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+
+# Ignore Agent Local State
+.claude/
+.copilot/
+.openai/
