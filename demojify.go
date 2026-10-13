@@ -6,15 +6,15 @@
 // defining ranges of its own. It matches one codepoint at a time, so ZWJ
 // sequences and variation selectors are stripped piecewise. demojifyAllowed
 // and demojifyPreserving implement Options.AllowedRanges and
-// Options.AllowedEmojis; the latter uses Unicode noncharacter placeholders
-// (buildPlaceholders) chosen so they never collide with input text.
+// Options.AllowedEmojis; the latter protects the allowed occurrences by
+// marking their bytes in place (allowedSpans), so no input text can collide
+// with the mechanism.
 // Range rationale: docs/unicode-coverage.md.
 
 package demojify
 
 import (
 	"regexp"
-	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -162,108 +162,48 @@ func demojifyAllowed(text string, allowed []*unicode.RangeTable) string {
 
 // demojifyPreserving removes emoji codepoints from text while preserving
 // specific emoji strings listed in allowedEmojis and any rune belonging to
-// the provided Unicode range tables. Allowed emoji strings are temporarily
-// replaced with inert Unicode noncharacter placeholders (U+FDD0-U+FDEF)
-// before emoji removal, then restored. Longer allowed strings are matched
+// the provided Unicode range tables. Longer allowed strings are matched
 // before shorter sub-sequences to handle variation-selector and ZWJ
-// sequences correctly.
+// sequences correctly; each leftmost occurrence that does not overlap one
+// already protected is kept (see [allowedSpans]).
 //
-// Empty strings in allowedEmojis are silently ignored because
-// [strings.ReplaceAll] with an empty old-string inserts the replacement
-// between every rune, causing unbounded memory growth.
+// The occurrences are protected by marking their bytes in place. Earlier
+// releases swapped Unicode noncharacter placeholders into the text and
+// restored them afterwards; input that already held the placeholder
+// characters (all 34 noncharacters plus the fallback sequence), or an
+// allowed string that matched inside a placeholder (a digit), corrupted the
+// output. Marking bytes has no such collision.
+//
+// Empty strings in allowedEmojis are ignored.
 func demojifyPreserving(text string, allowedEmojis []string, allowedRanges []*unicode.RangeTable) string {
-	// Filter out empty strings (DoS prevention) and sort allowed emojis
-	// by descending byte length so longer sequences (e.g., ZWJ family
-	// emoji) are matched before their sub-sequences.
-	sorted := make([]string, 0, len(allowedEmojis))
-	for _, e := range allowedEmojis {
-		if e != "" {
-			sorted = append(sorted, e)
-		}
-	}
-	if len(sorted) == 0 {
-		// All entries were empty; fall back to standard removal.
-		if len(allowedRanges) > 0 {
-			return demojifyAllowed(text, allowedRanges)
-		}
-		return Demojify(text)
-	}
-	sortByLenDesc(sorted)
-
-	// Build placeholder strings guaranteed to be absent from the input.
-	// We use a Unicode noncharacter (U+FDD0–U+FDEF range) as a sentinel
-	// prefix, then append an index. If any placeholder collides with text
-	// already in the input, we increment the sentinel codepoint until all
-	// placeholders are unique.
-	placeholders := buildPlaceholders(len(sorted), text)
-
-	// Phase 1: Protect allowed emoji sequences with placeholders.
-	protected := text
-	for i, emoji := range sorted {
-		protected = strings.ReplaceAll(protected, emoji, placeholders[i])
-	}
-
-	// Phase 2: Strip remaining emoji.
-	var cleaned string
-	if len(allowedRanges) > 0 {
-		cleaned = demojifyAllowed(protected, allowedRanges)
-	} else {
-		cleaned = Demojify(protected)
-	}
-
-	// Phase 3: Restore placeholders to their original emoji.
-	for i, emoji := range sorted {
-		cleaned = strings.ReplaceAll(cleaned, placeholders[i], emoji)
-	}
-
-	return cleaned
+	return demojifyProtected(text, allowedRanges, allowedSpans(text, allowedEmojis))
 }
 
-// buildPlaceholders generates n placeholder strings that are guaranteed not to
-// appear anywhere in text. It uses Unicode noncharacters (U+FDD0-U+FDEF) as
-// sentinel prefixes. These codepoints are permanently reserved by Unicode and
-// must never appear in conforming text, making collisions extremely unlikely.
-//
-// A sentinel is rejected when its bare rune appears anywhere in text -- not
-// merely when a full placeholder string does. Requiring total absence
-// guarantees that after phase-1 substitution every occurrence of the sentinel
-// in the working string belongs to a placeholder, so the phase-3 restore can
-// never match a spurious placeholder assembled from adjacent input text
-// (e.g. a stray noncharacter followed by a digit from the input). When a
-// sentinel is present in text the function advances to the next noncharacter.
-func buildPlaceholders(n int, text string) []string {
-	// Unicode defines 32 noncharacters in U+FDD0-U+FDEF. That gives us
-	// 32 sentinel prefixes to try before falling back to the BMP
-	// noncharacters U+FFFE and U+FFFF, for a total of 34 candidates.
-	const firstSentinel = '\uFDD0'
-	const lastSentinel = '\uFDEF'
-
-	for sentinel := rune(firstSentinel); ; {
-		if !strings.ContainsRune(text, sentinel) {
-			prefix := string(sentinel)
-			phs := make([]string, n)
-			for i := 0; i < n; i++ {
-				phs[i] = prefix + strconv.Itoa(i) + prefix
-			}
-			return phs
-		}
-		switch sentinel {
-		case lastSentinel:
-			// Extreme fallback: try the BMP noncharacters next.
-			sentinel = '\uFFFE'
-		case '\uFFFE':
-			sentinel = '\uFFFF'
-		case '\uFFFF':
-			// All 34 noncharacters appear in the input -- practically
-			// impossible outside deliberately hostile text. Fall back to a
-			// multi-rune prefix that cannot occur naturally.
-			phs := make([]string, n)
-			for i := 0; i < n; i++ {
-				phs[i] = "\uFDD0\uFDD1\uFDD2" + strconv.Itoa(i) + "\uFDD0\uFDD1\uFDD2"
-			}
-			return phs
-		default:
-			sentinel++
-		}
+// demojifyProtected removes every emoji codepoint from text except a rune in
+// allowed and one starting at a byte protected marks (nil protects nothing).
+// It is the v1 removal rule: a Zero Width Joiner or a variation selector is
+// removed wherever it appears (see [demojifyScriptAware] for the
+// script-aware rule).
+func demojifyProtected(text string, allowed []*unicode.RangeTable, protected []bool) string {
+	locs := emojiRE.FindAllStringIndex(text, -1)
+	if len(locs) == 0 {
+		return text
 	}
+	var b strings.Builder
+	b.Grow(len(text))
+	last := 0
+	for _, l := range locs {
+		if l[0] < len(protected) && protected[l[0]] {
+			continue
+		}
+		if len(allowed) > 0 {
+			if r, _ := utf8.DecodeRuneInString(text[l[0]:l[1]]); unicode.IsOneOf(allowed, r) {
+				continue
+			}
+		}
+		b.WriteString(text[last:l[0]])
+		last = l[1]
+	}
+	b.WriteString(text[last:])
+	return b.String()
 }

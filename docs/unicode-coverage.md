@@ -66,7 +66,8 @@ Two of the matched codepoints also belong to ordinary written language:
 
 By default both are removed wherever they appear, and `ContainsEmoji`
 reports them, so Indic text with a joiner reads as containing emoji. With
-`Options.ScriptAware` (and `ContainsEmojiWith`):
+`Options.ScriptAware` (and `ContainsEmojiWith`), which `SafeOptions`,
+`SanitizeSafe` and `SafeScanConfig` turn on (v1.2.0):
 
 | Codepoint | Removed when | Kept when |
 |---|---|---|

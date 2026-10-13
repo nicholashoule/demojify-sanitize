@@ -1,16 +1,28 @@
 // Internal helpers shared across files: isBinary (NUL sniff), sortByLenDesc
-// and sortedKeys (longest-first key ordering for the substitution scan), and
-// statAndWrite/atomicWrite (same-directory temp file, fsync, chmod, rename).
-// sortedKeys drops empty keys; an empty key would match at every position.
+// and sortedKeys (longest-first key ordering for the substitution scan),
+// readCapped (size-bounded reads), and statAndWrite/atomicWrite
+// (same-directory temp file, fsync, chmod, a changed-since-read check,
+// rename). sortedKeys drops empty keys; an empty key would match at every
+// position.
 
 package demojify
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
 )
+
+// ErrFileChanged is returned by the functions that write a file back
+// ([WriteFinding], [FixDir], [SanitizeFile], [ReplaceFile]) when the file no
+// longer holds the content that was read and cleaned: another writer changed
+// it in between. Nothing is written; the file keeps the other writer's
+// content. Branch on it with [errors.Is].
+var ErrFileChanged = errors.New("demojify: file changed since it was read")
 
 // sniffSize is the number of bytes inspected for NUL when detecting binary files.
 const sniffSize = 512
@@ -53,21 +65,60 @@ func sortedKeys(m map[string]string) []string {
 	return keys
 }
 
+// readCapped reads r to EOF, at most limit bytes. over reports that r held
+// more than limit bytes, in which case data is nil: the caller skips the
+// input instead of reading it whole.
+func readCapped(r io.Reader, limit int64) (data []byte, over bool, err error) {
+	data, err = io.ReadAll(io.LimitReader(r, limit+1))
+	if err != nil {
+		return nil, false, err
+	}
+	if int64(len(data)) > limit {
+		return nil, true, nil
+	}
+	return data, false, nil
+}
+
 // statAndWrite writes cleaned through a same-directory temp file and rename,
-// preserving the file's current permissions. It is used by file-modifying
-// functions after they have determined that a write is necessary.
-func statAndWrite(path, cleaned string) error {
+// preserving the file's current permissions, provided the file still holds
+// original (the content cleaned was derived from); otherwise it returns an
+// error wrapping [ErrFileChanged] and writes nothing. It is used by
+// file-modifying functions after they have determined that a write is
+// necessary.
+func statAndWrite(path, original, cleaned string) error {
 	info, err := os.Stat(path)
 	if err != nil {
 		return err
 	}
-	return atomicWrite(path, cleaned, info.Mode().Perm())
+	return atomicWrite(path, cleaned, info.Mode().Perm(), original)
+}
+
+// unchanged reports whether the file at path still holds exactly want. It
+// reads at most len(want)+1 bytes, so a file that grew is caught without
+// being read whole.
+func unchanged(path, want string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer func() { _ = f.Close() }()
+	got, over, err := readCapped(f, int64(len(want)))
+	if err != nil {
+		return false, err
+	}
+	return !over && string(got) == want, nil
 }
 
 // atomicWrite writes content to path using a temp-file-plus-rename strategy,
 // preserving the given file permissions. On success the file at path contains
 // exactly content; on failure the original file is left untouched and the
 // temp file is removed.
+//
+// The rename happens only if the file at path still holds original, checked
+// once the temp file is complete so the window between the check and the
+// rename is as short as the filesystem allows. A file another writer changed
+// after it was read is reported as [ErrFileChanged] instead of being
+// overwritten with content cleaned from the stale copy.
 //
 // On POSIX systems rename(2) is atomic and replaces the destination in a
 // single filesystem operation. On Windows, Go (1.24+, the module minimum) implements os.Rename via
@@ -77,7 +128,7 @@ func statAndWrite(path, cleaned string) error {
 // directory). The file data is flushed to stable storage via Sync before
 // the rename so that a power failure cannot leave a zero-length or
 // partially-written destination.
-func atomicWrite(path, content string, perm os.FileMode) error {
+func atomicWrite(path, content string, perm os.FileMode, original string) error {
 	dir := filepath.Dir(path)
 	tmp, err := os.CreateTemp(dir, ".demojify-*")
 	if err != nil {
@@ -103,6 +154,13 @@ func atomicWrite(path, content string, perm os.FileMode) error {
 	}
 	if err := os.Chmod(tmpName, perm); err != nil {
 		return err
+	}
+	same, err := unchanged(path, original)
+	if err != nil {
+		return err
+	}
+	if !same {
+		return fmt.Errorf("%w: %s", ErrFileChanged, path)
 	}
 	if err := os.Rename(tmpName, path); err != nil {
 		return err

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -61,12 +62,7 @@ func TestDefaultScanConfig(t *testing.T) {
 }
 
 func slicesContains(s []string, v string) bool {
-	for _, e := range s {
-		if e == v {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s, v)
 }
 
 func TestDefaultScanConfigSkipsBinaryAndMinified(t *testing.T) {
@@ -669,14 +665,14 @@ func TestScanDirMaxFileBytesExactBoundary(t *testing.T) {
 func TestScanDirConcurrent(t *testing.T) {
 	const goroutines = 10
 	roots := make([]string, goroutines)
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		roots[i] = t.TempDir()
 		writeTempFile(t, roots[i], "file.md", "Hello \U0001F680 World\n")
 		writeTempFile(t, roots[i], "clean.md", "Hello World\n")
 	}
 
 	errCh := make(chan error, goroutines)
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		go func(idx int) {
 			cfg := demojify.DefaultScanConfig()
 			cfg.Root = roots[idx]
@@ -693,7 +689,7 @@ func TestScanDirConcurrent(t *testing.T) {
 			errCh <- nil
 		}(i)
 	}
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		if err := <-errCh; err != nil {
 			t.Errorf("goroutine %d: ScanDir error: %v", i, err)
 		}

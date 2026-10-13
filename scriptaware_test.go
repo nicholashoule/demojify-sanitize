@@ -110,7 +110,7 @@ func randomText(r *rand.Rand) string {
 func TestScriptAwareNeverRemovesMoreThanTheDefault(t *testing.T) {
 	t.Parallel()
 	r := rand.New(rand.NewSource(1))
-	for i := 0; i < 20000; i++ {
+	for range 20000 {
 		text := randomText(r)
 		def, aware := Demojify(text), Sanitize(text, scriptAware)
 		if Demojify(aware) != def {
@@ -253,7 +253,7 @@ func TestScriptAwareWithAllowedEmojisMatchesTheDefault(t *testing.T) {
 		{cp(0x1F600), cp(0x1F468, 0x1F3FD)},
 	}
 	r := rand.New(rand.NewSource(2))
-	for i := 0; i < 20000; i++ {
+	for range 20000 {
 		text := randomText(r)
 		for _, allowed := range sets {
 			plain := Options{RemoveEmojis: true, AllowedEmojis: allowed}

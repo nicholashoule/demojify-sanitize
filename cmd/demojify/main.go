@@ -192,7 +192,7 @@ func main() {
 	}
 
 	if *skip != "" {
-		for _, d := range strings.Split(*skip, ",") {
+		for d := range strings.SplitSeq(*skip, ",") {
 			d = strings.TrimSpace(d)
 			if d == "" {
 				continue
@@ -206,7 +206,7 @@ func main() {
 	}
 
 	if *exts != "" {
-		for _, e := range strings.Split(*exts, ",") {
+		for e := range strings.SplitSeq(*exts, ",") {
 			e = strings.TrimSpace(e)
 			if e == "" {
 				continue

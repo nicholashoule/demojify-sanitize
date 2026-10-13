@@ -10,7 +10,8 @@ linters:
   default: none
   enable:
     - govet          # vet-style checks (shadow, printf, etc.)
-    - staticcheck    # Dominik Honnef's comprehensive static analysis (includes gosimple)
+    - staticcheck    # Dominik Honnef's comprehensive static analysis (includes gosimple; SA1012 nil Context is in its default set)
+    - modernize      # modern-Go rewrites gopls also suggests (b.Loop, range over int, ...), limited to the go.mod version
     - errcheck       # unhandled errors
     - ineffassign    # assignments whose values are never used
     - unused         # unused code

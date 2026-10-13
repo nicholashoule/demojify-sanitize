@@ -5,6 +5,64 @@ Notable changes are documented following [Keep a Changelog] and
 
 ## [Unreleased]
 
+Intended release: v1.2.0 (minor: additive API plus fixes). Nothing an
+existing caller relies on changes: every v1 default (a zero `Options`
+passing text through, `DefaultOptions`, `DefaultScanConfig` and
+`ContainsEmoji` without `ScriptAware`, `MaxFileBytes` zero meaning no
+limit) and every exported signature stays as it was.
+
+### Added
+
+- `SafeOptions()`: the recommended configuration, emoji removal with
+  `ScriptAware` and whitespace left alone, so it is safe for any text,
+  including JSON string values and source code. Add `NormalizeWhitespace`
+  or allow lists on the returned value as needed.
+- `SanitizeSafe(text)`: `Sanitize` with `SafeOptions()`, the recommended
+  entry point: no `Options` value to leave unset by mistake.
+- `SafeScanConfig()`: `DefaultScanConfig()` with `SafeOptions()`, the
+  recommended scanner preset.
+- `DefaultMaxFileBytes` (1 MiB), the limit both presets set in
+  `ScanConfig.MaxFileBytes`.
+- `ErrFileChanged`, returned (wrapped) by `WriteFinding`, `FixDir`,
+  `SanitizeFile` and `ReplaceFile` when a file changed after it was read.
+- Native fuzz tests (`FuzzSanitizeSafe`, `FuzzAllowedEmojis`, with seed
+  corpora), examples (`ExampleSanitizeSafe`, `ExampleSafeOptions`) and
+  regression tests for every fix below.
+
+### Changed
+
+- Documentation recommends `SanitizeSafe`, `SafeOptions` and
+  `SafeScanConfig`, and describes the v1 defaults as stable but easy to
+  misuse (a forgotten `Options` field sanitizes nothing). The README's
+  pre-commit hook scripts moved to [docs/git-hooks.md](docs/git-hooks.md),
+  which already carried them. The README warns against running `Sanitize`
+  over raw JSON bytes (use `SanitizeJSON`).
+- Benchmarks use `b.Loop()`; the `modernize` linter is enabled.
+
+### Fixed
+
+- `WriteFinding` and `FixDir` (and `SanitizeFile`, `ReplaceFile`) no
+  longer overwrite a file that changed after it was read: just before the
+  rename the target is compared with the content that was cleaned, and a
+  mismatch leaves the file alone and returns an error wrapping
+  `ErrFileChanged`. A `Finding` held across an edit used to replace the edit
+  with content cleaned from the stale copy.
+- `ScanConfig.MaxFileBytes` bounds the read, not only the size check. The
+  check uses the walk entry's own size, which for a symlink is the link's,
+  so a symlink to a file over the limit was read whole; a file that grew
+  after the check was too. Both are now skipped.
+
+### Security
+
+- `Options.AllowedEmojis` no longer swaps placeholders into the text. Input
+  holding all 34 Unicode noncharacters and the fallback placeholder sequence
+  had that text turned into an allowed emoji, and an allowed string matching
+  inside a placeholder (an ASCII digit) corrupted the output. The allowed
+  occurrences are now protected by marking their bytes in place, with the
+  same longest-first, leftmost, non-overlapping choice, so ordinary input
+  gives exactly the previous result (checked by `FuzzAllowedEmojis` against
+  the previous implementation) and hostile input can no longer collide.
+
 ## [1.1.0] - 2026-10-02
 
 Additive only: with the new option off, every function returns exactly what

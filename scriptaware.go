@@ -68,9 +68,7 @@ func removeEmoji(text string, opts Options) string {
 // allowed emoji, from [allowedSpans]; nil protects nothing).
 //
 // It reads the text as written, protected bytes included, so a joiner or a
-// selector beside an allowed emoji is classified by the emoji itself. (The
-// placeholders [demojifyPreserving] swaps in would hide it: a joiner after
-// an allowed emoji would look like a joiner after ordinary text, and stay.)
+// selector beside an allowed emoji is classified by the emoji itself.
 func demojifyScriptAware(text string, allowed []*unicode.RangeTable, protected []bool) string {
 	locs := emojiRE.FindAllStringIndex(text, -1)
 	if len(locs) == 0 {
@@ -187,11 +185,11 @@ func findingHasEmoji(text string, opts Options) bool {
 }
 
 // allowedSpans marks the bytes of text inside an occurrence of an allowed
-// emoji, chosen the way [demojifyPreserving]'s placeholders choose them:
-// longest strings first, and for each, every leftmost occurrence that does
-// not overlap one already marked. It returns nil when there is nothing to
-// protect (no non-empty entries, or none occurs). Empty entries are
-// ignored, as Sanitize ignores them.
+// emoji: longest strings first, and for each, every leftmost occurrence that
+// does not overlap one already marked. It returns nil when there is nothing
+// to protect (no non-empty entries, or none occurs). Empty entries are
+// ignored, as Sanitize ignores them. Both removal rules
+// ([demojifyPreserving], [demojifyScriptAware]) protect through it.
 func allowedSpans(text string, allowedEmojis []string) []bool {
 	sorted := make([]string, 0, len(allowedEmojis))
 	for _, e := range allowedEmojis {
@@ -212,8 +210,7 @@ func allowedSpans(text string, allowedEmojis []string) []bool {
 			}
 			start, end := i+j, i+j+len(e)
 			if mask != nil && marked(mask[start:end]) {
-				// It overlaps an occurrence already protected, so the
-				// placeholder pass would not see it either.
+				// It overlaps an occurrence already protected.
 				i = start + 1
 				continue
 			}

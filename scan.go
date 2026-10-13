@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"unicode/utf8"
 )
@@ -70,9 +71,13 @@ type ScanConfig struct {
 	Extensions []string
 
 	// MaxFileBytes is the maximum file size in bytes that ScanDir will read.
-	// Files larger than this value are silently skipped. A value of zero
-	// disables the limit and all files are read regardless of size.
-	// DefaultScanConfig sets this to 1 MiB (1 << 20).
+	// Files larger than this value are silently skipped; the read itself is
+	// bounded too, so a file that grows past the limit after its size is
+	// checked is skipped rather than read whole. A value of zero (or a
+	// negative value) disables the limit and all files are read regardless
+	// of size; that is the stable v1 behavior, so prefer
+	// [DefaultScanConfig] or [SafeScanConfig], which set it to
+	// [DefaultMaxFileBytes] (1 MiB).
 	MaxFileBytes int64
 
 	// Options configures the sanitization pipeline applied to each file's
@@ -103,6 +108,21 @@ type ScanConfig struct {
 	// per-file allocation cost; leave it false for bulk audits that only need
 	// the cleaned text.
 	CollectMatches bool
+}
+
+// DefaultMaxFileBytes is the per-file read limit [DefaultScanConfig] and
+// [SafeScanConfig] set in [ScanConfig.MaxFileBytes]: 1 MiB. Added in v1.2.0.
+const DefaultMaxFileBytes int64 = 1 << 20
+
+// SafeScanConfig returns [DefaultScanConfig] with [SafeOptions] in place of
+// its Options: the same filters and the [DefaultMaxFileBytes] limit, with
+// script-aware emoji removal (a Zero Width Joiner or variation selector in
+// Indic, CJK or mathematical text is not a finding). It is the recommended
+// starting point for new scans. Added in v1.2.0.
+func SafeScanConfig() ScanConfig {
+	cfg := DefaultScanConfig()
+	cfg.Options = SafeOptions()
+	return cfg
 }
 
 // DefaultScanConfig returns a ScanConfig suitable for auditing a typical Go
@@ -143,8 +163,8 @@ func DefaultScanConfig() ScanConfig {
 		SkipDirs:       []string{".git/", "vendor/", "node_modules/"},
 		ExemptSuffixes: []string{"_test.go"},
 		SkipExtensions: defaultSkipExtensions(),
-		Extensions:     nil,     // scan all file types
-		MaxFileBytes:   1 << 20, // 1 MiB
+		Extensions:     nil, // scan all file types
+		MaxFileBytes:   DefaultMaxFileBytes,
 		Options: Options{
 			RemoveEmojis: true,
 		},
@@ -324,10 +344,8 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 		if d.IsDir() {
 			if norm != "." {
 				name := d.Name()
-				for _, skip := range trimmedSkips {
-					if name == skip {
-						return filepath.SkipDir
-					}
+				if slices.Contains(trimmedSkips, name) {
+					return filepath.SkipDir
 				}
 			}
 			return nil
@@ -349,10 +367,8 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 
 		// Exempt files by base name.
 		base := d.Name()
-		for _, exempt := range cfg.ExemptFiles {
-			if base == exempt {
-				return nil
-			}
+		if slices.Contains(cfg.ExemptFiles, base) {
+			return nil
 		}
 
 		// Exempt files by suffix.
@@ -402,8 +418,21 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 			_ = f.Close()
 			return nil
 		}
-		// Text file -- read the remainder and combine.
-		rest, readErr := io.ReadAll(f)
+		// Text file -- read the remainder and combine. With a limit set,
+		// the read is bounded by it: a file that grew past the limit
+		// since the size check is skipped, never read whole.
+		var rest []byte
+		var readErr error
+		if cfg.MaxFileBytes > 0 {
+			var over bool
+			rest, over, readErr = readCapped(f, cfg.MaxFileBytes-int64(n))
+			if readErr == nil && over {
+				_ = f.Close()
+				return nil
+			}
+		} else {
+			rest, readErr = io.ReadAll(f)
+		}
 		_ = f.Close()
 		if readErr != nil {
 			return readErr

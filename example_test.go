@@ -459,3 +459,23 @@ func ExampleContainsEmojiWith() {
 	// true
 	// false
 }
+
+// ExampleSanitizeSafe is the recommended entry point: emoji are always
+// removed, a script joiner stays, and whitespace is left alone.
+func ExampleSanitizeSafe() {
+	hindi := "\u0915\u094D\u200D\u0937" // "ksha" with a Zero Width Joiner
+	fmt.Println(demojify.SanitizeSafe("ship it \u2705  "+hindi) == "ship it   "+hindi)
+	// Output:
+	// true
+}
+
+// ExampleSafeOptions adds whitespace normalization and an allow list to the
+// recommended configuration.
+func ExampleSafeOptions() {
+	opts := demojify.SafeOptions()
+	opts.NormalizeWhitespace = true
+	opts.AllowedEmojis = []string{"\U0001F680"}
+	fmt.Printf("%+q\n", demojify.Sanitize("launch \U0001F680   now \U0001F600", opts))
+	// Output:
+	// "launch \U0001f680 now"
+}

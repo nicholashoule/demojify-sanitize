@@ -162,8 +162,10 @@ func FindAll(text string) []string {
 // skipped and return (0, nil), matching the behavior of [ScanDir] and
 // [ScanFile].
 //
-// ReplaceFile returns an error for any filesystem failure. When count is zero
-// the file is unchanged and no write is performed.
+// ReplaceFile returns an error for any filesystem failure, including one
+// wrapping [ErrFileChanged] (and no write) when another writer changed the
+// file between the read and the write. When count is zero the file is
+// unchanged and no write is performed.
 // ReplaceFile is safe for concurrent use provided callers do not share path
 // and the replacements map is not mutated concurrently.
 func ReplaceFile(path string, replacements map[string]string) (count int, err error) {
@@ -194,7 +196,7 @@ func ReplaceFile(path string, replacements map[string]string) (count int, err er
 		count = len(emojiRE.FindAllString(original, -1))
 	}
 
-	if err := statAndWrite(path, cleaned); err != nil {
+	if err := statAndWrite(path, original, cleaned); err != nil {
 		return 0, err
 	}
 	return count, nil

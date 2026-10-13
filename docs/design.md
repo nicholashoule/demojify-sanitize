@@ -218,6 +218,16 @@ interruption would produce a truncated file. Writing to a sibling temp file
 and then calling `os.Rename` means the file is either fully updated or fully
 unchanged.
 
+**Why a write is refused when the file changed:** every write-back
+(`WriteFinding`, `FixDir`, `SanitizeFile`, `ReplaceFile`) carries the content
+it read. Once the temp file is complete, and just before the rename, the
+target is read again (at most one byte past the expected length) and compared;
+if another writer changed it in between, nothing is renamed, the temp file is
+removed, and the error wraps `ErrFileChanged`. Before v1.2.0 a `Finding` held
+across an edit overwrote the edit with content cleaned from the stale copy.
+The check narrows that window to the compare-and-rename; it cannot close it on
+a filesystem without a compare-and-swap rename.
+
 On POSIX systems `rename(2)` is atomic and replaces the destination in a
 single filesystem operation. On Windows, Go 1.24+ (the minimum version for
 this module) implements `os.Rename` via `MoveFileEx` with
@@ -261,7 +271,14 @@ applies the sanitization or replacement pipeline from `cfg`, and writes back
 every changed file through the temp-file strategy described above. It returns
 counts of fixed and already-clean files. Path-traversal protection (via `filepath.EvalSymlinks`
 and `isInsideDir`) ensures no write target can escape `root` through `..`
-components or symlinks.
+components or symlinks, and a file changed since the scan is skipped with
+`ErrFileChanged` (see above).
+
+`ScanConfig.MaxFileBytes` bounds the read itself, not only the size check: the
+check reads the walk entry's own size, which for a symlink is the link's, so a
+symlink to a large file used to pass it and be read whole. Zero (or negative)
+still means no limit, the stable v1 meaning; `DefaultScanConfig` and
+`SafeScanConfig` set `DefaultMaxFileBytes` (1 MiB).
 
 ## Scope boundaries
 

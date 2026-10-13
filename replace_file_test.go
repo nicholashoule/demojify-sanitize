@@ -160,7 +160,7 @@ func TestReplaceConcurrent(_ *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		go func(idx int) {
 			defer wg.Done()
 			input := inputs[idx%len(inputs)]
