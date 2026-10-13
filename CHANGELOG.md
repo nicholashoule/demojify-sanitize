@@ -41,6 +41,15 @@ limit) and every exported signature stays as it was.
 
 ### Fixed
 
+- The `demojify` CLI scans with `SafeScanConfig()` instead of
+  `DefaultScanConfig()`, so its emoji removal is script-aware. Before, an
+  audit could report, and `-fix` would delete, a Zero Width Joiner that
+  shapes script text: `-fix` turned the Devanagari half-form (U+0915 U+094D
+  U+200D U+0937) into the conjunct (U+0915 U+094D U+0937), silently changing
+  how the text renders. Emoji, and the
+  joiners inside emoji sequences, are removed exactly as before; flags and
+  exit codes are unchanged. The library's v1 defaults (`DefaultOptions`,
+  `DefaultScanConfig`) are untouched.
 - `WriteFinding` and `FixDir` (and `SanitizeFile`, `ReplaceFile`) no
   longer overwrite a file that changed after it was read: just before the
   rename the target is compared with the content that was cleaned, and a

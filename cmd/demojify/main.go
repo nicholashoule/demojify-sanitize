@@ -184,7 +184,10 @@ func main() {
 		log.Fatalf("root is not a directory: %s", *root)
 	}
 
-	cfg := demojify.DefaultScanConfig()
+	// SafeScanConfig, the recommended preset: emoji removal is ScriptAware,
+	// so a Zero Width Joiner that shapes script text (a Devanagari
+	// half-form, for one) is kept rather than stripped by -fix.
+	cfg := demojify.SafeScanConfig()
 	cfg.Root = *root
 	cfg.CollectMatches = true
 	if *normalize {

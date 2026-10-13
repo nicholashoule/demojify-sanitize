@@ -145,7 +145,7 @@ release (`go install ...@v1.1.0`). Builds from local source -- whether via
 
 ## Default Scan Behavior
 
-The CLI uses `DefaultScanConfig()`, which skips:
+The CLI uses `SafeScanConfig()` (since v1.2.0; `DefaultScanConfig()` before), so emoji removal is script-aware: a Zero Width Joiner or variation selector that shapes script text is kept. It skips:
 
 - **Directories:** `.git/`, `vendor/`, `node_modules/` (plus any added via
   `-skip`).
@@ -283,7 +283,7 @@ The CLI is a thin wrapper around the library. The equivalent library calls:
 | CLI flag combination | Library call |
 |----------------------|--------------|
 | `-version` | `runtime/debug.ReadBuildInfo()` (no library call) |
-| (audit only) | `ScanDir(DefaultScanConfig())` |
+| (audit only) | `ScanDir(SafeScanConfig())` |
 | `-fix` | `ScanDir(cfg)` + `WriteFinding(path, f)` |
 | `-sub` | `ScanDir(cfg)` with `cfg.Replacements = DefaultReplacements()` + `WriteFinding(path, f)` |
 | `-sub -normalize` | as `-sub`, plus `cfg.Options.NormalizeWhitespace = true` |
