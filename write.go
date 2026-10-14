@@ -9,9 +9,11 @@ package demojify
 // Original file permissions are preserved.
 //
 // The write happens only if the file still holds f.Original, the content the
-// scan read and cleaned. A file another writer changed after the scan is
-// left alone and WriteFinding returns (false, err) with err wrapping
-// [ErrFileChanged], so a stale [Finding] never overwrites newer content.
+// scan read and cleaned, checked just before the rename. A file another
+// writer changed after the scan is left alone and WriteFinding returns
+// (false, err) with err wrapping [ErrFileChanged], so a stale [Finding] does
+// not overwrite newer content. The check is best-effort: a write landing
+// between it and the rename is not seen (see [ErrFileChanged]).
 //
 // WriteFinding returns true when the file was modified and false when it
 // was already clean. It returns an error for any filesystem failure.

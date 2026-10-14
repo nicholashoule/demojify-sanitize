@@ -53,7 +53,7 @@
 // github.com/nicholashoule/demojify-sanitize/cmd/demojify.
 // Install v1 with:
 //
-//	go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0
+//	go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.2.0
 //
 // See the cmd/demojify package documentation for the full CLI reference,
 // including modes, flags, exit codes, and JSON output.

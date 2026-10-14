@@ -1,7 +1,8 @@
 // Native fuzz tests for the sanitizer paths changed in v1.2.0: the
-// recommended SanitizeSafe path and the AllowedEmojis protection, checked
+// recommended SanitizeSafe path, the AllowedEmojis protection (checked
 // against the pre-v1.2.0 placeholder implementation where that one is
-// correct. Run beyond the seed corpus with, e.g.:
+// correct), and the substitution scan under ScriptAware. Run beyond the
+// seed corpus with, e.g.:
 //
 //	go test -run '^$' -fuzz FuzzSanitizeSafe -fuzztime 30s .
 
@@ -132,6 +133,36 @@ func FuzzAllowedEmojis(f *testing.F) {
 		}
 		if want := legacyDemojifyPreserving(text, list); got != want {
 			t.Fatalf("differs from the legacy implementation: %q allowed %q: got %q, want %q", text, list, got, want)
+		}
+	})
+}
+
+// FuzzReplacerScriptAware: where no mapped key occurs, the substitution scan
+// ScanDir runs for Replacements strips exactly what emoji removal strips,
+// with ScriptAware and without, and its matches are exactly the stripped
+// bytes, so a joiner kept in script text is never reported.
+func FuzzReplacerScriptAware(f *testing.F) {
+	for _, s := range fuzzSeeds {
+		f.Add(s)
+	}
+	repl := map[string]string{"\x00": ""}
+	keys := sortedKeys(repl)
+	f.Fuzz(func(t *testing.T, in string) {
+		if strings.ContainsRune(in, 0) {
+			return
+		}
+		for _, aware := range []bool{false, true} {
+			want := removeEmoji(in, Options{RemoveEmojis: true, ScriptAware: aware})
+			if got := applyReplacer(in, repl, keys, aware); got != want {
+				t.Fatalf("ScriptAware=%v: %q: substitution scan = %q, removal = %q", aware, in, got, want)
+			}
+			reported := 0
+			for _, m := range buildMatches(in, repl, keys, aware) {
+				reported += len(m.Sequence)
+			}
+			if reported != len(in)-len(want) {
+				t.Fatalf("ScriptAware=%v: %q: matches cover %d bytes, removal took %d", aware, in, reported, len(in)-len(want))
+			}
 		}
 	})
 }

@@ -41,7 +41,7 @@ func Replace(text string, replacements map[string]string) string {
 	if len(replacements) == 0 {
 		return Demojify(text)
 	}
-	return applyReplacer(text, replacements, sortedKeys(replacements))
+	return applyReplacer(text, replacements, sortedKeys(replacements), false)
 }
 
 // applyReplacer walks text left to right, substituting mapped keys (tried
@@ -53,9 +53,14 @@ func Replace(text string, replacements map[string]string) string {
 // [ReplaceCount], [ReplaceFile], and the [ScanDir] walk to avoid re-sorting
 // keys in composed operations.
 //
+// With scriptAware (the [ScanDir] walk under [Options.ScriptAware]), an
+// unmapped joiner or variation selector that [keepInScript] calls script
+// text is kept, as [Sanitize] keeps it; mapped keys are substituted either
+// way.
+//
 // The keys parameter must hold the map's non-empty keys sorted by descending
 // byte length (see [sortedKeys]).
-func applyReplacer(text string, replacements map[string]string, keys []string) string {
+func applyReplacer(text string, replacements map[string]string, keys []string, scriptAware bool) string {
 	// Group keys by first byte, preserving longest-first order inside each
 	// bucket, so the per-position candidate loop only sees keys that can
 	// possibly match. ASCII text then skips the key loop entirely for
@@ -88,7 +93,13 @@ func applyReplacer(text string, replacements map[string]string, keys []string) s
 		// byte-for-byte unchanged.
 		if c >= utf8.RuneSelf {
 			if loc := emojiRE.FindStringIndex(text[i:]); len(loc) > 0 && loc[0] == 0 {
-				i += loc[1]
+				end := i + loc[1]
+				if scriptAware {
+					if r, _ := utf8.DecodeRuneInString(text[i:end]); keepInScript(text, i, end, r) {
+						out = append(out, text[i:end]...)
+					}
+				}
+				i = end
 				continue
 			}
 			_, size := utf8.DecodeRuneInString(text[i:])
@@ -164,7 +175,8 @@ func FindAll(text string) []string {
 //
 // ReplaceFile returns an error for any filesystem failure, including one
 // wrapping [ErrFileChanged] (and no write) when another writer changed the
-// file between the read and the write. When count is zero the file is
+// file between the read and the check just before the rename; the check is
+// best-effort (see [ErrFileChanged]). When count is zero the file is
 // unchanged and no write is performed.
 // ReplaceFile is safe for concurrent use provided callers do not share path
 // and the replacements map is not mutated concurrently.
@@ -182,7 +194,7 @@ func ReplaceFile(path string, replacements map[string]string) (count int, err er
 	var keys []string
 	if len(replacements) > 0 {
 		keys = sortedKeys(replacements)
-		cleaned = applyReplacer(original, replacements, keys)
+		cleaned = applyReplacer(original, replacements, keys, false)
 	} else {
 		cleaned = Demojify(original)
 	}
@@ -267,7 +279,7 @@ func ReplaceCount(text string, replacements map[string]string) (string, int) {
 		return cleaned, len(emojiRE.FindAllString(text, -1))
 	}
 	keys := sortedKeys(replacements)
-	cleaned := applyReplacer(text, replacements, keys)
+	cleaned := applyReplacer(text, replacements, keys, false)
 	if cleaned == text {
 		return text, 0
 	}

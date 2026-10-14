@@ -27,7 +27,8 @@ signature stays as it was.
   `ScanConfig.MaxFileBytes`.
 - `ErrFileChanged`, returned (wrapped) by `WriteFinding`, `FixDir`,
   `SanitizeFile` and `ReplaceFile` when a file changed after it was read.
-- Native fuzz tests (`FuzzSanitizeSafe`, `FuzzAllowedEmojis`, with seed
+- Native fuzz tests (`FuzzSanitizeSafe`, `FuzzAllowedEmojis`,
+  `FuzzReplacerScriptAware`, with seed
   corpora), examples (`ExampleSanitizeSafe`, `ExampleSafeOptions`) and
   regression tests for every fix below.
 
@@ -51,17 +52,31 @@ signature stays as it was.
   how the text renders. Emoji, and the joiners inside emoji sequences, are
   removed exactly as before; flags and exit codes are unchanged. The
   library's v1 defaults (`DefaultOptions`, `DefaultScanConfig`) are
-  untouched.
-- `WriteFinding` and `FixDir` (and `SanitizeFile`, `ReplaceFile`) no
-  longer overwrite a file that changed after it was read: just before the
-  rename the target is compared with the content that was cleaned, and a
-  mismatch leaves the file alone and returns an error wrapping
-  `ErrFileChanged`. A `Finding` held across an edit used to replace the edit
-  with content cleaned from the stale copy.
+  untouched. The CLI's documented install version is now v1.2.0.
+- `ScanDir` and `FixDir` honor `Options.ScriptAware` when
+  `ScanConfig.Replacements` is set. The substitution path stripped every
+  unmapped joiner and variation selector, so the CLI's `-sub` still turned
+  the half-form into the conjunct, and `Finding.Matches` listed a joiner the
+  cleaning kept (the CLI reported it as stripped and counted it as a fixed
+  occurrence, under `-fix` too). Substitution now strips exactly what
+  removal with the same `Options` strips, and `Matches` lists only what
+  changes. `Replace`, `ReplaceFile`, `ReplaceCount` and `FindMatchesInFile`
+  take no `Options` and are unchanged; without `ScriptAware` the scan is
+  unchanged too.
+- `WriteFinding` and `FixDir` (and `SanitizeFile`, `ReplaceFile`) detect a
+  file that changed after it was read: just before the rename the target is
+  compared with the content that was cleaned, and a mismatch leaves the file
+  alone and returns an error wrapping `ErrFileChanged`. A `Finding` held
+  across an edit used to replace the edit with content cleaned from the
+  stale copy. The detection is best-effort: a write landing between the
+  comparison and the rename is not seen, since no portable filesystem
+  operation compares and renames atomically.
 - `ScanConfig.MaxFileBytes` bounds the read, not only the size check. The
   check uses the walk entry's own size, which for a symlink is the link's,
   so a symlink to a file over the limit was read whole; a file that grew
-  after the check was too. Both are now skipped.
+  after the check was too. Both are now skipped. The bound covers the
+  512-byte binary sniff as well, so a limit under 512 bytes is never read
+  past by more than one byte.
 
 ### Security
 

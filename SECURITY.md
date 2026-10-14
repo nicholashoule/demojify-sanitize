@@ -36,7 +36,10 @@ processing untrusted input should validate paths before passing them to these
 functions. All write-back functions preserve original file permissions and use
 a same-directory temp-file-plus-rename strategy (atomic on POSIX and
 best-effort replacement on Windows), and refuse to replace a file that changed
-since it was read (`ErrFileChanged`, v1.2.0).
+since it was read (`ErrFileChanged`, v1.2.0). That refusal is best-effort
+stale-write detection, not a lock: the file is compared just before the
+rename, and a write landing between the comparison and the rename is not
+seen.
 
 **Configuration:** a zero `Options` disables every step (stable v1 behavior), so
 a caller that forgets to set it sanitizes nothing. Use `SanitizeSafe`,

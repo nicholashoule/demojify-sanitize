@@ -135,9 +135,10 @@ func Sanitize(text string, opts Options) string {
 // skipped and return (false, nil), matching the behavior of [ScanDir] and
 // [ScanFile].
 //
-// The write happens only if the file still holds what was read: a file
-// another writer changed in between is left alone and SanitizeFile returns
-// (false, err) with err wrapping [ErrFileChanged].
+// The write happens only if the file still holds what was read, checked
+// just before the rename: a file another writer changed in between is left
+// alone and SanitizeFile returns (false, err) with err wrapping
+// [ErrFileChanged]. The check is best-effort (see [ErrFileChanged]).
 //
 // SanitizeFile returns true when the file was modified and false when it
 // was already clean. It returns an error for any filesystem failure.

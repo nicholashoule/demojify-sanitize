@@ -1,11 +1,13 @@
 // Regression tests for the v1.2.0 fixes: the AllowedEmojis placeholder
-// collision, writes over a file changed after it was read, and the bounded
-// read behind ScanConfig.MaxFileBytes.
+// collision, writes over a file changed after it was read, the bounded
+// read behind ScanConfig.MaxFileBytes, and ScriptAware on the Replacements
+// path of ScanDir.
 
 package demojify
 
 import (
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -208,6 +210,115 @@ func TestScanDirCapsSymlinkedLargeFile(t *testing.T) {
 	cfg.MaxFileBytes = 0
 	if findings, err = ScanDir(cfg); err != nil || len(findings) != 2 {
 		t.Errorf("unlimited scan = %d findings, %v; want 2", len(findings), err)
+	}
+}
+
+// countingReader counts the bytes read through it.
+type countingReader struct {
+	r io.Reader
+	n int
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	c.n += n
+	return n, err
+}
+
+// TestReadTextBoundsTheSniff is the regression for the binary sniff reading
+// past a small MaxFileBytes: the sniff read sniffSize bytes before the cap
+// applied, so a 100-byte file under a 10-byte limit was read whole before
+// being skipped. The whole read, sniff included, is now at most limit+1.
+func TestReadTextBoundsTheSniff(t *testing.T) {
+	tests := []struct {
+		name     string
+		in       string
+		limit    int64
+		wantSkip bool
+	}{
+		{"small limit, far over", strings.Repeat("x", 100), 10, true},
+		{"small limit, one over", strings.Repeat("x", 11), 10, true},
+		{"small limit, exactly at it", strings.Repeat("x", 10), 10, false},
+		{"limit just under the sniff", strings.Repeat("x", 4096), sniffSize - 1, true},
+		{"limit just over the sniff", strings.Repeat("x", 4096), sniffSize + 1, true},
+		{"large limit, under it", strings.Repeat("x", 4096), 1 << 20, false},
+		{"binary within the limit", "a\x00b", 10, true},
+		{"no limit", strings.Repeat("x", 4096), 0, false},
+		{"empty", "", 10, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &countingReader{r: strings.NewReader(tt.in)}
+			data, skip, err := readText(r, tt.limit)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if skip != tt.wantSkip {
+				t.Fatalf("skip = %v, want %v", skip, tt.wantSkip)
+			}
+			if !skip && string(data) != tt.in {
+				t.Errorf("data = %d bytes, want the %d-byte input", len(data), len(tt.in))
+			}
+			if skip && data != nil {
+				t.Errorf("data = %d bytes on a skip, want nil", len(data))
+			}
+			if tt.limit > 0 && int64(r.n) > tt.limit+1 {
+				t.Errorf("read %d bytes, want at most limit+1 = %d", r.n, tt.limit+1)
+			}
+		})
+	}
+	if _, _, err := readText(errReader{}, 8); err == nil {
+		t.Error("readText(failing reader) = nil error")
+	}
+}
+
+// TestScanDirReplacementsKeepScriptJoiners is the regression for the
+// Replacements path ignoring Options.ScriptAware: the demojify CLI's -sub
+// deleted the joiner in a Devanagari half-form (turning it into the
+// conjunct) and reported it as an occurrence, though SafeScanConfig is
+// script-aware. Without ScriptAware the joiner still goes, as in v1.
+func TestScanDirReplacementsKeepScriptJoiners(t *testing.T) {
+	const halfForm = "\u0915\u094d\u200d\u0937" // ka + virama + ZWJ + ssa
+	const family = "\U0001F468\u200d\U0001F469\u200d\U0001F467"
+	in := halfForm + " ok \u2705 " + family + " done\n"
+
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "a.md"), []byte(in), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name        string
+		cfg         ScanConfig
+		wantCleaned string
+		wantMatches int
+	}{
+		{"SafeScanConfig keeps the script joiner", SafeScanConfig(),
+			halfForm + " ok [PASS] done\n", 6},
+		{"DefaultScanConfig strips it, as in v1", DefaultScanConfig(),
+			"\u0915\u094d\u0937 ok [PASS] done\n", 7},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := tt.cfg
+			cfg.Root = root
+			cfg.Replacements = DefaultReplacements()
+			cfg.CollectMatches = true
+			findings, err := ScanDir(cfg)
+			if err != nil || len(findings) != 1 {
+				t.Fatalf("ScanDir = %d findings, %v; want 1", len(findings), err)
+			}
+			f := findings[0]
+			if f.Cleaned != tt.wantCleaned {
+				t.Errorf("Cleaned = %+q, want %+q", f.Cleaned, tt.wantCleaned)
+			}
+			if len(f.Matches) != tt.wantMatches {
+				t.Errorf("Matches = %d, want %d: %+v", len(f.Matches), tt.wantMatches, f.Matches)
+			}
+		})
+	}
+	// Replace takes no Options and is not script-aware; that is unchanged.
+	if got := Replace(halfForm, DefaultReplacements()); got != "\u0915\u094d\u0937" {
+		t.Errorf("Replace(half-form) = %+q, want the joiner stripped", got)
 	}
 }
 

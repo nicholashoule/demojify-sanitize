@@ -5,11 +5,11 @@
 //
 // Install demojify:
 //
-//	go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0
+//	go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.2.0
 //
 // Or run without installing:
 //
-//	go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0 [flags]
+//	go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.2.0 [flags]
 //
 // # CLI Subcommands
 //
@@ -81,7 +81,9 @@
 //
 // # CLI Default Scan Behavior
 //
-// The CLI uses [demojify.DefaultScanConfig], which skips:
+// The CLI uses [demojify.SafeScanConfig], so emoji removal is script-aware
+// in every mode, -sub included: a Zero Width Joiner or variation selector
+// that shapes script text is kept and not reported. It skips:
 //
 //   - Directories: .git/, vendor/, node_modules/ (plus any added via -skip).
 //   - Suffixes: *_test.go.
@@ -92,7 +94,8 @@
 //
 // All other file types are scanned unless -exts restricts them. Any
 // remaining binary file is detected by a NUL byte in the first 512 bytes
-// and skipped, and files larger than 1 MiB are skipped.
+// and skipped, and files larger than 1 MiB are skipped without being read
+// past the limit.
 package main
 
 import (
@@ -186,7 +189,8 @@ func main() {
 
 	// SafeScanConfig, the recommended preset: emoji removal is ScriptAware,
 	// so a Zero Width Joiner that shapes script text (a Devanagari
-	// half-form, for one) is kept rather than stripped by -fix.
+	// half-form, for one) is kept rather than stripped by -fix or -sub
+	// (ScanConfig.Replacements honors ScriptAware).
 	cfg := demojify.SafeScanConfig()
 	cfg.Root = *root
 	cfg.CollectMatches = true
@@ -323,7 +327,7 @@ func main() {
 
 // cliVersion returns the module version reported by the Go build system.
 // A semver tag (e.g. "v1.0.0") is embedded only when the binary is installed
-// from a published tagged release (e.g. "go install ...@v1.1.0"). Builds from
+// from a published tagged release (e.g. "go install ...@v1.2.0"). Builds from
 // local source -- whether via "go run", "go build", or "go install" without a
 // version suffix -- have the version set to "(devel)" by the Go toolchain.
 // The empty-string fallback is a defensive guard for unusual non-module build

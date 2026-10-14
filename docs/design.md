@@ -126,8 +126,9 @@ approach and does not weaken the library's error-handling contract.
 `ScanConfig` provides three exemption axes -- directories (`SkipDirs`), files
 (`ExemptFiles`), and suffixes (`ExemptSuffixes`) -- plus a binary/minified
 denylist (`SkipExtensions`), an extension allowlist (`Extensions`), a size
-guard (`MaxFileBytes`), an optional `Replacements` map (uses `Replace` instead of
-`Sanitize` per file when set), and a `CollectMatches` flag (populates
+guard (`MaxFileBytes`), an optional `Replacements` map (substitutes as `Replace`
+does instead of running `Sanitize` per file when set, still honoring
+`Options.ScriptAware`), and a `CollectMatches` flag (populates
 `Finding.Matches` with per-occurrence detail). `DefaultScanConfig` returns
 safe defaults for a typical Go module repo. The scanner reuses the same
 `Options` struct and `Sanitize` pipeline that callers already know, keeping
@@ -194,6 +195,21 @@ residual, leaving a stray space or no-op character. Trying keys in descending
 byte-length order at each position (the same greedy walk used by
 `FindAllMapped`) ensures multi-codepoint sequences are always consumed
 atomically.
+
+**Why the scanner's substitution honors `ScriptAware` and `Replace` does not:**
+`Replace`, `ReplaceFile` and `ReplaceCount` take no `Options`; their stable v1
+signatures keep the default rules, so they strip every unmapped joiner and
+variation selector. `ScanConfig` does carry `Options`, and `SafeScanConfig`
+promises script-aware removal. The `Replacements` path of the walk once
+ignored it, so the CLI's `-sub` turned a Devanagari half-form into the
+conjunct, and `Finding.Matches` listed a joiner the cleaning had kept.
+Under `Options.ScriptAware` the walk's strip step now applies the same
+`keepInScript` rule as `Sanitize`, and the match builder skips what that rule
+keeps, so `Finding.Matches` lists exactly what was substituted or removed.
+Mapped keys are substituted either way; no `DefaultReplacements()` key is a
+bare joiner or selector. `FuzzReplacerScriptAware` checks that, where no
+mapped key occurs, the scan strips exactly what emoji removal with the same
+setting strips, and reports exactly those bytes.
 
 **Why `DefaultReplacements()` returns a copy:**
 A shared global map is not safe for concurrent mutation. Returning a fresh
@@ -276,9 +292,12 @@ components or symlinks, and a file changed since the scan is skipped with
 
 `ScanConfig.MaxFileBytes` bounds the read itself, not only the size check: the
 check reads the walk entry's own size, which for a symlink is the link's, so a
-symlink to a large file used to pass it and be read whole. Zero (or negative)
-still means no limit, the stable v1 meaning; `DefaultScanConfig` and
-`SafeScanConfig` set `DefaultMaxFileBytes` (1 MiB).
+symlink to a large file used to pass it and be read whole. The bound covers
+the binary sniff as well: with a limit under the 512-byte sniff window the
+sniff itself shrinks, so the whole read is at most the limit plus the one
+byte that shows the file is over it. Zero (or negative) still means no limit,
+the stable v1 meaning; `DefaultScanConfig` and `SafeScanConfig` set
+`DefaultMaxFileBytes` (1 MiB).
 
 ## Scope boundaries
 

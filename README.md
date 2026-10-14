@@ -20,7 +20,7 @@ A dependency-free Go library for auditing and detecting emoji clutter, removing 
 - **Streaming** -- `SanitizeReader` processes `io.Reader` line by line; supports lines up to 1 MiB
 - **JSON-aware** -- `SanitizeJSON` cleans string values only; preserves keys, numbers, booleans, null, and numeric precision
 - **Directory scanner** -- `ScanDir` / `ScanDirContext` walk an entire tree and return per-file findings; cancellation supported
-- **Safer writes** -- `SanitizeFile`, `ReplaceFile`, `WriteFinding`, and `FixDir` use a same-directory temp file and rename while preserving permissions, and never overwrite a file changed since it was read (`ErrFileChanged`); replacement is atomic on POSIX and best-effort on Windows
+- **Safer writes** -- `SanitizeFile`, `ReplaceFile`, `WriteFinding`, and `FixDir` use a same-directory temp file and rename while preserving permissions, and detect a file changed since it was read (`ErrFileChanged`; best-effort, checked just before the rename); replacement is atomic on POSIX and best-effort on Windows
 - **CLI** -- `cmd/demojify` supports audit, strip (`-fix`), substitute (`-sub`), normalize, quiet mode, extension filter, and directory skip
 - **Zero external dependencies** -- pure stdlib; no `go.sum` required
 
@@ -111,7 +111,10 @@ fmt.Printf("fixed %d file(s)\n", fixed)
 
 A file edited after the scan read it is left alone: the error wraps
 `ErrFileChanged` (from v1.2.0; `WriteFinding`, `SanitizeFile` and
-`ReplaceFile` check the same way).
+`ReplaceFile` check the same way). The check runs just before the rename,
+so it catches an edit made any time up to then; an edit landing between the
+check and the rename is not seen, since no portable filesystem operation
+compares and renames atomically ([docs/design.md](docs/design.md)).
 
 ### Substitution -- replace emoji with meaningful text
 
@@ -167,7 +170,7 @@ Full signatures and doc comments are on
 |----------|---------|
 | `SanitizeSafe(text) string` | Recommended: `Sanitize` with `SafeOptions()` (v1.2.0) |
 | `Sanitize(text, opts) string` | Configurable pipeline: emoji removal then whitespace normalization |
-| `SanitizeFile(path, opts) (bool, error)` | Sanitize through temp-file replacement; no write when clean, `ErrFileChanged` when edited since the read |
+| `SanitizeFile(path, opts) (bool, error)` | Sanitize through temp-file replacement; no write when clean, `ErrFileChanged` when edited since the read (best-effort) |
 | `Demojify(text) string` | Strip recognized emoji-related codepoints |
 | `ContainsEmoji(text) bool` | Detect emoji presence |
 | `ContainsEmojiWith(text, opts) bool` | Detect what `Sanitize` with opts would remove (honors `ScriptAware`, `AllowedRanges`, `AllowedEmojis`); a zero `Options` answers as `ContainsEmoji` |
@@ -190,7 +193,7 @@ Full signatures and doc comments are on
 | Function | Purpose |
 |----------|---------|
 | `Replace(text, repl) string` | Map emoji to text equivalents; strip unmapped remainder |
-| `ReplaceFile(path, repl) (int, error)` | Temp-file replacement; no write when clean |
+| `ReplaceFile(path, repl) (int, error)` | Temp-file replacement; no write when clean, `ErrFileChanged` when edited since the read (best-effort) |
 | `ReplaceCount(text, repl) (string, int)` | Replace and return substitution count |
 | `FindAll(text) []string` | Distinct emoji sequences in text |
 | `FindAllMapped(text, repl) []string` | Mapped keys found in text |
@@ -204,8 +207,8 @@ Full signatures and doc comments are on
 | `ScanDirContext(ctx, cfg) ([]Finding, error)` | Context-aware scan with cancellation support |
 | `ScanFile(path, opts) (*Finding, error)` | Check a single file |
 | `FindMatchesInFile(path, repl) ([]Match, error)` | Per-occurrence match detail (line, column, context) |
-| `WriteFinding(path, f) (bool, error)` | Temp-file write-back; `ErrFileChanged` (no write) when the file changed since the scan |
-| `FixDir(root, cfg) (fixed, clean int, err error)` | Scan and fix an entire directory tree in one call |
+| `WriteFinding(path, f) (bool, error)` | Temp-file write-back; `ErrFileChanged` (no write) when the file changed since the scan (best-effort) |
+| `FixDir(root, cfg) (fixed, clean int, err error)` | Scan and fix an entire directory tree in one call; a file changed since the scan is skipped with `ErrFileChanged` (best-effort) |
 | `SafeScanConfig()` | Recommended: `DefaultScanConfig()` with `SafeOptions()` (v1.2.0) |
 | `ScanConfig` / `DefaultScanConfig()` | Scanner configuration (root, skip dirs, extensions, `MaxFileBytes` = `DefaultMaxFileBytes`, etc.) |
 | `Finding` | Path, HasEmoji, Original, Cleaned, Matches |

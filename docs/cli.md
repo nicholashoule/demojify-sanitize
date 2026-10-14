@@ -17,13 +17,13 @@ go build -o demojify ./cmd/demojify/
 Or install directly:
 
 ```sh
-go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.2.0
 ```
 
 Or run without installing:
 
 ```sh
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0 [flags]
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.2.0 [flags]
 ```
 
 ## Synopsis
@@ -101,6 +101,11 @@ are stripped. Runs of adjacent identical emoji that map to the same token
 collapse to a single token; literal text that happens to equal a token is
 never altered.
 
+Like `-fix`, `-sub` is script-aware (since v1.2.0): a Zero Width Joiner or
+variation selector that shapes script text, such as the joiner in a
+Devanagari half-form, is kept and not reported. One inside an emoji
+sequence is stripped with the emoji.
+
 ### Normalize (`-normalize`)
 
 Collapse redundant whitespace in every scanned file. Implies `-fix`.
@@ -131,7 +136,7 @@ demojify -version
 
 The version is read from the Go build info. A semver tag (e.g. `v1.0.0`)
 is embedded only when the binary is installed from a published tagged
-release (`go install ...@v1.1.0`). Builds from local source -- whether via
+release (`go install ...@v1.2.0`). Builds from local source -- whether via
 `go run`, `go build`, or `go install` without a version suffix -- report
 `(devel)`.
 
@@ -145,7 +150,7 @@ release (`go install ...@v1.1.0`). Builds from local source -- whether via
 
 ## Default Scan Behavior
 
-The CLI uses `SafeScanConfig()` (since v1.2.0; `DefaultScanConfig()` before), so emoji removal is script-aware: a Zero Width Joiner or variation selector that shapes script text is kept. It skips:
+The CLI uses `SafeScanConfig()` (since v1.2.0; `DefaultScanConfig()` before), so emoji removal is script-aware in every mode, `-sub` included: a Zero Width Joiner or variation selector that shapes script text is kept and is not reported. It skips:
 
 - **Directories:** `.git/`, `vendor/`, `node_modules/` (plus any added via
   `-skip`).
@@ -165,7 +170,9 @@ The CLI uses `SafeScanConfig()` (since v1.2.0; `DefaultScanConfig()` before), so
 
 All other file types are scanned unless `-exts` restricts them. Remaining
 binary files are auto-detected (NUL byte sniff in the first 512 bytes) and
-skipped. Files larger than 1 MiB are skipped.
+skipped. Files larger than 1 MiB are skipped, and the read itself stops at
+the limit, so a symlink to a larger file (whose own size passes the check)
+or a file that grows during the scan is skipped without being read whole.
 
 ## Text Output
 
@@ -289,6 +296,11 @@ The CLI is a thin wrapper around the library. The equivalent library calls:
 | `-sub -normalize` | as `-sub`, plus `cfg.Options.NormalizeWhitespace = true` |
 | `-skip dist,build` | `cfg.SkipDirs = append(cfg.SkipDirs, "dist/", "build/")` |
 | `-json` | Same as audit; output wrapped in JSON envelope with `Finding`/`Match` fields |
+
+In every row `cfg` starts from `SafeScanConfig()`. `ScanConfig.Replacements`
+honors `Options.ScriptAware`, so the library calls behind `-sub` keep script
+joiners exactly as `-fix` does; `Replace` and `ReplaceFile`, which take no
+`Options`, do not.
 
 ## See Also
 

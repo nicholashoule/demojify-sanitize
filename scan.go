@@ -7,7 +7,10 @@
 //   - When NormalizeWhitespace is off, cleanup touches only changed lines
 //     (tidyChangedLines) and CRLF is restored only for pure-CRLF files.
 //   - SkipExtensions and MaxFileBytes are checked before the file is opened;
-//     binary detection is a NUL sniff of the first 512 bytes (isBinary).
+//     binary detection is a NUL sniff of the first 512 bytes (isBinary), and
+//     readText bounds the whole read, sniff included, by MaxFileBytes.
+//   - Under Options.ScriptAware the Replacements path keeps script joiners
+//     too: applyReplacer and buildMatches both consult keepInScript.
 //   - Finding.Path is slash-separated and relative to Root for ScanDir but
 //     is the path argument as given for ScanFile.
 //
@@ -17,7 +20,6 @@ package demojify
 
 import (
 	"context"
-	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -72,12 +74,12 @@ type ScanConfig struct {
 
 	// MaxFileBytes is the maximum file size in bytes that ScanDir will read.
 	// Files larger than this value are silently skipped; the read itself is
-	// bounded too, so a file that grows past the limit after its size is
-	// checked is skipped rather than read whole. A value of zero (or a
-	// negative value) disables the limit and all files are read regardless
-	// of size; that is the stable v1 behavior, so prefer
-	// [DefaultScanConfig] or [SafeScanConfig], which set it to
-	// [DefaultMaxFileBytes] (1 MiB).
+	// bounded too (at most MaxFileBytes+1 bytes, binary sniff included), so
+	// a file that grows past the limit after its size is checked is skipped
+	// rather than read whole. A value of zero (or a negative value) disables
+	// the limit and all files are read regardless of size; that is the
+	// stable v1 behavior, so prefer [DefaultScanConfig] or [SafeScanConfig],
+	// which set it to [DefaultMaxFileBytes] (1 MiB).
 	MaxFileBytes int64
 
 	// Options configures the sanitization pipeline applied to each file's
@@ -92,12 +94,15 @@ type ScanConfig struct {
 	//
 	// NOTE: When Replacements is non-empty, [Options.RemoveEmojis],
 	// [Options.AllowedRanges], and [Options.AllowedEmojis] are ignored
-	// because [Replace] always strips residual unmapped emoji. Only
-	// [Options.NormalizeWhitespace] is honored after substitution; when
-	// enabled it runs unconditionally on every scanned file. Replacement
-	// values are emitted verbatim, so to preserve specific codepoints
-	// during replacement-based scans, add them to the Replacements map
-	// with identity values (key == value).
+	// because residual unmapped emoji are always stripped, as by [Replace].
+	// [Options.ScriptAware] is honored: an unmapped Zero Width Joiner or
+	// variation selector that shapes script text is kept, exactly as
+	// [Sanitize] keeps it ([Replace] itself takes no Options and is not
+	// script-aware). [Options.NormalizeWhitespace] is honored after
+	// substitution; when enabled it runs unconditionally on every scanned
+	// file. Replacement values are emitted verbatim, so to preserve specific
+	// codepoints during replacement-based scans, add them to the
+	// Replacements map with identity values (key == value).
 	Replacements map[string]string
 
 	// CollectMatches controls whether [ScanDir] populates [Finding.Matches] for
@@ -256,9 +261,10 @@ type Finding struct {
 
 // ScanDir walks the directory tree rooted at cfg.Root and returns a [Finding]
 // for every file whose content would change after cleaning. When
-// [ScanConfig.Replacements] is non-empty, each file is cleaned with [Replace]
-// (mapped-sequence substitution plus stripping of residual unmapped emoji);
-// otherwise emoji removal is applied per cfg.Options.
+// [ScanConfig.Replacements] is non-empty, each file is cleaned as by [Replace]
+// (mapped-sequence substitution plus stripping of residual unmapped emoji,
+// script-aware under [Options.ScriptAware]); otherwise emoji removal is
+// applied per cfg.Options.
 //
 // When [Options.NormalizeWhitespace] is enabled, whitespace normalization
 // is applied unconditionally to every scanned file, regardless of whether
@@ -400,50 +406,22 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 			}
 		}
 
-		// Two-phase read: sniff the first 512 bytes for a NUL byte
-		// to detect binary files before committing to a full read.
-		// This avoids unnecessary I/O and allocations for large
-		// binary files, especially when MaxFileBytes is 0 (disabled).
+		// Sniff for a binary file before committing to a full read, and
+		// bound the whole read, sniff included, by MaxFileBytes: a file
+		// that grew past the limit since the size check (or a symlink,
+		// whose checked size is the link's own) is skipped, never read
+		// whole.
 		f, openErr := os.Open(path)
 		if openErr != nil {
 			return openErr
 		}
-		var sniff [sniffSize]byte
-		n, sniffErr := io.ReadFull(f, sniff[:])
-		if sniffErr != nil && sniffErr != io.ErrUnexpectedEOF && sniffErr != io.EOF {
-			_ = f.Close()
-			return sniffErr
-		}
-		if isBinary(sniff[:n]) {
-			_ = f.Close()
-			return nil
-		}
-		// Text file -- read the remainder and combine. With a limit set,
-		// the read is bounded by it: a file that grew past the limit
-		// since the size check is skipped, never read whole.
-		var rest []byte
-		var readErr error
-		if cfg.MaxFileBytes > 0 {
-			var over bool
-			rest, over, readErr = readCapped(f, cfg.MaxFileBytes-int64(n))
-			if readErr == nil && over {
-				_ = f.Close()
-				return nil
-			}
-		} else {
-			rest, readErr = io.ReadAll(f)
-		}
+		data, skip, readErr := readText(f, cfg.MaxFileBytes)
 		_ = f.Close()
 		if readErr != nil {
 			return readErr
 		}
-		var data []byte
-		if len(rest) > 0 {
-			data = make([]byte, n+len(rest))
-			copy(data, sniff[:n])
-			copy(data[n:], rest)
-		} else {
-			data = sniff[:n]
+		if skip {
+			return nil
 		}
 		original := string(data)
 
@@ -457,7 +435,7 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 		var cleaned string
 		switch {
 		case len(replKeys) > 0:
-			cleaned = applyReplacer(original, cfg.Replacements, replKeys)
+			cleaned = applyReplacer(original, cfg.Replacements, replKeys, cfg.Options.ScriptAware)
 		case cfg.Options.RemoveEmojis:
 			cleaned = removeEmoji(original, cfg.Options)
 		default:
@@ -505,7 +483,7 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 				Cleaned:  cleaned,
 			}
 			if cfg.CollectMatches {
-				f.Matches = buildMatches(original, cfg.Replacements, replKeys)
+				f.Matches = buildMatches(original, cfg.Replacements, replKeys, cfg.Options.ScriptAware)
 			}
 			findings = append(findings, f)
 		}
@@ -527,10 +505,13 @@ func scanDirCounted(ctx context.Context, cfg ScanConfig) ([]Finding, int, error)
 // byte-column within that line, the full line as context, and the mapped
 // replacement string (empty if not in replacements).
 //
+// With scriptAware, a joiner or variation selector that [keepInScript] calls
+// script text is not a match, since the cleaning step keeps it.
+//
 // The keys parameter must be the replacement map keys sorted by descending
 // byte length (longest first). Callers that have already sorted keys (e.g.,
 // [ScanDir]) pass them directly to avoid re-sorting per file.
-func buildMatches(text string, replacements map[string]string, keys []string) []Match {
+func buildMatches(text string, replacements map[string]string, keys []string, scriptAware bool) []Match {
 	var byFirst [256][]string
 	for _, k := range keys {
 		byFirst[k[0]] = append(byFirst[k[0]], k)
@@ -568,6 +549,14 @@ func buildMatches(text string, replacements map[string]string, keys []string) []
 			// No replacement key matched; fall back to emojiRE for unmapped emoji.
 			if loc := emojiRE.FindStringIndex(line[i:]); len(loc) > 0 && loc[0] == 0 {
 				seq := line[i : i+loc[1]]
+				// A line break is never an emoji base, so judging a joiner
+				// within its line is the same as judging it in the text.
+				if scriptAware {
+					if r, _ := utf8.DecodeRuneInString(seq); keepInScript(line, i, i+loc[1], r) {
+						i += loc[1]
+						continue
+					}
+				}
 				matches = append(matches, Match{
 					Sequence: seq,
 
@@ -645,5 +634,5 @@ func FindMatchesInFile(path string, replacements map[string]string) ([]Match, er
 	if isBinary(data) {
 		return nil, nil
 	}
-	return buildMatches(string(data), replacements, sortedKeys(replacements)), nil
+	return buildMatches(string(data), replacements, sortedKeys(replacements), false), nil
 }
