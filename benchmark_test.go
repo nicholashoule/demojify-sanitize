@@ -16,7 +16,7 @@ import (
 // benchInput builds a string with n emoji interspersed in plain text.
 func benchInput(n int) string {
 	var b strings.Builder
-	for i := 0; i < n; i++ {
+	for range n {
 		b.WriteString("build step ")
 		b.WriteString("\u2705 passed, deploy \U0001F680 done, check \U0001F4CA report\n")
 	}
@@ -101,24 +101,21 @@ var largeSizes = []struct {
 
 func BenchmarkDemojify(b *testing.B) {
 	input := benchInput(100)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		demojify.Demojify(input)
 	}
 }
 
 func BenchmarkContainsEmoji(b *testing.B) {
 	input := benchInput(100)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		demojify.ContainsEmoji(input)
 	}
 }
 
 func BenchmarkNormalize(b *testing.B) {
 	input := strings.Repeat("Hello   World  \n\n\n\nMore text  here\n", 100)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		demojify.Normalize(input)
 	}
 }
@@ -126,8 +123,7 @@ func BenchmarkNormalize(b *testing.B) {
 func BenchmarkReplace(b *testing.B) {
 	input := benchInput(100)
 	repl := demojify.DefaultReplacements()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		demojify.Replace(input, repl)
 	}
 }
@@ -135,8 +131,7 @@ func BenchmarkReplace(b *testing.B) {
 func BenchmarkReplaceCount(b *testing.B) {
 	input := benchInput(100)
 	repl := demojify.DefaultReplacements()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		demojify.ReplaceCount(input, repl)
 	}
 }
@@ -144,8 +139,7 @@ func BenchmarkReplaceCount(b *testing.B) {
 func BenchmarkSanitize(b *testing.B) {
 	input := benchInput(100)
 	opts := demojify.DefaultOptions()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		demojify.Sanitize(input, opts)
 	}
 }
@@ -153,7 +147,7 @@ func BenchmarkSanitize(b *testing.B) {
 func BenchmarkScanDir(b *testing.B) {
 	dir := b.TempDir()
 	// Create 10 files with emoji content.
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		name := "file" + strings.Repeat("x", i) + ".md"
 		content := benchInput(10)
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
@@ -163,8 +157,7 @@ func BenchmarkScanDir(b *testing.B) {
 	cfg := demojify.DefaultScanConfig()
 	cfg.Root = dir
 	cfg.ExemptSuffixes = nil // don't skip anything
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, err := demojify.ScanDir(cfg)
 		if err != nil {
 			b.Fatal(err)
@@ -174,8 +167,7 @@ func BenchmarkScanDir(b *testing.B) {
 
 func BenchmarkFindAll(b *testing.B) {
 	input := benchInput(100)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		demojify.FindAll(input)
 	}
 }
@@ -192,8 +184,7 @@ func BenchmarkLargeDemojify(b *testing.B) {
 		b.Run(sz.name, func(b *testing.B) {
 			b.SetBytes(int64(len(input)))
 			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				demojify.Demojify(input)
 			}
 		})
@@ -206,8 +197,7 @@ func BenchmarkLargeContainsEmoji(b *testing.B) {
 		b.Run(sz.name, func(b *testing.B) {
 			b.SetBytes(int64(len(input)))
 			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				demojify.ContainsEmoji(input)
 			}
 		})
@@ -220,8 +210,7 @@ func BenchmarkLargeNormalize(b *testing.B) {
 		b.Run(sz.name, func(b *testing.B) {
 			b.SetBytes(int64(len(input)))
 			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				demojify.Normalize(input)
 			}
 		})
@@ -235,8 +224,7 @@ func BenchmarkLargeReplace(b *testing.B) {
 		b.Run(sz.name, func(b *testing.B) {
 			b.SetBytes(int64(len(input)))
 			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				demojify.Replace(input, repl)
 			}
 		})
@@ -250,8 +238,7 @@ func BenchmarkLargeReplaceCount(b *testing.B) {
 		b.Run(sz.name, func(b *testing.B) {
 			b.SetBytes(int64(len(input)))
 			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				demojify.ReplaceCount(input, repl)
 			}
 		})
@@ -265,8 +252,7 @@ func BenchmarkLargeSanitize(b *testing.B) {
 		b.Run(sz.name, func(b *testing.B) {
 			b.SetBytes(int64(len(input)))
 			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				demojify.Sanitize(input, opts)
 			}
 		})
@@ -279,8 +265,7 @@ func BenchmarkLargeFindAll(b *testing.B) {
 		b.Run(sz.name, func(b *testing.B) {
 			b.SetBytes(int64(len(input)))
 			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				demojify.FindAll(input)
 			}
 		})
@@ -294,8 +279,7 @@ func BenchmarkLargeFindAllMapped(b *testing.B) {
 		b.Run(sz.name, func(b *testing.B) {
 			b.SetBytes(int64(len(input)))
 			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				demojify.FindAllMapped(input, repl)
 			}
 		})
@@ -313,7 +297,7 @@ func BenchmarkLargeScanDir(b *testing.B) {
 			const fileCount = 5
 			perFile := sz.bytes / fileCount
 			totalWritten := 0
-			for i := 0; i < fileCount; i++ {
+			for i := range fileCount {
 				content := buildLargeMarkdown(perFile)
 				totalWritten += len(content)
 				name := fmt.Sprintf("doc_%02d.md", i)
@@ -326,8 +310,7 @@ func BenchmarkLargeScanDir(b *testing.B) {
 			cfg.ExemptSuffixes = nil
 			b.SetBytes(int64(totalWritten))
 			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				if _, err := demojify.ScanDir(cfg); err != nil {
 					b.Fatal(err)
 				}
@@ -349,8 +332,7 @@ func BenchmarkLargeScanFile(b *testing.B) {
 			}
 			b.SetBytes(int64(len(content)))
 			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				if _, err := demojify.ScanFile(path, opts); err != nil {
 					b.Fatal(err)
 				}
@@ -373,8 +355,7 @@ func BenchmarkLargeFindMatchesInFile(b *testing.B) {
 			}
 			b.SetBytes(int64(len(content)))
 			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				if _, err := demojify.FindMatchesInFile(path, repl); err != nil {
 					b.Fatal(err)
 				}
@@ -395,8 +376,7 @@ func BenchmarkLargeSanitizeFile(b *testing.B) {
 			path := filepath.Join(dir, "large.md")
 			b.SetBytes(int64(len(content)))
 			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				// Re-write the dirty file before each sanitize pass.
 				if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 					b.Fatalf("write: %v", err)
@@ -420,8 +400,7 @@ func BenchmarkLargeReplaceFile(b *testing.B) {
 			path := filepath.Join(dir, "large.md")
 			b.SetBytes(int64(len(content)))
 			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 					b.Fatalf("write: %v", err)
 				}

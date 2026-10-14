@@ -255,6 +255,12 @@ func main() {
 	fmt.Printf("  ContainsEmoji(hindi):              %v\n", demojify.ContainsEmoji(hindi))
 	fmt.Printf("  ContainsEmojiWith(hindi):          %v\n", demojify.ContainsEmojiWith(hindi, aware))
 
+	// ---- 21. The recommended path (v1.2.0) -- SanitizeSafe / SafeOptions ----
+	fmt.Println("\n=== SanitizeSafe ===")
+	fmt.Printf("  SanitizeSafe keeps the word whole: %v\n", demojify.SanitizeSafe(mixed) == hindi+" ")
+	fmt.Printf("  zero Options passes through:       %v\n", demojify.Sanitize(mixed, demojify.Options{}) == mixed)
+	fmt.Printf("  SafeScanConfig is script-aware:    %v\n", demojify.SafeScanConfig().Options.ScriptAware)
+
 	fmt.Println("\n[PASS] driver completed successfully")
 }
 

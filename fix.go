@@ -41,9 +41,11 @@ import (
 // write errors. In the partial-failure case each skipped file produces a
 // separate error (joined via [errors.Join]) that includes the file path and
 // the underlying cause; callers can inspect individual errors with
-// [errors.As] or [errors.Is]. The fixed and clean counts are still valid;
-// callers that need finer control should use [ScanDir] plus [WriteFinding]
-// directly.
+// [errors.As] or [errors.Is]. A file another writer changed after the scan
+// read it is skipped, not overwritten, and its error wraps [ErrFileChanged];
+// as in [WriteFinding], the check is best-effort (see [ErrFileChanged]). The
+// fixed and clean counts are still valid; callers that need finer control
+// should use [ScanDir] plus [WriteFinding] directly.
 func FixDir(root string, cfg ScanConfig) (fixed, clean int, err error) { //nolint:gocritic // hugeParam: ScanConfig is passed by value per public API contract
 	cfg.Root = root
 

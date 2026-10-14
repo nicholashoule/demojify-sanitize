@@ -66,7 +66,8 @@ Two of the matched codepoints also belong to ordinary written language:
 
 By default both are removed wherever they appear, and `ContainsEmoji`
 reports them, so Indic text with a joiner reads as containing emoji. With
-`Options.ScriptAware` (and `ContainsEmojiWith`):
+`Options.ScriptAware` (and `ContainsEmojiWith`), which `SafeOptions`,
+`SanitizeSafe` and `SafeScanConfig` turn on (v1.2.0):
 
 | Codepoint | Removed when | Kept when |
 |---|---|---|
@@ -79,9 +80,10 @@ ScriptAware never removes anything the default keeps: its output differs from
 the default's only by joiners and variation selectors it kept, and a test
 checks that over 20,000 random strings. It is opt-in, so the default behavior
 of every function is unchanged. It applies to `Sanitize` and the functions
-built on it (including the scanner's `Options`), and to `ContainsEmojiWith`;
-`Demojify`, `ContainsEmoji`, `CountEmoji` and the `Replace` family keep the
-default rules.
+built on it, to the scanner through `ScanConfig.Options` (with
+`ScanConfig.Replacements` set too, since v1.2.0), and to `ContainsEmojiWith`;
+`Demojify`, `ContainsEmoji`, `CountEmoji` and the `Replace` family, which
+take no `Options`, keep the default rules.
 
 ## What is intentionally NOT removed
 
@@ -136,6 +138,12 @@ needed.
 
 The `-sub` flag in the CLI does exactly this: substitutes known emoji with text
 tokens, then removes any residual unmapped codepoints.
+
+With `Options.ScriptAware` (on in `SafeScanConfig`, and so in the CLI),
+`ScanConfig.Replacements` strips only what script-aware removal would: an
+unmapped joiner or variation selector that shapes script text is kept, and
+`Finding.Matches` does not list it. `Replace` and `ReplaceFile` take no
+`Options` and strip it as by default.
 
 `DefaultReplacements()` covers 280 codepoint sequences across 24 categories:
 

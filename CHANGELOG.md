@@ -5,6 +5,90 @@ Notable changes are documented following [Keep a Changelog] and
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-13
+
+Minor: additive API plus fixes. Nothing an existing caller relies on
+changes: every v1 default (a zero `Options` passing text through,
+`DefaultOptions`, `DefaultScanConfig` and `ContainsEmoji` without
+`ScriptAware`, `MaxFileBytes` zero meaning no limit) and every exported
+signature stays as it was.
+
+### Added
+
+- `SafeOptions()`: the recommended configuration, emoji removal with
+  `ScriptAware` and whitespace left alone, so it is safe for any text,
+  including JSON string values and source code. Add `NormalizeWhitespace`
+  or allow lists on the returned value as needed.
+- `SanitizeSafe(text)`: `Sanitize` with `SafeOptions()`, the recommended
+  entry point: no `Options` value to leave unset by mistake.
+- `SafeScanConfig()`: `DefaultScanConfig()` with `SafeOptions()`, the
+  recommended scanner preset.
+- `DefaultMaxFileBytes` (1 MiB), the limit both presets set in
+  `ScanConfig.MaxFileBytes`.
+- `ErrFileChanged`, returned (wrapped) by `WriteFinding`, `FixDir`,
+  `SanitizeFile` and `ReplaceFile` when a file changed after it was read.
+- Native fuzz tests (`FuzzSanitizeSafe`, `FuzzAllowedEmojis`,
+  `FuzzReplacerScriptAware`, with seed
+  corpora), examples (`ExampleSanitizeSafe`, `ExampleSafeOptions`) and
+  regression tests for every fix below.
+
+### Changed
+
+- Documentation recommends `SanitizeSafe`, `SafeOptions` and
+  `SafeScanConfig`, and describes the v1 defaults as stable but easy to
+  misuse (a forgotten `Options` field sanitizes nothing). The README's
+  pre-commit hook scripts moved to [docs/git-hooks.md](docs/git-hooks.md),
+  which already carried them. The README warns against running `Sanitize`
+  over raw JSON bytes (use `SanitizeJSON`).
+- Benchmarks use `b.Loop()`; the `modernize` linter is enabled.
+
+### Fixed
+
+- The `demojify` CLI scans with `SafeScanConfig()` instead of
+  `DefaultScanConfig()`, so its emoji removal is script-aware. Before, an
+  audit could report, and `-fix` would delete, a Zero Width Joiner that
+  shapes script text: `-fix` turned the Devanagari half-form (U+0915 U+094D
+  U+200D U+0937) into the conjunct (U+0915 U+094D U+0937), silently changing
+  how the text renders. Emoji, and the joiners inside emoji sequences, are
+  removed exactly as before; flags and exit codes are unchanged. The
+  library's v1 defaults (`DefaultOptions`, `DefaultScanConfig`) are
+  untouched. The CLI's documented install version is now v1.2.0.
+- `ScanDir` and `FixDir` honor `Options.ScriptAware` when
+  `ScanConfig.Replacements` is set. The substitution path stripped every
+  unmapped joiner and variation selector, so the CLI's `-sub` still turned
+  the half-form into the conjunct, and `Finding.Matches` listed a joiner the
+  cleaning kept (the CLI reported it as stripped and counted it as a fixed
+  occurrence, under `-fix` too). Substitution now strips exactly what
+  removal with the same `Options` strips, and `Matches` lists only what
+  changes. `Replace`, `ReplaceFile`, `ReplaceCount` and `FindMatchesInFile`
+  take no `Options` and are unchanged; without `ScriptAware` the scan is
+  unchanged too.
+- `WriteFinding` and `FixDir` (and `SanitizeFile`, `ReplaceFile`) detect a
+  file that changed after it was read: just before the rename the target is
+  compared with the content that was cleaned, and a mismatch leaves the file
+  alone and returns an error wrapping `ErrFileChanged`. A `Finding` held
+  across an edit used to replace the edit with content cleaned from the
+  stale copy. The detection is best-effort: a write landing between the
+  comparison and the rename is not seen, since no portable filesystem
+  operation compares and renames atomically.
+- `ScanConfig.MaxFileBytes` bounds the read, not only the size check. The
+  check uses the walk entry's own size, which for a symlink is the link's,
+  so a symlink to a file over the limit was read whole; a file that grew
+  after the check was too. Both are now skipped. The bound covers the
+  512-byte binary sniff as well, so a limit under 512 bytes is never read
+  past by more than one byte.
+
+### Security
+
+- `Options.AllowedEmojis` no longer swaps placeholders into the text. Input
+  holding all 34 Unicode noncharacters and the fallback placeholder sequence
+  had that text turned into an allowed emoji, and an allowed string matching
+  inside a placeholder (an ASCII digit) corrupted the output. The allowed
+  occurrences are now protected by marking their bytes in place, with the
+  same longest-first, leftmost, non-overlapping choice, so ordinary input
+  gives exactly the previous result (checked by `FuzzAllowedEmojis` against
+  the previous implementation) and hostile input can no longer collide.
+
 ## [1.1.0] - 2026-10-02
 
 Additive only: with the new option off, every function returns exactly what
@@ -85,7 +169,8 @@ comparisons: [0.10.0], [0.9.0], [0.8.0], and [0.7.3 and earlier].
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.1.0/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
-[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/nicholashoule/demojify-sanitize/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.10.1...v1.0.0
 [0.10.1]: https://github.com/nicholashoule/demojify-sanitize/compare/v0.10.0...v0.10.1

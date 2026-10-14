@@ -126,8 +126,9 @@ approach and does not weaken the library's error-handling contract.
 `ScanConfig` provides three exemption axes -- directories (`SkipDirs`), files
 (`ExemptFiles`), and suffixes (`ExemptSuffixes`) -- plus a binary/minified
 denylist (`SkipExtensions`), an extension allowlist (`Extensions`), a size
-guard (`MaxFileBytes`), an optional `Replacements` map (uses `Replace` instead of
-`Sanitize` per file when set), and a `CollectMatches` flag (populates
+guard (`MaxFileBytes`), an optional `Replacements` map (substitutes as `Replace`
+does instead of running `Sanitize` per file when set, still honoring
+`Options.ScriptAware`), and a `CollectMatches` flag (populates
 `Finding.Matches` with per-occurrence detail). `DefaultScanConfig` returns
 safe defaults for a typical Go module repo. The scanner reuses the same
 `Options` struct and `Sanitize` pipeline that callers already know, keeping
@@ -195,6 +196,21 @@ byte-length order at each position (the same greedy walk used by
 `FindAllMapped`) ensures multi-codepoint sequences are always consumed
 atomically.
 
+**Why the scanner's substitution honors `ScriptAware` and `Replace` does not:**
+`Replace`, `ReplaceFile` and `ReplaceCount` take no `Options`; their stable v1
+signatures keep the default rules, so they strip every unmapped joiner and
+variation selector. `ScanConfig` does carry `Options`, and `SafeScanConfig`
+promises script-aware removal. The `Replacements` path of the walk once
+ignored it, so the CLI's `-sub` turned a Devanagari half-form into the
+conjunct, and `Finding.Matches` listed a joiner the cleaning had kept.
+Under `Options.ScriptAware` the walk's strip step now applies the same
+`keepInScript` rule as `Sanitize`, and the match builder skips what that rule
+keeps, so `Finding.Matches` lists exactly what was substituted or removed.
+Mapped keys are substituted either way; no `DefaultReplacements()` key is a
+bare joiner or selector. `FuzzReplacerScriptAware` checks that, where no
+mapped key occurs, the scan strips exactly what emoji removal with the same
+setting strips, and reports exactly those bytes.
+
 **Why `DefaultReplacements()` returns a copy:**
 A shared global map is not safe for concurrent mutation. Returning a fresh
 copy on every call lets each caller add, remove, or override entries without
@@ -217,6 +233,16 @@ Writing directly to the target file leaves a window where a crash or
 interruption would produce a truncated file. Writing to a sibling temp file
 and then calling `os.Rename` means the file is either fully updated or fully
 unchanged.
+
+**Why a write is refused when the file changed:** every write-back
+(`WriteFinding`, `FixDir`, `SanitizeFile`, `ReplaceFile`) carries the content
+it read. Once the temp file is complete, and just before the rename, the
+target is read again (at most one byte past the expected length) and compared;
+if another writer changed it in between, nothing is renamed, the temp file is
+removed, and the error wraps `ErrFileChanged`. Before v1.2.0 a `Finding` held
+across an edit overwrote the edit with content cleaned from the stale copy.
+The check narrows that window to the compare-and-rename; it cannot close it on
+a filesystem without a compare-and-swap rename.
 
 On POSIX systems `rename(2)` is atomic and replaces the destination in a
 single filesystem operation. On Windows, Go 1.24+ (the minimum version for
@@ -261,7 +287,17 @@ applies the sanitization or replacement pipeline from `cfg`, and writes back
 every changed file through the temp-file strategy described above. It returns
 counts of fixed and already-clean files. Path-traversal protection (via `filepath.EvalSymlinks`
 and `isInsideDir`) ensures no write target can escape `root` through `..`
-components or symlinks.
+components or symlinks, and a file changed since the scan is skipped with
+`ErrFileChanged` (see above).
+
+`ScanConfig.MaxFileBytes` bounds the read itself, not only the size check: the
+check reads the walk entry's own size, which for a symlink is the link's, so a
+symlink to a large file used to pass it and be read whole. The bound covers
+the binary sniff as well: with a limit under the 512-byte sniff window the
+sniff itself shrinks, so the whole read is at most the limit plus the one
+byte that shows the file is over it. Zero (or negative) still means no limit,
+the stable v1 meaning; `DefaultScanConfig` and `SafeScanConfig` set
+`DefaultMaxFileBytes` (1 MiB).
 
 ## Scope boundaries
 

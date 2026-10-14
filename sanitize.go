@@ -25,7 +25,12 @@ import (
 var ErrMultipleJSONValues = errors.New("demojify: input contains multiple JSON values")
 
 // Options configures the sanitization pipeline used by [Sanitize].
-// Zero value disables all steps; use [DefaultOptions] for sensible defaults.
+//
+// The zero value disables every step: [Sanitize] with Options{} returns its
+// input unchanged. That is the stable v1 behavior, kept for existing
+// callers; it is easy to get wrong, because an Options a caller forgot to
+// fill in sanitizes nothing. New code should start from [SafeOptions] (or
+// call [SanitizeSafe]), which always removes emoji and keeps script joiners.
 type Options struct {
 	// RemoveEmojis strips emoji and Unicode pictographic characters.
 	// Equivalent to calling [Demojify] on the input.
@@ -64,16 +69,45 @@ type Options struct {
 	// [ContainsEmoji], [CountEmoji] and the [Replace] family are unchanged.
 	// For sanitization, has no effect when RemoveEmojis is false;
 	// [ContainsEmojiWith] honors it regardless. Added in v1.1.0; off by
-	// default.
+	// default (the stable v1 default), on in [SafeOptions].
 	ScriptAware bool
 }
 
-// DefaultOptions returns an Options value with all sanitization steps enabled.
+// DefaultOptions returns an Options value with emoji removal and whitespace
+// normalization enabled. ScriptAware stays off, the v1.0.0 behavior, so a
+// Zero Width Joiner or a variation selector is removed wherever it appears,
+// including inside Indic, CJK and mathematical text; prefer [SafeOptions]
+// (adding NormalizeWhitespace when wanted) in new code.
 func DefaultOptions() Options {
 	return Options{
 		RemoveEmojis:        true,
 		NormalizeWhitespace: true,
 	}
+}
+
+// SafeOptions returns the recommended Options: emoji removal on, with
+// ScriptAware, and whitespace left alone. Every emoji, every joiner between
+// emoji and the presentation selectors are removed; a Zero Width Joiner or a
+// standardized variation selector that joins or varies script text stays.
+// Leaving whitespace alone makes it safe for any text, including the string
+// values [SanitizeJSON] visits and source code; set NormalizeWhitespace on
+// the returned value to collapse whitespace too.
+//
+// Use it with [Sanitize], [SanitizeJSON], [SanitizeReader], [SanitizeFile]
+// and [ContainsEmojiWith], or call [SanitizeSafe]. Added in v1.2.0.
+func SafeOptions() Options {
+	return Options{
+		RemoveEmojis: true,
+		ScriptAware:  true,
+	}
+}
+
+// SanitizeSafe is [Sanitize] with [SafeOptions]: it always removes emoji,
+// keeps script joiners, and leaves whitespace alone. It is the recommended
+// entry point for new code, since no Options value can be left unset by
+// mistake. Added in v1.2.0.
+func SanitizeSafe(text string) string {
+	return Sanitize(text, SafeOptions())
 }
 
 // Sanitize applies the sanitization steps defined in opts to text and returns
@@ -101,6 +135,11 @@ func Sanitize(text string, opts Options) string {
 // skipped and return (false, nil), matching the behavior of [ScanDir] and
 // [ScanFile].
 //
+// The write happens only if the file still holds what was read, checked
+// just before the rename: a file another writer changed in between is left
+// alone and SanitizeFile returns (false, err) with err wrapping
+// [ErrFileChanged]. The check is best-effort (see [ErrFileChanged]).
+//
 // SanitizeFile returns true when the file was modified and false when it
 // was already clean. It returns an error for any filesystem failure.
 func SanitizeFile(path string, opts Options) (changed bool, err error) {
@@ -116,7 +155,10 @@ func SanitizeFile(path string, opts Options) (changed bool, err error) {
 	if cleaned == original {
 		return false, nil
 	}
-	return true, statAndWrite(path, cleaned)
+	if err := statAndWrite(path, original, cleaned); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // SanitizeResult holds the cleaned output and metrics from a sanitization
@@ -254,7 +296,7 @@ func SanitizeReader(r io.Reader, w io.Writer, opts Options) error {
 // contains trailing non-whitespace content after the first value (e.g.,
 // `{"a":1} trailing`).
 func SanitizeJSON(data []byte, opts Options) ([]byte, error) {
-	var v interface{}
+	var v any
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.UseNumber()
 	if err := dec.Decode(&v); err != nil {
@@ -280,16 +322,16 @@ func SanitizeJSON(data []byte, opts Options) ([]byte, error) {
 // sanitizeJSONValue recursively sanitizes string values in a decoded JSON
 // structure, returning the sanitized value. Non-string leaf values
 // (numbers, booleans, null) are returned unchanged.
-func sanitizeJSONValue(v interface{}, opts Options) interface{} {
+func sanitizeJSONValue(v any, opts Options) any {
 	switch val := v.(type) {
 	case string:
 		return Sanitize(val, opts)
-	case map[string]interface{}:
+	case map[string]any:
 		for k, child := range val {
 			val[k] = sanitizeJSONValue(child, opts)
 		}
 		return val
-	case []interface{}:
+	case []any:
 		for i, child := range val {
 			val[i] = sanitizeJSONValue(child, opts)
 		}

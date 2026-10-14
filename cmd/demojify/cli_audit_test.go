@@ -58,6 +58,46 @@ func TestFixStripsEmoji(t *testing.T) {
 	}
 }
 
+// TestFixKeepsScriptJoiners: the CLI uses the script-aware preset, so a
+// joiner that shapes script text is neither reported nor removed, while the
+// emoji beside it (and the joiners inside an emoji sequence) still go. -sub
+// takes the substitution path, which must honor the preset too.
+func TestFixKeepsScriptJoiners(t *testing.T) {
+	const halfForm = "\u0915\u094d\u200d\u0937" // Devanagari ka + virama + ZWJ + ssa
+	const persian = "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645"
+
+	clean := t.TempDir()
+	writeTempFile(t, clean, "script.txt", halfForm+" "+persian+"\n")
+	if stdout, _, code := runCLI(t, "-root", clean); code != 0 {
+		t.Errorf("script joiners alone reported as findings (exit %d): %q", code, stdout)
+	}
+
+	// The fixer closes the gap a removed emoji leaves (its usual behavior).
+	for _, tc := range []struct{ flag, want string }{
+		{"-fix", halfForm + " ok family " + persian + "\n"},
+		{"-sub", halfForm + " ok [APPROVED] family " + persian + "\n"},
+	} {
+		dir := t.TempDir()
+		path := writeTempFile(t, dir, "mixed.txt", halfForm+" ok \U0001F44D family \U0001F468\u200d\U0001F469\u200d\U0001F467 "+persian+"\n")
+		stdout, _, code := runCLI(t, "-root", dir, tc.flag)
+		if code != 0 {
+			t.Fatalf("%s: exit code = %d, want 0", tc.flag, code)
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("%s: read fixed file: %v", tc.flag, err)
+		}
+		if string(data) != tc.want {
+			t.Errorf("%s result = %+q, want %+q", tc.flag, data, tc.want)
+		}
+		// Thumbs up, then the family's three people and two joiners; the
+		// half-form's joiner is not an occurrence.
+		if !strings.Contains(stdout, "fixed 6 occurrence(s)") {
+			t.Errorf("%s output = %q, want 6 occurrences (the script joiner is not one)", tc.flag, stdout)
+		}
+	}
+}
+
 func TestSubSubstitutesEmoji(t *testing.T) {
 	dir := t.TempDir()
 	path := writeTempFile(t, dir, "sub.txt", "\u2705 tests passed\n")

@@ -330,7 +330,7 @@ func TestDemojifyConcurrent(_ *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
-	for i := 0; i < goroutines; i++ {
+	for i := range goroutines {
 		go func(idx int) {
 			defer wg.Done()
 			input := inputs[idx%len(inputs)]
@@ -344,11 +344,12 @@ func TestDemojifyConcurrent(_ *testing.T) {
 	wg.Wait()
 }
 
-// TestSanitizeBuildPlaceholderCollisionFallback exercises the extreme fallback
-// path in buildPlaceholders, which triggers when all 34 Unicode noncharacter
-// sentinels (U+FDD0-U+FDEF, U+FFFE, U+FFFF) collide with text already in the
-// input. The function must still return correct unique placeholders via the
-// three-rune prefix fallback, allowing AllowedEmojis to work correctly.
+// TestSanitizeBuildPlaceholderCollisionFallback feeds AllowedEmojis input that
+// holds every placeholder the pre-v1.2.0 implementation could choose (all 34
+// Unicode noncharacters, U+FDD0-U+FDEF, U+FFFE, U+FFFF). Allowed occurrences
+// are now protected in place, with no placeholders, so the allowed emoji
+// survives and the rest is removed; see TestAllowedEmojisNoPlaceholderCollision
+// for the exact-output regression.
 func TestSanitizeBuildPlaceholderCollisionFallback(t *testing.T) {
 	// Build text that contains the placeholder string for every possible
 	// single-character sentinel, forcing all 34 candidates to collide.

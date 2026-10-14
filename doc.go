@@ -7,9 +7,16 @@
 //
 // [Sanitize] combines configurable emoji removal and whitespace normalization.
 // [Demojify], [ContainsEmoji], [CountEmoji], [BytesSaved], and [Normalize]
-// expose the individual operations. For the common case:
+// expose the individual operations. For the common case, the recommended
+// entry point (v1.2.0) always removes emoji and keeps script joiners:
 //
-//	clean := demojify.Sanitize(text, demojify.DefaultOptions())
+//	clean := demojify.SanitizeSafe(text)
+//
+// [SafeOptions] is the same configuration as an [Options] value, and
+// [SafeScanConfig] the scanner preset built on it. The v1 defaults are
+// stable and unchanged: a zero [Options] passes text through, and
+// [DefaultOptions], [DefaultScanConfig] and [ContainsEmoji] are not
+// script-aware.
 //
 // [SanitizeReport] returns a [SanitizeResult] with removal metrics,
 // [SanitizeReader] streams an [io.Reader] line by line, and [SanitizeJSON]
@@ -46,7 +53,7 @@
 // github.com/nicholashoule/demojify-sanitize/cmd/demojify.
 // Install v1 with:
 //
-//	go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0
+//	go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.2.0
 //
 // See the cmd/demojify package documentation for the full CLI reference,
 // including modes, flags, exit codes, and JSON output.

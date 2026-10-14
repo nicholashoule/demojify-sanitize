@@ -13,30 +13,31 @@ A dependency-free Go library for auditing and detecting emoji clutter, removing 
 - **Emoji removal** -- strips emoji-related codepoints in the documented Unicode ranges; ZWJ, variation-selector, keycap, and tag codepoints are handled
 - **Whitespace normalization** -- collapses redundant inline spaces and blank lines while preserving leading indentation
 - **Configurable pipeline** -- `Sanitize` runs removal and normalization in one call; `AllowedRanges` and `AllowedEmojis` let callers preserve specific codepoints
-- **Script-aware** -- `ScriptAware` (opt-in, v1.1.0) keeps the Zero Width Joiner and standardized variation selectors in Indic, CJK and mathematical text while still removing every emoji; `ContainsEmojiWith` detects under the same options
+- **Safe by construction** -- `SanitizeSafe`, `SafeOptions` and `SafeScanConfig` (v1.2.0) always remove emoji and keep script joiners, so no unset option can turn sanitizing off
+- **Script-aware** -- `ScriptAware` (v1.1.0; on in `SafeOptions`) keeps the Zero Width Joiner and standardized variation selectors in Indic, CJK and mathematical text while still removing every emoji; `ContainsEmojiWith` detects under the same options
 - **Substitution** -- `Replace` maps 280 built-in emoji to readable text equivalents (e.g., `[PASS]`, `[FAIL]`); custom maps supported
 - **Metrics** -- `SanitizeReport` returns emoji count removed and bytes saved alongside the cleaned text
 - **Streaming** -- `SanitizeReader` processes `io.Reader` line by line; supports lines up to 1 MiB
 - **JSON-aware** -- `SanitizeJSON` cleans string values only; preserves keys, numbers, booleans, null, and numeric precision
 - **Directory scanner** -- `ScanDir` / `ScanDirContext` walk an entire tree and return per-file findings; cancellation supported
-- **Safer writes** -- `SanitizeFile`, `ReplaceFile`, `WriteFinding`, and `FixDir` use a same-directory temp file and rename while preserving permissions; replacement is atomic on POSIX and best-effort on Windows
+- **Safer writes** -- `SanitizeFile`, `ReplaceFile`, `WriteFinding`, and `FixDir` use a same-directory temp file and rename while preserving permissions, and detect a file changed since it was read (`ErrFileChanged`; best-effort, checked just before the rename); replacement is atomic on POSIX and best-effort on Windows
 - **CLI** -- `cmd/demojify` supports audit, strip (`-fix`), substitute (`-sub`), normalize, quiet mode, extension filter, and directory skip
 - **Zero external dependencies** -- pure stdlib; no `go.sum` required
 
 ## Installation
 
 ```bash
-go get github.com/nicholashoule/demojify-sanitize@v1.1.0
+go get github.com/nicholashoule/demojify-sanitize@v1.2.0
 ```
 
 ### CLI
 
 ```bash
-go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0
+go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.2.0
 ```
 
 ```bash
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0 -sub
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.2.0 -sub
 ```
 
 ### Quick start
@@ -46,9 +47,21 @@ The v1 module keeps the existing import path; no `/v1` suffix is required.
 ```go
 import demojify "github.com/nicholashoule/demojify-sanitize"
 
-// Remove all emojis and normalize whitespace in one call.
-clean := demojify.Sanitize(text, demojify.DefaultOptions())
+// Recommended (v1.2.0): always removes emoji, keeps script joiners,
+// leaves whitespace alone. No Options value to leave unset by mistake.
+clean := demojify.SanitizeSafe(text)
+
+// Also collapse redundant whitespace:
+opts := demojify.SafeOptions()
+opts.NormalizeWhitespace = true
+clean = demojify.Sanitize(text, opts)
 ```
+
+`SafeOptions`, `SanitizeSafe` and `SafeScanConfig` are the recommended path.
+The v1 defaults stay as they were (semantic versioning): a zero `Options`
+passes text through unchanged, and `DefaultOptions`, `DefaultScanConfig`
+and `ContainsEmoji` are not script-aware. They are stable, not deprecated,
+but easy to misuse; see [Options](#options).
 
 A ready-to-run CLI example lives in [cmd/demojify/main.go](cmd/demojify/main.go).
 It audits a directory tree for emoji, reports every occurrence with file, line,
@@ -67,21 +80,21 @@ go build -o demojify ./cmd/demojify
 ### AI response post-processing
 
 ```go
-clean := demojify.Sanitize(aiResponse, demojify.DefaultOptions())
+clean := demojify.SanitizeSafe(aiResponse)
 ```
 
 ### Content gate -- detect and clean
 
 ```go
-if demojify.ContainsEmoji(userInput) {
-	userInput = demojify.Sanitize(userInput, demojify.DefaultOptions())
+if demojify.ContainsEmojiWith(userInput, demojify.SafeOptions()) {
+	userInput = demojify.SanitizeSafe(userInput)
 }
 ```
 
 ### Directory scanner -- audit a repo in one call
 
 ```go
-cfg := demojify.DefaultScanConfig()
+cfg := demojify.SafeScanConfig()
 findings, _ := demojify.ScanDir(cfg)
 for _, f := range findings {
 	fmt.Printf("%s: has_emoji=%v\n", f.Path, f.HasEmoji)
@@ -91,10 +104,17 @@ for _, f := range findings {
 ### Batch fix -- scan and write back in one call
 
 ```go
-cfg := demojify.DefaultScanConfig()
+cfg := demojify.SafeScanConfig()
 fixed, _, err := demojify.FixDir(".", cfg)
 fmt.Printf("fixed %d file(s)\n", fixed)
 ```
+
+A file edited after the scan read it is left alone: the error wraps
+`ErrFileChanged` (from v1.2.0; `WriteFinding`, `SanitizeFile` and
+`ReplaceFile` check the same way). The check runs just before the rename,
+so it catches an edit made any time up to then; an edit landing between the
+check and the rename is not seen, since no portable filesystem operation
+compares and renames atomically ([docs/design.md](docs/design.md)).
 
 ### Substitution -- replace emoji with meaningful text
 
@@ -106,43 +126,9 @@ clean := demojify.Replace("\u2705 tests passed, \u274c build failed", repl)
 
 ### Git pre-commit hook
 
-**Option A -- pre-built binary (CI, minimal setup):**
-
-```sh
-go build -o .git/hooks/demojify ./cmd/demojify
-```
-
-```sh
-#!/bin/sh
-# .git/hooks/pre-commit
-root="$(git rev-parse --show-toplevel)"
-"$root/.git/hooks/demojify" -root "$root" -exts .go,.md -quiet
-```
-
-**Option B -- `go run` with repogov governance (recommended for in-repo hooks):**
-
-This mirrors `scripts/hooks/pre-commit` in this repository, which runs
-demojify from its own working tree because it is the CLI's source. Repogov
-enforces line limits and layout rules; demojify blocks emoji. Downstream
-hooks run both tools from their published module versions -- no local clone
-required.
-
-```sh
-#!/bin/sh
-# .git/hooks/pre-commit
-root="$(git rev-parse --show-toplevel)"
-cd "$root"
-
-go run github.com/nicholashoule/repogov/cmd/repogov@v0.8.0 -root "$root" -agent copilot
-repogov_exit=$?
-
-go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.1.0 -root "$root" -exts .go,.md
-demojify_exit=$?
-
-exit $((repogov_exit | demojify_exit))
-```
-
-See [docs/git-hooks.md](docs/git-hooks.md) for auto-fix, substitution, the full Go API variant, and cross-platform (macOS/Linux/Windows) examples.
+Run the CLI from a hook to block emoji at commit time. [docs/git-hooks.md](docs/git-hooks.md)
+has the pre-built-binary and `go run` (with repogov) hooks, auto-fix,
+substitution, the Go API variant, and macOS/Linux/Windows examples.
 
 ### Streaming sanitization
 
@@ -151,7 +137,7 @@ buffering the full input:
 
 ```go
 var out bytes.Buffer
-err := demojify.SanitizeReader(llmStream, &out, demojify.DefaultOptions())
+err := demojify.SanitizeReader(llmStream, &out, demojify.SafeOptions())
 ```
 
 Lines up to 1 MiB are supported. Longer lines return `bufio.ErrTooLong`.
@@ -159,10 +145,11 @@ Lines up to 1 MiB are supported. Longer lines return `bufio.ErrTooLong`.
 ### JSON value sanitization
 
 Clean string values inside a JSON document while leaving keys, numbers,
-booleans, and null untouched:
+booleans, and null untouched. Never run `Sanitize` over raw JSON bytes:
+it would edit text inside keys and strings without knowing the structure.
 
 ```go
-clean, err := demojify.SanitizeJSON(jsonBytes, demojify.DefaultOptions())
+clean, err := demojify.SanitizeJSON(jsonBytes, demojify.SafeOptions())
 ```
 
 Returns an error for invalid JSON and for input with trailing non-whitespace
@@ -181,8 +168,9 @@ Full signatures and doc comments are on
 
 | Function | Purpose |
 |----------|---------|
+| `SanitizeSafe(text) string` | Recommended: `Sanitize` with `SafeOptions()` (v1.2.0) |
 | `Sanitize(text, opts) string` | Configurable pipeline: emoji removal then whitespace normalization |
-| `SanitizeFile(path, opts) (bool, error)` | Sanitize through temp-file replacement; no write when clean |
+| `SanitizeFile(path, opts) (bool, error)` | Sanitize through temp-file replacement; no write when clean, `ErrFileChanged` when edited since the read (best-effort) |
 | `Demojify(text) string` | Strip recognized emoji-related codepoints |
 | `ContainsEmoji(text) bool` | Detect emoji presence |
 | `ContainsEmojiWith(text, opts) bool` | Detect what `Sanitize` with opts would remove (honors `ScriptAware`, `AllowedRanges`, `AllowedEmojis`); a zero `Options` answers as `ContainsEmoji` |
@@ -205,7 +193,7 @@ Full signatures and doc comments are on
 | Function | Purpose |
 |----------|---------|
 | `Replace(text, repl) string` | Map emoji to text equivalents; strip unmapped remainder |
-| `ReplaceFile(path, repl) (int, error)` | Temp-file replacement; no write when clean |
+| `ReplaceFile(path, repl) (int, error)` | Temp-file replacement; no write when clean, `ErrFileChanged` when edited since the read (best-effort) |
 | `ReplaceCount(text, repl) (string, int)` | Replace and return substitution count |
 | `FindAll(text) []string` | Distinct emoji sequences in text |
 | `FindAllMapped(text, repl) []string` | Mapped keys found in text |
@@ -219,9 +207,10 @@ Full signatures and doc comments are on
 | `ScanDirContext(ctx, cfg) ([]Finding, error)` | Context-aware scan with cancellation support |
 | `ScanFile(path, opts) (*Finding, error)` | Check a single file |
 | `FindMatchesInFile(path, repl) ([]Match, error)` | Per-occurrence match detail (line, column, context) |
-| `WriteFinding(path, f) (bool, error)` | Temp-file write-back without re-reading |
-| `FixDir(root, cfg) (fixed, clean int, err error)` | Scan and fix an entire directory tree in one call |
-| `ScanConfig` / `DefaultScanConfig()` | Scanner configuration (root, skip dirs, extensions, etc.) |
+| `WriteFinding(path, f) (bool, error)` | Temp-file write-back; `ErrFileChanged` (no write) when the file changed since the scan (best-effort) |
+| `FixDir(root, cfg) (fixed, clean int, err error)` | Scan and fix an entire directory tree in one call; a file changed since the scan is skipped with `ErrFileChanged` (best-effort) |
+| `SafeScanConfig()` | Recommended: `DefaultScanConfig()` with `SafeOptions()` (v1.2.0) |
+| `ScanConfig` / `DefaultScanConfig()` | Scanner configuration (root, skip dirs, extensions, `MaxFileBytes` = `DefaultMaxFileBytes`, etc.) |
 | `Finding` | Path, HasEmoji, Original, Cleaned, Matches |
 | `Match` | Sequence, Replacement, Line, Column, Context |
 
@@ -236,31 +225,34 @@ type Options struct {
 	ScriptAware         bool               // keep ZWJ and FE00-FE0D outside emoji sequences (v1.1.0)
 }
 
-func DefaultOptions() Options // RemoveEmojis + NormalizeWhitespace = true
+func SafeOptions() Options    // recommended: RemoveEmojis + ScriptAware (v1.2.0)
+func DefaultOptions() Options // RemoveEmojis + NormalizeWhitespace (not script-aware)
 ```
+
+The zero `Options` disables every step, so `Sanitize(text, Options{})` returns
+`text` unchanged: stable v1 behavior that a forgotten field turns into a silent
+pass-through. Start from `SafeOptions()` instead.
 
 `AllowedRanges` and `AllowedEmojis` can be combined. Empty strings in
 `AllowedEmojis` and empty keys in replacement maps are silently skipped.
 
-`ScriptAware` is off by default, so existing callers see no change. Turn it on
-when the input may be written language other than English: Devanagari,
-Malayalam and Sinhala join letters with the Zero Width Joiner, and the
-default removes it (and `ContainsEmoji` reports it) wherever it appears.
+`ScriptAware` is off in a zero `Options` and in `DefaultOptions`, so v1
+callers see no change; `SafeOptions` turns it on. Without it, the Zero Width
+Joiner that Devanagari, Malayalam and Sinhala use is removed (and
+`ContainsEmoji` reports it) wherever it appears.
 
 ```go
 // An input gate that accepts Indic text but refuses an emoji.
-gate := demojify.Options{RemoveEmojis: true, ScriptAware: true}
-if demojify.ContainsEmojiWith(userInput, gate) {
-	userInput = demojify.Sanitize(userInput, gate)
+if demojify.ContainsEmojiWith(userInput, demojify.SafeOptions()) {
+	return errEmojiNotAllowed
 }
 ```
 
 ```go
 // Remove recognized emoji except rocket and thumbs-up.
-clean := demojify.Sanitize(text, demojify.Options{
-	RemoveEmojis:  true,
-	AllowedEmojis: []string{"\U0001F680", "\U0001F44D"},
-})
+opts := demojify.SafeOptions()
+opts.AllowedEmojis = []string{"\U0001F680", "\U0001F44D"}
+clean := demojify.Sanitize(text, opts)
 ```
 
 ## Unicode emoji coverage

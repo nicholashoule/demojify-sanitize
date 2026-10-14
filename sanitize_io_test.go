@@ -446,7 +446,7 @@ func TestSanitizeJSON(t *testing.T) {
 			}
 			// Normalize by re-marshaling the expected JSON for comparison
 			// since map key order is non-deterministic.
-			var wantVal, gotVal interface{}
+			var wantVal, gotVal any
 			if err := json.Unmarshal([]byte(tt.want), &wantVal); err != nil {
 				t.Fatalf("unmarshal want: %v", err)
 			}
