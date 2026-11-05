@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="demojify-sanitize is a dependency-free Go library and CLI that detects, removes, or substitutes emoji and normalizes whitespace in AI output, user content, and source trees.">
+<meta name="color-scheme" content="light dark">
+<title>demojify-sanitize</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --text: #0f172a;
+    --muted: #475569;
+    --line: #e2e8f0;
+    --accent: #0e7490;
+    --accent-text: #ffffff;
+    --code-bg: #eef2f6;
+    --code-text: #1e293b;
+    --del: #b91c1c;
+    --ins: #15803d;
+    --max: 46rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1419;
+      --surface: #161d24;
+      --text: #e6edf3;
+      --muted: #9aa7b4;
+      --line: #26313c;
+      --accent: #22d3ee;
+      --accent-text: #0f172a;
+      --code-bg: #1b242d;
+      --code-text: #dbe4ec;
+      --del: #f87171;
+      --ins: #4ade80;
+    }
+  }
+  * { box-sizing: border-box; }
+  /* Phones keep the sizes set here rather than enlarging some text on their own. */
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover, a:focus-visible { text-decoration: underline; }
+  code, pre, kbd {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.92em;
+  }
+  code { background: var(--code-bg); color: var(--code-text); padding: 0.1em 0.35em; border-radius: 0.3em; overflow-wrap: anywhere; }
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    border: 1px solid var(--line);
+    border-radius: 0.6rem;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    line-height: 1.5;
+  }
+  pre code { background: none; padding: 0; font-size: 0.88rem; }
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 1.25rem; }
+
+  header.site {
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+    position: sticky; top: 0; z-index: 2;
+  }
+  header.site .wrap {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    min-height: 3.5rem; flex-wrap: wrap;
+  }
+  .brand { font-weight: 700; letter-spacing: -0.01em; color: var(--text); display: inline-flex; align-items: center; gap: 0.45rem; }
+  .brand:hover { text-decoration: none; }
+  .logo { flex: none; }
+  nav {
+    display: flex; align-items: stretch; flex-wrap: wrap;
+    border: 1px solid var(--line); background: var(--code-bg);
+    border-radius: 0.4rem;
+  }
+  nav a {
+    display: inline-flex; align-items: center;
+    color: var(--muted); font-size: 0.78rem; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 0.55rem 0.9rem; border-left: 1px solid var(--line);
+    position: relative;
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
+  nav a:first-child { border-left: 0; border-radius: 0.4rem 0 0 0.4rem; }
+  nav a:last-child { border-radius: 0 0.4rem 0.4rem 0; }
+  nav a::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+    background: var(--accent); transform: scaleX(0); transition: transform 0.15s ease;
+  }
+  nav a:hover, nav a:focus-visible, nav a[aria-current="true"] { color: var(--text); background: var(--surface); text-decoration: none; }
+  nav a:hover::after, nav a:focus-visible::after, nav a[aria-current="true"]::after { transform: scaleX(1); }
+  nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  nav a.github { padding: 0.55rem 0.7rem; }
+  /* The gopher's head pokes out past the bar's left edge, behind the first tab. */
+  .peek {
+    position: absolute; right: 100%; top: 50%; width: 36px; height: 40px; margin-top: -20px;
+    overflow: hidden; pointer-events: none;
+  }
+  .peek img {
+    position: absolute; left: 23.5px; top: -4.5px; width: 36px; height: auto;
+    transform: rotate(-90deg); transform-origin: 50% 50%; transition: transform 0.25s ease;
+  }
+  nav a:hover .peek img, nav a:focus-visible .peek img, nav a[aria-current="true"] .peek img { transform: translateX(-13px) rotate(-90deg); }
+  @media (prefers-reduced-motion: reduce) { .peek img, nav a, nav a::after { transition: none; } }
+
+  .hero { padding-block: 4.5rem 3rem; }
+  .hero h1 {
+    font-size: clamp(2.2rem, 6vw, 3.4rem);
+    line-height: 1.05; letter-spacing: -0.03em; margin: 0 0 1rem;
+  }
+  .hero p.lead { font-size: 1.2rem; color: var(--muted); max-width: 38rem; margin: 0 0 1.75rem; }
+  .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; padding: 0.65rem 1.1rem; border-radius: 0.5rem;
+    border: 1px solid var(--line); background: var(--surface); color: var(--text); font-weight: 600;
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .btn:hover { text-decoration: none; filter: brightness(1.05); }
+
+  .diff { margin: 2rem 0 0; display: grid; gap: 0.5rem; }
+  .diff div {
+    display: flex; gap: 0.75rem; align-items: baseline;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 0.5rem; padding: 0.6rem 0.9rem;
+  }
+  .diff b { flex: none; width: 3.2rem; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; }
+  .diff .before b { color: var(--del); }
+  .diff .after b { color: var(--ins); }
+  .diff code { background: none; padding: 0; }
+
+  section { padding: 2.5rem 0; border-top: 1px solid var(--line); scroll-margin-top: 4.5rem; }
+  #top { scroll-margin-top: 0; }
+  h2 { font-size: 1.5rem; letter-spacing: -0.02em; margin: 0 0 0.75rem; }
+  h3 { font-size: 1.05rem; margin: 1.5rem 0 0.5rem; }
+  p { margin: 0 0 1rem; }
+  .muted { color: var(--muted); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; margin: 1.25rem 0 0; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 0.75rem; padding: 1.1rem 1.2rem;
+  }
+  .card h3 { margin: 0 0 0.35rem; font-size: 1rem; }
+  .card p { margin: 0; font-size: 0.95rem; color: var(--muted); }
+
+  .from-source { display: flex; gap: 1.1rem; align-items: flex-start; margin: 1.5rem 0 0.5rem; padding: 1rem 1.1rem; background: var(--surface); border: 1px solid var(--line); border-radius: 0.75rem; }
+  .from-source h3 { margin: 0 0 0.35rem; }
+  .from-source p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+  .gopher { flex: none; width: 52px; height: auto; margin-top: 0.1rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.95rem; margin: 1rem 0; }
+  th, td { text-align: left; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td code { white-space: nowrap; }
+
+  ul.docs { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; gap: 0.5rem; }
+  ul.docs li { padding: 0.6rem 0.8rem; border: 1px solid var(--line); border-radius: 0.5rem; background: var(--surface); }
+  ul.docs span { color: var(--muted); }
+
+  footer.site { border-top: 1px solid var(--line); background: var(--code-bg); padding: 2rem 0 3rem; color: var(--muted); font-size: 0.9rem; }
+  footer.site a { color: var(--muted); text-decoration: underline; }
+  /* Phones: the header is not sticky, and the bar becomes a three by two grid. */
+  @media (max-width: 40rem) {
+    header.site { position: static; }
+    header.site .wrap { padding-block: 0.75rem; row-gap: 0.75rem; }
+    nav { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); overflow: hidden; }
+    nav a {
+      justify-content: center; padding: 0.6rem 0.4rem; font-size: 0.7rem; letter-spacing: 0.04em;
+      border-left: 1px solid var(--line); border-top: 1px solid var(--line); margin: -1px 0 0 -1px;
+    }
+    nav a:first-child { border-left: 1px solid var(--line); }
+    nav a:first-child, nav a:last-child { border-radius: 0; }
+    .peek { display: none; }
+    section { scroll-margin-top: 1rem; }
+    .hero { padding-block: 2.5rem 1.75rem; }
+    .hero h1 { font-size: 1.9rem; }
+    .hero p.lead { font-size: 1.05rem; }
+    pre code { font-size: 0.8rem; }
+    table { display: block; overflow-x: auto; }
+    td code { white-space: normal; }
+    .from-source { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#top"><svg class="logo" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+        <circle cx="12" cy="12" r="10.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <circle cx="8.6" cy="9.6" r="1.3" fill="currentColor"/>
+        <circle cx="15.4" cy="9.6" r="1.3" fill="currentColor"/>
+        <path d="M7.6 14.2 a5 5 0 0 0 8.8 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M4.6 19.4 L19.4 4.6" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"/>
+      </svg> demojify-sanitize</a>
+    <nav aria-label="Sections">
+      <a href="#install"><span class="peek" aria-hidden="true"><img src="images/gopher.svg" alt=""></span>Install</a>
+      <a href="#use">Use</a>
+      <a href="#cli">CLI</a>
+      <a href="#safety">Safety</a>
+      <a href="#docs">Docs</a>
+      <a class="github" href="https://github.com/nicholashoule/demojify-sanitize" aria-label="demojify-sanitize on GitHub" title="GitHub">
+        <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="wrap hero">
+    <h1>Strip the emoji clutter from AI output, user content, and your repository.</h1>
+    <p class="lead">
+      demojify-sanitize is a dependency-free Go library and CLI that detects emoji, removes them or swaps them
+      for readable text such as <code>[PASS]</code>, and tidies the whitespace they leave behind. Use it to
+      post-process agent responses, sanitize submitted text, or fail a CI build when emoji creep into source and docs.
+    </p>
+    <div class="actions">
+      <a class="btn primary" href="#install">Install</a>
+      <a class="btn" href="https://pkg.go.dev/github.com/nicholashoule/demojify-sanitize">API reference</a>
+      <a class="btn" href="https://github.com/nicholashoule/demojify-sanitize/releases/latest">Latest release</a>
+    </div>
+    <div class="diff" aria-label="Example of Replace">
+      <div class="before"><b>In</b><code>&#x2705; tests passed, &#x274C; build failed &#x1F680;&#x1F680;</code></div>
+      <div class="after"><b>Out</b><code>[PASS] tests passed, [FAIL] build failed [DEPLOY]</code></div>
+    </div>
+  </div>
+
+  <section id="why">
+    <div class="wrap">
+      <h2>Small, predictable, and safe to run on anything</h2>
+      <p class="muted">Pure standard library, no <code>go.sum</code>, and defaults that never silently do nothing.</p>
+      <div class="grid">
+        <div class="card">
+          <h3>Remove or substitute</h3>
+          <p><code>Sanitize</code> strips emoji; <code>Replace</code> maps 280 built-in emoji to text tokens and strips the rest. Custom maps are supported.</p>
+        </div>
+        <div class="card">
+          <h3>Script-aware</h3>
+          <p>Keeps the Zero Width Joiner and variation selectors that shape Indic, CJK, and math text, while still removing every emoji.</p>
+        </div>
+        <div class="card">
+          <h3>Whitespace that stays put</h3>
+          <p>Collapses redundant spaces and blank lines while preserving indentation, gofmt alignment, and CRLF line endings.</p>
+        </div>
+        <div class="card">
+          <h3>Streams, JSON, and trees</h3>
+          <p><code>SanitizeReader</code> for LLM streams, <code>SanitizeJSON</code> for string values only, and <code>ScanDir</code> / <code>FixDir</code> for whole repositories.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Install</h2>
+      <p>Add the library to a module. The v1 import path has no <code>/v1</code> suffix.</p>
+<pre><code>go get github.com/nicholashoule/demojify-sanitize@v1.2.0</code></pre>
+      <p>Install the CLI, or run it once without installing:</p>
+<pre><code>go install github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.2.0
+go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.2.0 -root .</code></pre>
+
+      <div class="from-source">
+        <img class="gopher" src="images/gopher.svg" width="52" height="71" alt="The Go gopher">
+        <div>
+          <h3>Zero dependencies, Go 1.24 or newer</h3>
+          <p>Everything is built on the standard library, so there is nothing else to fetch or audit. CI tests Go 1.24, 1.25, and the latest release on Linux, macOS, and Windows.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="use">
+    <div class="wrap">
+      <h2>Use</h2>
+      <p>Start from the safe presets. <code>SanitizeSafe</code> always removes emoji, keeps script joiners, and leaves whitespace alone.</p>
+<pre><code>import demojify "github.com/nicholashoule/demojify-sanitize"
+
+clean := demojify.SanitizeSafe(aiResponse)
+
+// Also collapse redundant whitespace.
+opts := demojify.SafeOptions()
+opts.NormalizeWhitespace = true
+clean = demojify.Sanitize(text, opts)
+
+// Substitute instead of strip.
+clean = demojify.Replace(text, demojify.DefaultReplacements())
+
+// Gate user input.
+if demojify.ContainsEmojiWith(input, demojify.SafeOptions()) {
+	return errEmojiNotAllowed
+}</code></pre>
+      <h3>Whole repositories</h3>
+<pre><code>cfg := demojify.SafeScanConfig()
+findings, err := demojify.ScanDir(cfg)   // audit
+fixed, _, err := demojify.FixDir(".", cfg) // audit and rewrite</code></pre>
+      <table>
+        <tr><th>Function</th><th>Purpose</th></tr>
+        <tr><td><code>SanitizeSafe</code></td><td>Recommended entry point: remove emoji, keep script joiners.</td></tr>
+        <tr><td><code>Sanitize</code></td><td>Configurable pipeline: removal, then whitespace normalization.</td></tr>
+        <tr><td><code>Replace</code></td><td>Map emoji to text tokens; strip anything unmapped.</td></tr>
+        <tr><td><code>SanitizeReport</code></td><td>Cleaned text plus emoji removed and bytes saved.</td></tr>
+        <tr><td><code>SanitizeReader</code></td><td>Line-by-line streaming, lines up to 1 MiB.</td></tr>
+        <tr><td><code>SanitizeJSON</code></td><td>Clean string values; keys, numbers, and precision untouched.</td></tr>
+        <tr><td><code>ScanDir</code>, <code>FixDir</code></td><td>Walk a tree, report per-file findings, and optionally write back.</td></tr>
+      </table>
+      <p>Every function and option is documented on <a href="https://pkg.go.dev/github.com/nicholashoule/demojify-sanitize">pkg.go.dev</a>.</p>
+    </div>
+  </section>
+
+  <section id="cli">
+    <div class="wrap">
+      <h2>CLI</h2>
+      <p><code>demojify</code> audits a directory tree and reports every occurrence with file, line, and column. It exits <code>1</code> when it finds emoji, so it works as a CI gate or pre-commit hook.</p>
+<pre><code>demojify -root .                         # audit only; nothing changes
+demojify -root . -exts .go,.md           # limit to these extensions
+demojify -root . -fix                    # strip emoji in place
+demojify -root . -sub                    # substitute text tokens in place
+demojify -root . -sub -normalize         # substitute and tidy whitespace
+demojify -root . -skip dist,build -json  # machine-readable findings
+demojify -version</code></pre>
+      <p>See the <a href="https://github.com/nicholashoule/demojify-sanitize/blob/main/docs/cli.md">CLI reference</a> for every flag and exit code, <a href="https://github.com/nicholashoule/demojify-sanitize/blob/main/docs/ci.md">CI integration</a> for GitHub Actions and GitLab CI, and <a href="https://github.com/nicholashoule/demojify-sanitize/blob/main/docs/git-hooks.md">git hooks</a> for blocking emoji at commit time.</p>
+    </div>
+  </section>
+
+  <section id="safety">
+    <div class="wrap">
+      <h2>Safety</h2>
+      <p>A zero <code>Options</code> passes text through unchanged, as v1 promises, so a forgotten field can silently turn sanitizing off. <code>SafeOptions</code>, <code>SanitizeSafe</code>, and <code>SafeScanConfig</code> leave nothing to forget: they always remove emoji.</p>
+      <p>File writes go through a same-directory temp file and rename, preserving permissions. A file edited after it was read is left alone and reported with <code>ErrFileChanged</code>. Scans skip binary files and the safe preset caps file size; <code>FixDir</code> never writes through a path or symlink that resolves outside its root. <a href="https://github.com/nicholashoule/demojify-sanitize/blob/main/SECURITY.md">SECURITY.md</a> says how to report a vulnerability.</p>
+    </div>
+  </section>
+
+  <section id="docs">
+    <div class="wrap">
+      <h2>Documentation</h2>
+      <ul class="docs">
+        <li><a href="https://pkg.go.dev/github.com/nicholashoule/demojify-sanitize">API reference</a> <span>every function, type, and option</span></li>
+        <li><a href="https://github.com/nicholashoule/demojify-sanitize/blob/main/docs/cli.md">CLI</a> <span>flags, modes, exit codes, and output format</span></li>
+        <li><a href="https://github.com/nicholashoule/demojify-sanitize/blob/main/docs/ci.md">CI integration</a> <span>GitHub Actions, GitLab CI, and test-based gates</span></li>
+        <li><a href="https://github.com/nicholashoule/demojify-sanitize/blob/main/docs/git-hooks.md">Git hooks</a> <span>pre-commit hooks on macOS, Linux, and Windows</span></li>
+        <li><a href="https://github.com/nicholashoule/demojify-sanitize/blob/main/docs/replacements.md">Replacements</a> <span>all 280 built-in emoji-to-text mappings</span></li>
+        <li><a href="https://github.com/nicholashoule/demojify-sanitize/blob/main/docs/unicode-coverage.md">Unicode coverage</a> <span>the ranges removed and what is intentionally kept</span></li>
+        <li><a href="https://github.com/nicholashoule/demojify-sanitize/blob/main/docs/design.md">Design</a> <span>zero dependencies, pipeline order, and write strategy</span></li>
+        <li><a href="https://github.com/nicholashoule/demojify-sanitize/blob/main/CHANGELOG.md">Changelog</a> <span>what changed in each release</span></li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <p>demojify-sanitize is open source under the <a href="https://github.com/nicholashoule/demojify-sanitize/blob/main/LICENSE">Apache-2.0 license</a>. Source, issues, and releases are on <a href="https://github.com/nicholashoule/demojify-sanitize">GitHub</a>; you can also <a href="https://github.com/sponsors/nicholashoule">sponsor the project</a>. Built and maintained by <a href="https://github.com/nicholashoule">Nicholas Houle</a>.</p>
+    <p>The Go gopher was designed by <a href="https://reneefrench.blogspot.com/">Renee French</a> and is used under the <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0</a> license.</p>
+  </div>
+</footer>
+
+<script>
+  // Marks the menu item for the section in view.
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('nav a[href^="#"]'));
+    var byId = {};
+    links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+    var sections = Object.keys(byId).map(function (id) { return document.getElementById(id); }).filter(Boolean);
+    if (!('IntersectionObserver' in window) || sections.length === 0) return;
+    var visible = {};
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { visible[e.target.id] = e.isIntersecting ? e.intersectionRatio : 0; });
+      var best = null;
+      sections.forEach(function (s) { if (visible[s.id] > 0 && (best === null || visible[s.id] > visible[best])) best = s.id; });
+      links.forEach(function (a) {
+        if (a.getAttribute('href') === '#' + best) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+      });
+    }, { rootMargin: '-20% 0px -60% 0px', threshold: [0, 0.25, 0.5, 1] });
+    sections.forEach(function (s) { observer.observe(s); });
+  })();
+</script>
+</body>
+</html>
