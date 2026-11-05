@@ -1,0 +1,100 @@
+# Publish site/ to GitHub Pages when main changes it; pull requests only run the check.
+# Pages must be enabled once in Settings > Pages with "GitHub Actions" as the source.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", "tools/site/**", ".github/workflows/pages.yml"]
+  pull_request:
+    paths: ["site/**", "tools/site/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check the site
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Check the page and the files it references
+        run: go run ./tools/site
+
+  deploy:
+    name: Deploy
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Job permissions replace the workflow's, so contents: read is repeated.
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # On the job, not the workflow, so pull request checks cannot cancel a queued deploy.
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check that Pages is enabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh api "repos/$GITHUB_REPOSITORY/pages" --jq .build_type >"$RUNNER_TEMP/pages" 2>"$RUNNER_TEMP/pages-error"; then
+            if grep -q 'HTTP 404' "$RUNNER_TEMP/pages-error"; then
+              echo "::error::GitHub Pages is not enabled for $GITHUB_REPOSITORY. In Settings > Pages, set Source to \"GitHub Actions\", then rerun this workflow."
+            else
+              echo "::error::Could not read the Pages settings: $(cat "$RUNNER_TEMP/pages-error")"
+            fi
+            exit 1
+          fi
+          if [[ $(cat "$RUNNER_TEMP/pages") != workflow ]]; then
+            echo "::error::GitHub Pages is set to deploy from a branch, which publishes the repository root, not site/. In Settings > Pages, set Source to \"GitHub Actions\", then rerun this workflow."
+            exit 1
+          fi
+
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+      # The CDN may lag the deployment, so retry until the served page matches byte for byte.
+      - name: Check that the page is served
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          want=$(sha256sum site/index.html | cut -d' ' -f1)
+          for attempt in $(seq 1 12); do
+            got=$(curl -fsSL --proto '=https' --max-time 10 -H 'Cache-Control: no-cache' "$PAGE_URL" | sha256sum | cut -d' ' -f1)
+            if [[ $got == "$want" ]]; then
+              echo "served: $PAGE_URL"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::$PAGE_URL did not serve the page just deployed within four minutes"
+          exit 1

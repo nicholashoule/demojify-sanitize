@@ -1,4 +1,4 @@
-.PHONY: all help build test race coverage fmt fmt-check vet lint pre-commit hooks driver clean
+.PHONY: all help build test race coverage fmt fmt-check vet lint pre-commit hooks driver site clean
 
 # Default: format, vet, then test
 all: fmt vet test
@@ -18,6 +18,7 @@ help:
 	@echo "  pre-commit  run the git hook's gate: gofmt + vet + lint + test (cross-platform)"
 	@echo "  hooks       install scripts/hooks/pre-commit into .git/hooks/"
 	@echo "  driver      build and run the driver example"
+	@echo "  site        check the GitHub Pages site in site/"
 	@echo "  clean       remove build artifacts"
 
 # Build check (library -- no binary output)
@@ -78,6 +79,10 @@ hooks:
 # The driver exercises every major public API as a downstream consumer would.
 driver:
 	go run ./docs/examples/driver/
+
+# Check the GitHub Pages site: its page and every file it references.
+site:
+	go run ./tools/site
 
 # Remove build artifacts (cross-platform; missing files are not an error).
 clean:
