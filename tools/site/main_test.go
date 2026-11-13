@@ -60,11 +60,13 @@ func TestCheckSearch(t *testing.T) {
 		}
 	}
 	sitemap := func(locs ...string) string {
-		s := `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`
+		var s strings.Builder
+		s.WriteString(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`)
 		for _, loc := range locs {
-			s += "<url><loc>" + loc + "</loc></url>"
+			s.WriteString("<url><loc>" + loc + "</loc></url>")
 		}
-		return s + "</urlset>"
+		s.WriteString("</urlset>")
+		return s.String()
 	}
 	for _, tc := range []struct {
 		name, head, sitemap, want string
