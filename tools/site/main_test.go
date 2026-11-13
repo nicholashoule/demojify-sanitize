@@ -18,7 +18,7 @@ func TestCheck(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	sound := `<html lang="en"><head><title>x</title><meta name="viewport" content="w"><meta name="description" content="d"></head>` +
+	sound := `<html lang="en"><head><title>x</title><meta name="viewport" content="w"><meta name="description" content="d">` + soundSearch + `</head>` +
 		`<body><p>&#x2705;</p><a href="#top">t</a><a href="https://example.com/">e</a><img src="images/a.svg"><a href="images/a.svg#x">f</a></body></html>`
 	write("index.html", sound)
 	write("images/a.svg", "<svg/>")
@@ -31,13 +31,91 @@ func TestCheck(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"lacks a <title>", "lacks a lang", "lacks a viewport", "lacks a description", "literal emoji", "plain HTTP link", "not in " + dir + ": missing.png", "absolute path"} {
+	for _, want := range []string{"lacks a <title>", "lacks a lang", "lacks a viewport", "lacks a description", "literal emoji", "plain HTTP link", "not in " + dir + ": missing.png", "absolute path", "lacks a canonical link"} {
 		if !strings.Contains(strings.Join(problems, "\n"), want) {
 			t.Errorf("problems %q lack %q", problems, want)
 		}
 	}
 	if _, err := check(filepath.Join(dir, "nowhere")); err == nil {
 		t.Error("a missing site passed")
+	}
+}
+
+// soundSearch is the head markup checkSearch accepts for a site whose files
+// include images/a.svg.
+const soundSearch = `<link rel="canonical" href="https://example.com/p/">` +
+	`<meta property="og:url" content="https://example.com/p/">` +
+	`<meta property="og:title" content="t"><meta property="og:description" content="a > b">` +
+	`<meta property="og:image" content="https://example.com/p/images/a.svg">` +
+	`<script type="application/ld+json">{"url": "https://example.com/p/", "image": ["https://example.com/p/images/a.svg"]}</script>`
+
+func TestCheckSearch(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "images"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"index.html", filepath.Join("images", "a.svg")} {
+		if err := os.WriteFile(filepath.Join(dir, name), nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sitemap := func(locs ...string) string {
+		s := `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`
+		for _, loc := range locs {
+			s += "<url><loc>" + loc + "</loc></url>"
+		}
+		return s + "</urlset>"
+	}
+	for _, tc := range []struct {
+		name, head, sitemap, want string
+	}{
+		{name: "sound", head: soundSearch},
+		{name: "sound with sitemap", head: soundSearch, sitemap: sitemap(" https://example.com/p/ ")},
+		{name: "no canonical", head: "", want: "lacks a canonical link"},
+		{name: "plain HTTP canonical", head: strings.Replace(soundSearch, `href="https://example.com/p/"`, `href="http://example.com/p/"`, 1), want: "https:// address ending in /"},
+		{name: "canonical without slash", head: strings.Replace(soundSearch, `href="https://example.com/p/"`, `href="https://example.com/p"`, 1), want: "https:// address ending in /"},
+		{name: "og:url elsewhere", head: strings.Replace(soundSearch, `og:url" content="https://example.com/p/"`, `og:url" content="https://example.com/old/"`, 1), want: "og:url must be the canonical address"},
+		{name: "no og:title", head: strings.Replace(soundSearch, `og:title`, `og:other`, 1), want: "lacks og:title"},
+		{name: "no og:image", head: strings.Replace(soundSearch, `property="og:image"`, `property="og:other"`, 1), want: "lacks og:image"},
+		{name: "og:image off site", head: strings.Replace(soundSearch, `content="https://example.com/p/images/a.svg"`, `content="https://cdn.example.com/a.png"`, 1), want: "og:image must be a file on this site"},
+		{name: "og:image missing", head: strings.Replace(soundSearch, `p/images/a.svg">`, `p/images/gone.png">`, 1), want: "not in " + dir + ": images/gone.png (as https://example.com/p/images/gone.png)"},
+		{name: "structured data not JSON", head: strings.Replace(soundSearch, `"url":`, `url:`, 1), want: "structured data that is not valid JSON"},
+		{name: "structured data names a missing file", head: strings.Replace(soundSearch, `["https://example.com/p/images/a.svg"]`, `["https://example.com/p/images/gone.svg"]`, 1), want: "images/gone.svg"},
+		{name: "sitemap off site", head: soundSearch, sitemap: sitemap("https://example.com/old/"), want: "not under the canonical"},
+		{name: "sitemap missing file", head: soundSearch, sitemap: sitemap("https://example.com/p/gone.html"), want: "not in " + dir + ": gone.html"},
+		{name: "sitemap empty", head: soundSearch, sitemap: sitemap(), want: "lists no addresses"},
+		{name: "sitemap wrong namespace", head: soundSearch, sitemap: `<urlset><url><loc>https://example.com/p/</loc></url></urlset>`, want: "not a sitemap"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(dir, "sitemap.xml")
+			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+				t.Fatal(err)
+			}
+			if tc.sitemap != "" {
+				if err := os.WriteFile(path, []byte(tc.sitemap), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			problems := strings.Join(checkSearch(dir, "<html><head>"+tc.head+"</head></html>"), "\n")
+			if tc.want == "" && problems != "" || !strings.Contains(problems, tc.want) {
+				t.Errorf("problems %q, want %q", problems, tc.want)
+			}
+		})
+	}
+}
+
+func TestStartTagsAndAttr(t *testing.T) {
+	html := `<LINK REL=canonical HREF='https://a/'><linkx href="no"><meta content="a > b" property="og:x"><meta/>`
+	links := startTags(html, "link")
+	if len(links) != 1 || attr(links[0].text, "href") != "https://a/" || attr(links[0].text, "rel") != "canonical" {
+		t.Errorf("startTags(link) = %q", links)
+	}
+	metas := startTags(html, "meta")
+	if len(metas) != 2 || attr(metas[0].text, "content") != "a > b" || attr(metas[0].text, "property") != "og:x" || attr(metas[1].text, "content") != "" {
+		t.Errorf("startTags(meta) = %q", metas)
+	}
+	if got := scriptBodies(`<script>x</script><script type="application/ld+json"> {} </SCRIPT>`, "application/ld+json"); len(got) != 1 || got[0] != " {} " {
+		t.Errorf("scriptBodies = %q", got)
 	}
 }
 

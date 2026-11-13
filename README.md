@@ -8,6 +8,8 @@
 
 A dependency-free Go library for auditing and detecting emoji clutter, removing or substituting it, and normalizing unnecessary whitespace in text content. It is built for post-processing AI agent output, sanitizing AI or user-submitted content, and functioning as a CI quality gate. `Sanitize` runs removal and normalization as one pipeline, `Replace` substitutes mapped emoji with text equivalents and strips the rest, `ScanDir` audits directory trees, and `ContainsEmoji` provides direct single-string detection.
 
+The [project website](https://nicholashoule.github.io/demojify-sanitize/) gives a one-page tour of installation, usage, the CLI, and the safe defaults.
+
 ## Features
 
 - **Emoji removal** -- strips emoji-related codepoints in the documented Unicode ranges; ZWJ, variation-selector, keycap, and tag codepoints are handled

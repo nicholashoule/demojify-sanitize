@@ -3,9 +3,60 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="demojify-sanitize is a dependency-free Go library and CLI that detects, removes, or substitutes emoji and normalizes whitespace in AI output, user content, and source trees.">
+<title>Emoji removal and text sanitization for Go | demojify-sanitize</title>
+<meta name="description" content="Emoji removal, emoji detection, and text sanitization for Go (golang): a dependency-free library and CLI that cleans AI output, user content, and source code.">
+<meta name="author" content="Nicholas Houle">
 <meta name="color-scheme" content="light dark">
-<title>demojify-sanitize</title>
+<!-- Search engines index this address. tools/site checks that og:url matches it and that the
+     site addresses in the meta tags and sitemap.xml are files in site/; update all of them together. -->
+<link rel="canonical" href="https://nicholashoule.github.io/demojify-sanitize/">
+<link rel="icon" href="images/favicon.svg" type="image/svg+xml">
+<!-- Link previews. The image is rendered from tools/site/social-card.html. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="demojify-sanitize">
+<meta property="og:locale" content="en_US">
+<meta property="og:url" content="https://nicholashoule.github.io/demojify-sanitize/">
+<meta property="og:title" content="demojify-sanitize: emoji removal and text sanitization for Go">
+<meta property="og:description" content="A dependency-free Go library and CLI that detects, removes, or replaces emoji and tidies whitespace in AI output, user content, and source code.">
+<meta property="og:image" content="https://nicholashoule.github.io/demojify-sanitize/images/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="demojify-sanitize: emoji removal and text sanitization for Go, turning emoji into tokens such as [PASS] and [FAIL].">
+<meta name="twitter:card" content="summary_large_image">
+<!-- Structured data for search engines. Keep it in step with the visible page. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://nicholashoule.github.io/demojify-sanitize/#website",
+      "url": "https://nicholashoule.github.io/demojify-sanitize/",
+      "name": "demojify-sanitize",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "@id": "https://nicholashoule.github.io/demojify-sanitize/#software",
+      "name": "demojify-sanitize",
+      "description": "Dependency-free Go library and CLI for emoji removal, emoji detection, text sanitization, and whitespace normalization in AI output, user content, and source code.",
+      "url": "https://nicholashoule.github.io/demojify-sanitize/",
+      "image": "https://nicholashoule.github.io/demojify-sanitize/images/social-card.png",
+      "codeRepository": "https://github.com/nicholashoule/demojify-sanitize",
+      "programmingLanguage": { "@type": "ComputerLanguage", "name": "Go", "url": "https://go.dev/" },
+      "runtimePlatform": "Go 1.24 or newer",
+      "license": "https://www.apache.org/licenses/LICENSE-2.0",
+      "keywords": ["emoji removal", "emoji detection", "remove emoji", "sanitize text", "text sanitization", "whitespace normalization", "AI output cleanup", "LLM output", "content moderation", "Go", "golang", "CLI"],
+      "author": { "@type": "Person", "name": "Nicholas Houle", "url": "https://github.com/nicholashoule" },
+      "isPartOf": { "@id": "https://nicholashoule.github.io/demojify-sanitize/#website" },
+      "sameAs": [
+        "https://github.com/nicholashoule/demojify-sanitize",
+        "https://pkg.go.dev/github.com/nicholashoule/demojify-sanitize"
+      ]
+    }
+  ]
+}
+</script>
 <style>
   :root {
     color-scheme: light dark;
@@ -215,11 +266,11 @@
 
 <main id="top">
   <div class="wrap hero">
-    <h1>Strip the emoji clutter from AI output, user content, and your repository.</h1>
+    <h1>Emoji removal and text sanitization for AI output, user content, and your repository.</h1>
     <p class="lead">
       demojify-sanitize is a dependency-free Go library and CLI that detects emoji, removes them or swaps them
       for readable text such as <code>[PASS]</code>, and tidies the whitespace they leave behind. Use it to
-      post-process agent responses, sanitize submitted text, or fail a CI build when emoji creep into source and docs.
+      clean up AI agent and LLM responses, sanitize submitted text, or fail a CI build when emoji creep into source and docs.
     </p>
     <div class="actions">
       <a class="btn primary" href="#install">Install</a>
@@ -238,15 +289,15 @@
       <p class="muted">Pure standard library, no <code>go.sum</code>, and defaults that never silently do nothing.</p>
       <div class="grid">
         <div class="card">
-          <h3>Remove or substitute</h3>
-          <p><code>Sanitize</code> strips emoji; <code>Replace</code> maps 280 built-in emoji to text tokens and strips the rest. Custom maps are supported.</p>
+          <h3>Detect, remove, or substitute</h3>
+          <p><code>ContainsEmojiWith</code> detects emoji, <code>Sanitize</code> strips them, and <code>Replace</code> maps 280 built-in emoji to text tokens and strips the rest. Custom maps are supported.</p>
         </div>
         <div class="card">
           <h3>Script-aware</h3>
           <p>Keeps the Zero Width Joiner and variation selectors that shape Indic, CJK, and math text, while still removing every emoji.</p>
         </div>
         <div class="card">
-          <h3>Whitespace that stays put</h3>
+          <h3>Whitespace normalization</h3>
           <p>Collapses redundant spaces and blank lines while preserving indentation, gofmt alignment, and CRLF line endings.</p>
         </div>
         <div class="card">
@@ -259,7 +310,7 @@
 
   <section id="install">
     <div class="wrap">
-      <h2>Install</h2>
+      <h2>Install the Go library and CLI</h2>
       <p>Add the library to a module. The v1 import path has no <code>/v1</code> suffix.</p>
 <pre><code>go get github.com/nicholashoule/demojify-sanitize@v1.2.0</code></pre>
       <p>Install the CLI, or run it once without installing:</p>
@@ -278,7 +329,7 @@ go run github.com/nicholashoule/demojify-sanitize/cmd/demojify@v1.2.0 -root .</c
 
   <section id="use">
     <div class="wrap">
-      <h2>Use</h2>
+      <h2>Remove emoji from a string in Go</h2>
       <p>Start from the safe presets. <code>SanitizeSafe</code> always removes emoji, keeps script joiners, and leaves whitespace alone.</p>
 <pre><code>import demojify "github.com/nicholashoule/demojify-sanitize"
 
@@ -296,7 +347,7 @@ clean = demojify.Replace(text, demojify.DefaultReplacements())
 if demojify.ContainsEmojiWith(input, demojify.SafeOptions()) {
 	return errEmojiNotAllowed
 }</code></pre>
-      <h3>Whole repositories</h3>
+      <h3>Scan and clean a whole repository</h3>
 <pre><code>cfg := demojify.SafeScanConfig()
 findings, err := demojify.ScanDir(cfg)   // audit
 fixed, _, err := demojify.FixDir(".", cfg) // audit and rewrite</code></pre>
@@ -316,7 +367,7 @@ fixed, _, err := demojify.FixDir(".", cfg) // audit and rewrite</code></pre>
 
   <section id="cli">
     <div class="wrap">
-      <h2>CLI</h2>
+      <h2>Emoji linter CLI for CI and pre-commit hooks</h2>
       <p><code>demojify</code> audits a directory tree and reports every occurrence with file, line, and column. It exits <code>1</code> when it finds emoji, so it works as a CI gate or pre-commit hook.</p>
 <pre><code>demojify -root .                         # audit only; nothing changes
 demojify -root . -exts .go,.md           # limit to these extensions
@@ -331,7 +382,7 @@ demojify -version</code></pre>
 
   <section id="safety">
     <div class="wrap">
-      <h2>Safety</h2>
+      <h2>Safe defaults and safe file writes</h2>
       <p>A zero <code>Options</code> passes text through unchanged, as v1 promises, so a forgotten field can silently turn sanitizing off. <code>SafeOptions</code>, <code>SanitizeSafe</code>, and <code>SafeScanConfig</code> leave nothing to forget: they always remove emoji.</p>
       <p>File writes go through a same-directory temp file and rename, preserving permissions. A file edited after it was read is left alone and reported with <code>ErrFileChanged</code>. Scans skip binary files and the safe preset caps file size; <code>FixDir</code> never writes through a path or symlink that resolves outside its root. <a href="https://github.com/nicholashoule/demojify-sanitize/blob/main/SECURITY.md">SECURITY.md</a> says how to report a vulnerability.</p>
     </div>
