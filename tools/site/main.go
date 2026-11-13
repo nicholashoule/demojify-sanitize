@@ -2,18 +2,27 @@
 // site and the Pages workflow: the page exists, is bounded in size, declares a
 // title, a language, a viewport, and a description, contains no literal emoji,
 // every link or source it names relative to itself is a file inside site/, and
-// no link uses plain HTTP or runs script. The site is hand-written HTML with
-// no build step, so this is the only check it gets.
+// no link uses plain HTTP or runs script. For search engines and link previews
+// it also checks that the page names a canonical https:// address, that
+// og:url matches it, that og:title, og:description, and og:image are set,
+// that every address under the canonical one in a meta tag, the structured
+// data, or sitemap.xml is a file inside site/, and that the structured data
+// parses. The site is hand-written HTML with no build step, so this is the
+// only check it gets.
 //
 // Usage: go run ./tools/site [DIR], where DIR defaults to site.
 package main
 
 import (
+	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	demojify "github.com/nicholashoule/demojify-sanitize"
@@ -77,7 +86,226 @@ func check(dir string) ([]string, error) {
 			problems = append(problems, problem)
 		}
 	}
+	problems = append(problems, checkSearch(dir, html)...)
 	return problems, nil
+}
+
+// checkSearch returns the problems with what search engines and link
+// previews read from the page in dir: its canonical address, its og: tags,
+// its structured data, and sitemap.xml. A page moved to a new address keeps
+// stale copies of the old one in all of these, so each address under the
+// canonical one must name a file that is published.
+func checkSearch(dir, html string) []string {
+	var base string
+	for _, t := range startTags(html, "link") {
+		if strings.EqualFold(attr(t.text, "rel"), "canonical") {
+			base = attr(t.text, "href")
+		}
+	}
+	switch {
+	case base == "":
+		return []string{"index.html lacks a canonical link"}
+	case !strings.HasPrefix(base, "https://") || !strings.HasSuffix(base, "/"):
+		return []string{"the canonical link must be an https:// address ending in /: " + base}
+	}
+
+	var problems []string
+	og := map[string]string{}
+	for _, t := range startTags(html, "meta") {
+		content := attr(t.text, "content")
+		if property := attr(t.text, "property"); strings.HasPrefix(property, "og:") {
+			og[property] = content
+		}
+		problems = appendSiteURL(problems, dir, base, content)
+	}
+	for _, property := range []string{"og:title", "og:description", "og:image"} {
+		if og[property] == "" {
+			problems = append(problems, "index.html lacks "+property+", which link previews show")
+		}
+	}
+	if og["og:url"] != base {
+		problems = append(problems, "og:url must be the canonical address "+base+": "+og["og:url"])
+	}
+	if image := og["og:image"]; image != "" && !strings.HasPrefix(image, base) {
+		problems = append(problems, "og:image must be a file on this site, under "+base+": "+image)
+	}
+
+	for _, body := range scriptBodies(html, "application/ld+json") {
+		var data any
+		if err := json.Unmarshal([]byte(body), &data); err != nil {
+			problems = append(problems, "index.html has structured data that is not valid JSON: "+err.Error())
+			continue
+		}
+		for _, u := range jsonStrings(data, base) {
+			problems = appendSiteURL(problems, dir, base, u)
+		}
+	}
+
+	return append(problems, checkSitemap(dir, base)...)
+}
+
+// checkSitemap returns the problems with sitemap.xml in dir, if there is one:
+// it must parse as a sitemap, list at least one address, and list only
+// addresses under base that name files in dir.
+func checkSitemap(dir, base string) []string {
+	path := filepath.Join(dir, "sitemap.xml")
+	info, err := os.Stat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	} else if err != nil {
+		return []string{err.Error()}
+	}
+	if info.Size() > maxPage {
+		return []string{fmt.Sprintf("sitemap.xml is %d bytes, larger than %d", info.Size(), maxPage)}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return []string{err.Error()}
+	}
+	var sitemap struct {
+		XMLName xml.Name `xml:"http://www.sitemaps.org/schemas/sitemap/0.9 urlset"`
+		Locs    []string `xml:"url>loc"`
+	}
+	if err := xml.Unmarshal(data, &sitemap); err != nil {
+		return []string{"sitemap.xml is not a sitemap: " + err.Error()}
+	}
+	if len(sitemap.Locs) == 0 {
+		return []string{"sitemap.xml lists no addresses"}
+	}
+	var problems []string
+	for _, loc := range sitemap.Locs {
+		loc = strings.TrimSpace(loc)
+		if !strings.HasPrefix(loc, base) {
+			problems = append(problems, "sitemap.xml lists an address that is not under the canonical "+base+": "+loc)
+			continue
+		}
+		problems = appendSiteURL(problems, dir, base, loc)
+	}
+	return problems
+}
+
+// appendSiteURL appends the problem with u, an absolute address, to problems
+// when u is under base but names no file in dir. Addresses elsewhere are left
+// alone.
+func appendSiteURL(problems []string, dir, base, u string) []string {
+	rest, ok := strings.CutPrefix(u, base)
+	if !ok {
+		return problems
+	}
+	if problem := checkReference(dir, rest); problem != "" {
+		return append(problems, problem+" (as "+u+")")
+	}
+	return problems
+}
+
+// jsonStrings returns every string in the decoded JSON value v that starts
+// with prefix, in a stable order.
+func jsonStrings(v any, prefix string) []string {
+	switch v := v.(type) {
+	case string:
+		if strings.HasPrefix(v, prefix) {
+			return []string{v}
+		}
+	case []any:
+		var found []string
+		for _, e := range v {
+			found = append(found, jsonStrings(e, prefix)...)
+		}
+		return found
+	case map[string]any:
+		var found []string
+		for _, k := range slices.Sorted(maps.Keys(v)) {
+			found = append(found, jsonStrings(v[k], prefix)...)
+		}
+		return found
+	}
+	return nil
+}
+
+// tag is one start tag: its text from < through >, and the offset in the
+// page just past it, where the element's content begins.
+type tag struct {
+	text string
+	end  int
+}
+
+// startTags returns each start tag for the element name in html, in any
+// case. A > inside a quoted attribute value does not end the tag.
+func startTags(html, name string) []tag {
+	lower := strings.ToLower(html)
+	open := "<" + name
+	var tags []tag
+	for at := 0; ; {
+		i := strings.Index(lower[at:], open)
+		if i < 0 {
+			return tags
+		}
+		start := at + i
+		at = start + len(open)
+		if at < len(html) && !isSpace(html[at]) && html[at] != '>' && html[at] != '/' {
+			continue // a longer name, such as <linkx
+		}
+		end := tagEnd(html, at)
+		tags = append(tags, tag{text: html[start:end], end: end})
+		at = end
+	}
+}
+
+// tagEnd returns the offset just past the > that closes the tag whose
+// attributes start at html[from], or len(html) when nothing closes it.
+func tagEnd(html string, from int) int {
+	var quote byte
+	for i := from; i < len(html); i++ {
+		switch c := html[i]; {
+		case quote != 0:
+			if c == quote {
+				quote = 0
+			}
+		case c == '"' || c == '\'':
+			quote = c
+		case c == '>':
+			return i + 1
+		}
+	}
+	return len(html)
+}
+
+// attr returns the value of the attribute name in the start tag t, in any
+// case, or "" when t has none. Like references, it counts an attribute only
+// after whitespace.
+func attr(t, name string) string {
+	lower := strings.ToLower(t)
+	key := name + "="
+	for at := 0; ; {
+		i := strings.Index(lower[at:], key)
+		if i < 0 {
+			return ""
+		}
+		start := at + i
+		at = start + len(key)
+		if start > 0 && isSpace(t[start-1]) {
+			value, _ := attributeValue(t, at)
+			return strings.TrimSpace(value)
+		}
+	}
+}
+
+// scriptBodies returns the content of each <script> element in html whose
+// type attribute is typ.
+func scriptBodies(html, typ string) []string {
+	lower := strings.ToLower(html)
+	var bodies []string
+	for _, t := range startTags(html, "script") {
+		if !strings.EqualFold(attr(t.text, "type"), typ) {
+			continue
+		}
+		end := strings.Index(lower[t.end:], "</script")
+		if end < 0 {
+			end = len(html) - t.end
+		}
+		bodies = append(bodies, html[t.end:t.end+end])
+	}
+	return bodies
 }
 
 // checkReference returns the problem with one reference from the page, or

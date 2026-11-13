@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Submit https://nicholashoule.github.io/demojify-sanitize/sitemap.xml in Google Search Console and
+     Bing Webmaster Tools. A project page cannot list it in robots.txt, which only counts at the host root. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://nicholashoule.github.io/demojify-sanitize/</loc>
+  </url>
+</urlset>

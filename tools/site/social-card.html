@@ -1,0 +1,61 @@
+<!doctype html>
+<!--
+  Source of site/images/social-card.png, the 1200x630 preview that link
+  unfurls (og:image) show. It lives here, outside site/, so it is never
+  published as a page. After editing, regenerate the PNG from the repo root:
+
+    google-chrome --headless=new --hide-scrollbars --force-device-scale-factor=1 \
+      --window-size=1200,630 --screenshot=site/images/social-card.png \
+      "file://$PWD/tools/site/social-card.html"
+
+  Keep it free of emoji glyphs: a renderer without a color emoji font draws
+  empty boxes, and the repository's own audit rejects literal emoji.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>social card</title>
+<style>
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    background: #0f1419;
+    color: #e6edf3;
+    font-family: "Noto Sans", system-ui, sans-serif;
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 72px 80px 60px; box-sizing: border-box;
+    border-top: 10px solid #22d3ee;
+  }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+  .brand { display: flex; align-items: center; gap: 18px; font-size: 34px; font-weight: 700; letter-spacing: -0.01em; }
+  h1 { font-size: 66px; line-height: 1.08; letter-spacing: -0.03em; margin: 40px 0 22px; font-weight: 800; }
+  p { font-size: 29px; line-height: 1.4; color: #9aa7b4; margin: 0; max-width: 980px; }
+  code {
+    align-self: flex-start; white-space: nowrap;
+    font-family: "Liberation Mono", ui-monospace, monospace; font-size: 26px;
+    background: #1b242d; border: 1px solid #26313c; border-radius: 10px; padding: 12px 18px; color: #dbe4ec;
+  }
+  code b { color: #4ade80; font-weight: 400; }
+  .url { font-size: 24px; color: #9aa7b4; white-space: nowrap; }
+</style>
+</head>
+<body>
+  <div>
+    <div class="top">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" width="52" height="52" aria-hidden="true">
+          <circle cx="12" cy="12" r="10.5" fill="none" stroke="#e6edf3" stroke-width="1.8"/>
+          <circle cx="8.6" cy="9.6" r="1.3" fill="#e6edf3"/>
+          <circle cx="15.4" cy="9.6" r="1.3" fill="#e6edf3"/>
+          <path d="M7.6 14.2 a5 5 0 0 0 8.8 0" fill="none" stroke="#e6edf3" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M4.6 19.4 L19.4 4.6" stroke="#22d3ee" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+        demojify-sanitize
+      </div>
+      <span class="url">nicholashoule.github.io/demojify-sanitize</span>
+    </div>
+    <h1>Emoji removal and text sanitization for Go</h1>
+    <p>A dependency-free library and CLI for AI output, user content, and source code.</p>
+  </div>
+  <code>[<b>PASS</b>] tests passed, [<b>FAIL</b>] build failed [<b>DEPLOY</b>]</code>
+</body>
+</html>
